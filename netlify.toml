@@ -3,4 +3,4 @@
   publish = "mr-markdown-documentation/out"
 
 [build.environment]
-  BUN_VERSION = "latest"
+  BUN_VERSION = "1.3.14"
