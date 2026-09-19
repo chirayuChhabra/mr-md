@@ -47,6 +47,10 @@ describe("CLI Deep Tests", () => {
       const content = await readFile(filePath, "utf-8");
       expect(content).toContain("index: 1");
       expect(content).toContain("# test-lesson");
+
+      const buildResult = await $`bun run ${CLI_PATH} build 01-test-lesson.md`.cwd(tempDir).quiet();
+      expect(buildResult.exitCode).toBe(0);
+      expect(existsSync(join(tempDir, "out", "01-test-lesson.html"))).toBe(true);
     });
 
     test("Should correctly increment index for subsequent files", async () => {
