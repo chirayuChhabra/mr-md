@@ -104,6 +104,8 @@ tags: []
 
 # ${rawName}
 
+Start writing your lesson here.
+
 `;
 
 	fs.writeFileSync(targetPath, content);
