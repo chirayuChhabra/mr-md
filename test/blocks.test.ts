@@ -118,6 +118,13 @@ describe("Block Renderers", () => {
 			expect(doc).toContain("&lt;script src=&quot;https://unpkg.com/react&quot;&gt;&lt;/script&gt;");
 			expect(doc).toContain("{&quot;hello&quot;: &quot;world&quot;}");
 		});
+
+		test("should contain the logical canvas and theme the letterbox area", () => {
+			const doc = iframeDoc("", "{}", false);
+
+			expect(doc).toContain("Math.min(scaleX, scaleY)");
+			expect(doc).toContain("document.body.style.backgroundColor = background");
+		});
 	});
 
 	describe("renderAnimation", () => {
