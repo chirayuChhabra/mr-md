@@ -23,7 +23,7 @@ CLI fetches the skill directly from the public GitHub repository.
 Install the skill once at user level:
 
 ```bash
-bunx skills add chirayuChhabra/mr-md --skill mr-md-simulations --global
+bunx mr-md skill install
 ```
 
 Then use mr-md normally in any lesson directory:
@@ -31,6 +31,20 @@ Then use mr-md normally in any lesson directory:
 ```bash
 bunx mr-md dev .
 bunx mr-md build .
+```
+
+Check the installed skill version or update it with:
+
+```bash
+bunx mr-md skill status
+bunx mr-md skill update
+```
+
+`mr-md skill` delegates to the open Agent Skills CLI. The equivalent direct
+installation is:
+
+```bash
+bunx skills add chirayuChhabra/mr-md --skill mr-md-simulations --global
 ```
 
 During development of the skill itself, maintainers can install directly from

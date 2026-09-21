@@ -13,12 +13,15 @@ The skill is useful both to:
 Install it from the mr-md repository:
 
 ```bash
-bunx skills add chirayuChhabra/mr-md --skill mr-md-simulations --global
+bunx mr-md skill install
 ```
 
 The Skills CLI downloads it from GitHub; users do not clone mr-md or add mr-md
 as a project dependency. After this one-time agent installation, the normal
 lesson workflow remains `bunx mr-md dev .` or `bunx mr-md build .`.
+
+Use `bunx mr-md skill status`, `update`, or `remove` to manage it. The mr-md
+command transparently delegates to the open Agent Skills CLI.
 
 The `assets/` directory contains a starting pair that an agent can copy into a
 lesson project. It is an example, not another runtime implementation.

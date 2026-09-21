@@ -8,7 +8,7 @@ const command = args[0];
 
 if (!command || command === "--help" || command === "-h") {
 	logger.info(
-		"Usage: mr-md <command> [args]\nCommands:\n  build      Build all chapters or a specific file\n  dev        Start local dev server\n  generate   Generate a new markdown file (alias: g)",
+		"Usage: mr-md <command> [args]\nCommands:\n  build      Build all chapters or a specific file\n  dev        Start local dev server\n  generate   Generate a new markdown file (alias: g)\n  skill      Install and manage the mr-md Agent Skill",
 	);
 	process.exit(command ? 0 : 1);
 }
@@ -39,6 +39,15 @@ switch (command) {
 	case "generate":
 		import("./cli/generate.js")
 			.then((m) => m.runGenerate(args.slice(1)))
+			.catch((e) => {
+				logger.error(e instanceof Error ? e.message : String(e));
+				process.exit(1);
+			});
+		break;
+	case "skill":
+	case "skills":
+		import("./cli/skill.js")
+			.then((m) => m.runSkill(args.slice(1)))
 			.catch((e) => {
 				logger.error(e instanceof Error ? e.message : String(e));
 				process.exit(1);
