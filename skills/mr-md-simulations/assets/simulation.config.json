@@ -1,6 +1,6 @@
 {
   "label": "Replace with the lesson's exact concept",
-  "caption": "Replace with a context-specific instruction using the lesson's terminology.",
+  "caption": "Replace with a context-specific instruction using the lesson's terminology. Keep instructions here instead of duplicating host chrome inside the canvas.",
   "height": 420,
   "props": {
     "speed": 1,

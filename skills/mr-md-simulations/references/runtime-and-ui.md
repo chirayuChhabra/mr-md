@@ -59,6 +59,13 @@ defaults to a range, a string to text, and a boolean to a toggle. Explicit
 `tunables` are preferred because their labels and bounds define the intended
 experience.
 
+These generated controls are the only non-spatial input UI. Keep form fields,
+toggles, selects, ordinary action buttons, and control panels out of the iframe.
+When possible, reshape a task into declarative props—for example,
+comma-separated text for a collection—then use the canvas to show the result.
+If the required interaction cannot be represented, propose a host-control
+extension instead of implementing a parallel form system in the frame.
+
 `controls: "observe"` hides generated controls. Accent values supported by the
 block type are `neutral`, `blue`, `teal`, `amber`, `rose`, and `violet`.
 
@@ -99,6 +106,12 @@ draw(context, logicalWidth, logicalHeight);
 The callback initially draws once. The host starts and pauses continuous
 drawing by posting lifecycle messages as the frame is activated or leaves the
 viewport. Do not start another animation loop around `bkSetup`.
+
+The requested dimensions define logical coordinates, not a license to place
+content at their edges. Keep essential content inside a safe rectangle inset by
+at least 6% on every side. Include text, strokes, shadows, animation extent, and
+hit-target padding in layout bounds. Validate both normal and maximized frame
+states; compile-time checks cannot detect cropping or overlap.
 
 ### `window.bkCanvasPoint(event, canvas)`
 
@@ -192,4 +205,9 @@ Useful examples:
 - `mr-markdown-documentation/sims/pathfinder.config.json`
 - `mr-markdown-documentation/sims/qcd.js`
 - `mr-markdown-documentation/sims/qcd.config.json`
+
+Read both the script and config for a relevant example before implementing.
+Notice that generated controls stay in the host while the iframe remains a
+visual scene. Use `visual-quality.md` for containment, contrast, and screenshot
+acceptance gates.
 

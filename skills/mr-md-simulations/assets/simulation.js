@@ -15,9 +15,32 @@ const state = {
 let initialized = false;
 let previousTime = performance.now();
 
+const LOGICAL_WIDTH = 800;
+const LOGICAL_HEIGHT = 500;
+const SAFE_INSET = 48;
+const MARKER_RADIUS = 26;
+const MAX_MARKER_EXTENT = 36;
+
 function readFiniteNumber(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function moveMarker(point) {
+  state.x = clamp(
+    point.x,
+    SAFE_INSET + MAX_MARKER_EXTENT,
+    LOGICAL_WIDTH - SAFE_INSET - MAX_MARKER_EXTENT,
+  );
+  state.y = clamp(
+    point.y,
+    SAFE_INSET + MAX_MARKER_EXTENT,
+    LOGICAL_HEIGHT - SAFE_INSET - MAX_MARKER_EXTENT,
+  );
 }
 
 window.addEventListener("bk:props", (event) => {
@@ -33,16 +56,14 @@ function initialize(canvas) {
 
   canvas.addEventListener("pointerdown", (event) => {
     const point = window.bkCanvasPoint(event, canvas);
-    state.x = point.x;
-    state.y = point.y;
+    moveMarker(point);
     canvas.setPointerCapture(event.pointerId);
   });
 
   canvas.addEventListener("pointermove", (event) => {
     if (!canvas.hasPointerCapture(event.pointerId)) return;
     const point = window.bkCanvasPoint(event, canvas);
-    state.x = point.x;
-    state.y = point.y;
+    moveMarker(point);
   });
 
   initialized = true;
@@ -57,9 +78,8 @@ function getUiStyle() {
         lineCap: "square",
         guideDash: [],
         shadow: "hard",
-        shadowOffset: 6,
+        shadowOffset: 4,
         pulseAmount: 0,
-        font: "800 18px monospace",
       };
     case "playful":
       return {
@@ -69,8 +89,7 @@ function getUiStyle() {
         guideDash: [4, 10],
         shadow: "chunky",
         shadowOffset: 5,
-        pulseAmount: 7,
-        font: "800 18px sans-serif",
+        pulseAmount: 4,
       };
     default:
       return {
@@ -80,8 +99,7 @@ function getUiStyle() {
         guideDash: [8, 8],
         shadow: "soft",
         shadowOffset: 3,
-        pulseAmount: 4,
-        font: "600 18px sans-serif",
+        pulseAmount: 3,
       };
   }
 }
@@ -107,7 +125,7 @@ function drawMarker(context, style, radius) {
   context.save();
 
   if (style.shadow === "hard") {
-    context.fillStyle = window.bkColor("text");
+    context.fillStyle = window.bkColor("line-strong");
     markerPath(
       context,
       state.x + style.shadowOffset,
@@ -122,12 +140,12 @@ function drawMarker(context, style, radius) {
     context.shadowOffsetY = style.shadowOffset;
   }
 
-  context.fillStyle = window.bkColor("accent");
-  context.strokeStyle = window.bkColor("text");
+  context.fillStyle = window.bkColor("paper");
+  context.strokeStyle = window.bkColor("accent");
   context.lineWidth = style.lineWidth;
   markerPath(context, state.x, state.y, radius, style.markerShape);
   context.fill();
-  if (style.markerShape === "square") context.stroke();
+  context.stroke();
 
   context.restore();
 }
@@ -152,21 +170,16 @@ function draw(context, width, height) {
     context.lineCap = ui.lineCap;
     context.setLineDash(ui.guideDash);
     context.beginPath();
-    context.moveTo(0, state.y);
-    context.lineTo(width, state.y);
+    context.moveTo(SAFE_INSET, state.y);
+    context.lineTo(width - SAFE_INSET, state.y);
     context.stroke();
     context.setLineDash([]);
   }
 
   const pulse =
-    26 + Math.sin(state.phase * Math.PI * 2) * ui.pulseAmount;
+    MARKER_RADIUS + Math.sin(state.phase * Math.PI * 2) * ui.pulseAmount;
   drawMarker(context, ui, pulse);
-
-  context.fillStyle = window.bkColor("text");
-  context.font = ui.font;
-  context.textAlign = "center";
-  context.fillText("Drag the point", state.x, state.y - pulse - 14);
 }
 
-window.bkSetup(800, 500, draw);
+window.bkSetup(LOGICAL_WIDTH, LOGICAL_HEIGHT, draw);
 

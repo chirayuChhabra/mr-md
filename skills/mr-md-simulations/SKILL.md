@@ -4,7 +4,7 @@ description: Create, integrate, debug, and review context-aware interactive canv
 compatibility: Requires an mr-md lesson project. Bun is required to compile TypeScript simulation sources and to run the mr-md repository's development and test commands.
 metadata:
   author: chirayuChhabra
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Build mr-md simulations
@@ -13,6 +13,17 @@ Create simulations that behave like part of the lesson, not isolated canvas
 demos. Ground every visible term and model choice in the material being taught.
 Prefer mr-md's host controls, theme tokens, responsive canvas helpers, and
 lifecycle over custom alternatives.
+
+Clipping, unreadable contrast, duplicated in-canvas form controls, and a UI mode
+that changes information density are release blockers. A build that compiles
+but has not been rendered and inspected is not complete.
+
+Use a modern, neat, clean visual baseline informed by excellent contemporary
+product design. Teenage Engineering and Apple are useful reference points:
+combine functional industrial clarity, disciplined grids, restrained playful
+accents, careful hierarchy, crisp rendering, and purposeful motion. Extract
+those principles; do not copy either company's branding, products, or trade
+dress. Let mr-md own the small interface details around the scene.
 
 ## Establish the task
 
@@ -128,7 +139,8 @@ lesson project. Do not edit the installed skill's assets as project source.
 
 Follow this order:
 
-1. Define a stable logical coordinate system, commonly `800 × 500`.
+1. Define a stable logical coordinate system, commonly `800 × 500`, plus a safe
+   content rectangle inside it.
 2. Read initial values from `window.__simProps`.
 3. Listen for `bk:props` and update local state when host controls change.
 4. Register pointer listeners once, during initialization.
@@ -140,7 +152,8 @@ Follow this order:
 9. Clamp elapsed time after pauses so resumed simulations do not jump.
 
 Read `references/runtime-and-ui.md` for the host contract and
-`references/ui-language.md` for required visual adaptation.
+`references/ui-language.md` for required visual adaptation. Read
+`references/visual-quality.md` before planning the viewport.
 
 ## Connect controls to behavior
 
@@ -168,9 +181,9 @@ Put author-facing defaults and controls in the sibling config:
 }
 ```
 
-Use generated controls for scalar settings and modes. Reserve direct canvas
-interaction for spatial actions such as dragging a body, drawing a ray, or
-selecting a cell.
+Use generated controls for all non-spatial input, including `range`, `number`,
+`text`, and `boolean` values. Reserve direct canvas interaction for spatial
+actions such as dragging a body, drawing a ray, or selecting a cell.
 
 Every tunable must:
 
@@ -181,9 +194,62 @@ Every tunable must:
 - have meaningful bounds and a usable step size; and
 - preserve its value type when handled by the simulation.
 
-Do not recreate sliders or toggles inside the iframe when mr-md can generate
-them. The iframe is sandboxed and cannot directly manipulate the host lesson
-DOM.
+Do not build a second form or toolbar inside the iframe. This prohibition
+includes sliders, toggles, text fields, number fields, selects, ordinary action
+buttons, and control cards. Reshape the interaction around host props when
+possible. For example, represent a set editor with a host text prop such as
+`Set members` and a membership query with `Test element`, then visualize the
+result on canvas. Do not draw fake input boxes on the canvas.
+
+If the learning objective genuinely requires a control the current config
+cannot express, stop and ask whether to simplify the interaction or extend
+mr-md's host-control contract. Do not silently create a parallel UI system in
+the simulation. The iframe is sandboxed and cannot directly manipulate the
+host lesson DOM.
+
+## Plan and contain the viewport
+
+Treat the canvas as a diagram or experimental scene, not a second application
+shell. The host already owns the lab title, controls, fullscreen action, and
+caption. Do not repeat them inside the canvas.
+
+Keep the scene visually current and focused:
+
+- establish one obvious focal point and a quiet supporting hierarchy;
+- prefer negative space, alignment, and grouping over extra containers;
+- use crisp typography and concise labels rather than decorative headings;
+- use motion to explain state or causality, not as ambient decoration;
+- avoid gratuitous gradients, glassmorphism, glow, badges, emoji, skeuomorphic
+  controls, and card-within-card layouts; and
+- do not add a panel, border, or shadow when the host frame already supplies
+  that separation.
+
+Before drawing, write down:
+
+1. the logical width and height;
+2. a safe content rectangle with at least 6% inset on every edge;
+3. regions for the primary model, labels, legend, and readouts;
+4. the maximum expected item count and label length; and
+5. the layout behavior for empty, minimum, typical, and maximum data.
+
+Then enforce these rules:
+
+- derive positions and sizes from the logical width, height, and safe rectangle;
+- keep every essential mark, label, shadow, and pointer target within that
+  rectangle in every state;
+- account for stroke width, shadow offset, text ascent/descent, and pulse or
+  animation extent when calculating bounds;
+- use `measureText()` and wrapping, truncation, or a bounded grid for dynamic
+  labels instead of guessing their width;
+- clamp draggable objects to the safe rectangle;
+- separate model, layout, and rendering so styling cannot accidentally change
+  the data layout; and
+- preserve the same layout and information density across UI modes.
+
+Do not solve overflow by shrinking all text until it is unreadable. Reduce
+decoration, restructure the layout, cap displayed detail with an explained
+summary, or ask for a product decision. See `references/visual-quality.md` for
+layout and screenshot gates.
 
 ## Match mr-md's UI
 
@@ -214,6 +280,13 @@ particle color charge or start/end states—but they must remain legible against
 every palette and must have a second signal such as shape, label, icon, or line
 style. Use palette tokens for all non-semantic chrome.
 
+Use safe token pairings by default: draw `text` on `bg` or `paper`, and use
+`accent` primarily for outlines, indicators, and highlights. Do not fill an
+object with `text` and then label it with `text`, and do not assume `text`
+contrasts with `accent`. Normal text must reach a 4.5:1 contrast ratio; large
+text and essential non-text strokes must reach 3:1. Hard-coded black and white
+are not substitutes for semantic tokens.
+
 A simulation must visibly belong to every supported UI mode. Do not stop after
 changing its colors. Adapt shape geometry, corner treatment, stroke weight,
 line caps and joins, shadows, typography, decoration, and motion character.
@@ -222,10 +295,22 @@ Current modes follow these broad rules:
 
 - `standard`: restrained geometry, moderate corners, thin strokes, and subtle
   depth;
-- `neo`: square or polygonal geometry, mitered joins, thick outlines, hard
-  offset shadows, and direct motion; and
+- `neo`: square or polygonal geometry, mitered joins, moderately stronger
+  outlines, one restrained hard-offset shadow on emphasized objects, and direct
+  motion; and
 - `playful`: circles and generous rounding, soft or chunky depth, friendly
   weight, and elastic motion where motion is not part of the scientific model.
+
+UI mode changes rendering vocabulary, not scale or information density. Keep
+semantic object bounds, label size, spacing, and hit targets the same across
+modes except for small optical adjustments. In particular, `neo` does not mean
+making everything larger, heavier, or shadowed. Do not stack shadows or combine
+a thick border, nested frames, and a large offset shadow on the same element.
+
+All modes share the same modern baseline. `standard` is calm and precise, `neo`
+is sharper and more graphic, and `playful` is warmer and more rounded—not
+juvenile or toy-like. Mode styling must reinforce the lesson rather than compete
+with it.
 
 For example, a decorative round marker may become an outlined square in `neo`
 and a soft circle in `playful`. Preserve circles only when roundness encodes a
@@ -273,11 +358,20 @@ For a lesson project:
 4. Compare every visible label, symbol, formula, unit, and default against the
    context brief and target lesson.
 5. Exercise every generated control and pointer gesture.
-6. Check narrow and wide viewports.
+6. Inspect rendered screenshots at normal and maximized sizes and at narrow and
+   wide viewports. Reject any clipped, overlapping, off-frame, or unreadable
+   content.
 7. Check the full cross-product of light/dark themes, all supported palettes,
    and every supported UI mode. Confirm that palettes update surfaces and
-   accents while geometry—not only color—changes between UI modes.
+   accents while visual language—not layout scale—changes between UI modes.
 8. Scroll the frame off screen and back; resumed motion must stay stable.
+9. Exercise empty, minimum, typical, maximum, and long-label data states.
+
+Visual inspection is mandatory for visual work. Automated builds and tests
+cannot prove that content fits or has usable contrast. If a browser or
+screenshot workflow is unavailable, say that visual validation remains undone
+and do not report the simulation as complete. Use
+`references/review-checklist.md` as the final acceptance checklist.
 
 For changes to the mr-md repository:
 

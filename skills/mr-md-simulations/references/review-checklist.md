@@ -33,6 +33,9 @@ than marking untested behavior as complete.
 - Every tunable has a correctly typed default prop.
 - Every tunable uses the lesson's exact terminology, notation, and unit.
 - Generated host controls are used for settings and modes.
+- Text and numeric input use generated host controls too.
+- No form fields, toggles, selects, ordinary buttons, toolbars, or fake inputs
+  are drawn or mounted inside the simulation frame.
 - Spatial interactions remain inside the canvas.
 - The simulation does not attempt to access the host DOM.
 
@@ -49,7 +52,31 @@ than marking untested behavior as complete.
 
 ## Visual and accessible communication
 
+- The scene has a modern, neat, restrained baseline informed by excellent
+  contemporary product design.
+- Teenage Engineering and Apple are treated as principle-level reference points
+  for industrial clarity, controlled playfulness, hierarchy, and polish—not as
+  branding or trade-dress templates.
+- The educational model is the obvious focal point.
+- Hierarchy comes from alignment, spacing, type, and restrained emphasis rather
+  than unnecessary containers or decoration.
+- The simulation avoids gratuitous glass, gradients, glow, nested cards, emoji,
+  badges, and ambient animation.
+- `playful` remains warm, deliberate, and precise rather than arbitrary.
+- The host title, controls, fullscreen action, and caption are not duplicated
+  inside the canvas.
+- A safe content rectangle of at least 6% per edge was defined before layout.
+- Every essential shape, stroke, shadow, label, animation extent, and hit target
+  remains inside the safe rectangle.
+- Empty, one-item, typical, maximum-data, and long-label states fit without
+  overlap or clipping.
+- Dynamic text is measured and wrapped, truncated, or laid out in a bounded
+  grid.
 - Colors come from supported `bkColor` tokens where appropriate.
+- `text` is drawn on `bg` or `paper` by default; fill and label never use the
+  same token.
+- Normal text reaches 4.5:1 contrast and large text or essential strokes reach
+  3:1.
 - Light and dark themes remain legible in every palette and UI mode.
 - `ink`, `field`, `ember`, `elixir`, `trunk`, and `lava` visibly update
   simulation surfaces, lines, text, and accents.
@@ -59,10 +86,14 @@ than marking untested behavior as complete.
 - Every supported UI mode has an intentional visual treatment.
 - Switching UI mode visibly updates geometry, strokes, corners, and depth—not
   only colors.
-- `neo` uses deliberate sharp or polygonal forms, hard outlines, and hard
-  shadows where domain geometry permits.
+- `neo` uses deliberate sharp or polygonal forms, bounded outlines, and at most
+  one restrained hard shadow per emphasized object.
+- `neo` does not enlarge all content, stack shadows, or combine heavy nested
+  frames.
 - `playful` uses deliberate rounding and softer or chunkier depth where domain
   geometry permits.
+- UI modes preserve the same layout, type size, information density, and usable
+  bounds.
 - Scientifically meaningful geometry remains accurate while its visual
   treatment adapts.
 - UI decisions are centralized rather than scattered through model code.
@@ -87,6 +118,9 @@ than marking untested behavior as complete.
 - Every control boundary and toggle state was exercised.
 - Pointer gestures were checked with mouse and a narrow/touch-like viewport.
 - The light/dark × palette × standard/neo/playful matrix was checked.
+- Rendered screenshots were inspected at normal and maximized sizes.
+- Screenshots include representative worst-case data and long labels.
+- No visual work is reported complete when browser inspection was unavailable.
 - Repository tests were run when the runtime contract changed.
 - The final report distinguishes automated checks from visual inspection.
 

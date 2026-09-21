@@ -3,7 +3,9 @@
 An Agent Skill for building context-aware interactive simulations that use the
 target lesson's terminology, notation, formulas, and teaching sequence together
 with mr-md's generated controls, sandboxed canvas runtime, appearance system,
-and lesson authoring syntax.
+and lesson authoring syntax. It includes hard visual gates for containment,
+contrast, host-control use, modern restrained styling, UI-mode restraint, and
+screenshot review.
 
 The skill is useful both to:
 

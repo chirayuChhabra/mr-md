@@ -3,6 +3,14 @@
 An mr-md simulation is part of the page's UI. It must react to a UI-mode change
 as thoroughly as cards, controls, callouts, and navigation do.
 
+Every mode starts from a modern, neat, restrained baseline. Aim for the clarity
+and finish associated with high-quality contemporary product design. Teenage
+Engineering and Apple are reference points for functional industrial clarity,
+disciplined organization, controlled playfulness, strong hierarchy, crisp
+typography, purposeful motion, and very little accidental chrome. Extract those
+principles without imitating either company's branding or trade dress, and do
+not apply glass, gradients, blur, and floating cards indiscriminately.
+
 Theme, palette, and UI language are independent:
 
 | Host setting | Simulation API | What it changes |
@@ -42,8 +50,24 @@ this reference was written, the modes translate into these canvas traits:
 | Motion | Restrained easing | Direct, stepped, or minimal overshoot | Elastic or bouncy when pedagogically safe |
 | Decoration | Sparse | Graphic blocks and strong borders | Friendly shapes and soft accents |
 
-These are semantic design rules, not fixed pixel values. Match the current host
-CSS rather than copying this table forever.
+These are semantic design rules, not permission to exaggerate a mode. Match the
+current host CSS rather than copying this table forever.
+
+`playful` may be warm, rounded, and lively while remaining deliberate and
+precise. `neo` may be bold and graphic, but not a dense brutalist dashboard.
+`standard` should be quiet and polished, not generic or unfinished.
+
+The model layout, information density, type size, and hit-target bounds stay
+stable across modes. As a default budget, use 1.5–2 logical pixels for normal
+outlines, 3 for emphasis, and no more than 4. Keep a hard shadow near 4 logical
+pixels and never above 6. Optical size adjustments should remain within 5%.
+Render at most one hard-shadow silhouette per emphasized object.
+
+In particular, `neo` does not mean “make every object large and black.” Do not
+stack shadows, shadow nested children, or combine thick outer and inner frames
+with thick object borders. Prefer a `paper` fill, `accent` or `line-strong`
+outline, and `text` label over a same-color fill-and-label pair. Include the
+shadow in the object's layout bounds.
 
 ## Lessons from the bundled examples
 
@@ -93,7 +117,7 @@ function getUiStyle() {
         lineCap: "square",
         lineJoin: "miter",
         shadow: "hard",
-        shadowOffset: 6,
+        shadowOffset: 4,
         motionScale: 0,
       };
     case "playful":
