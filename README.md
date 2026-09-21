@@ -6,6 +6,21 @@ Mr Markdown is an opinionated Markdown framework for building interactive learni
 
 The official documentation, guides, and showcase are available online at [mrmarkdown.com](https://mrmarkdown.com).
 
+## Agent Skill
+
+Install the [`mr-md-simulations`](./skills/mr-md-simulations) Agent Skill to
+teach compatible coding agents how to read a lesson's terminology and notation,
+then create context-aware simulations using mr-md's controls, sandboxed runtime,
+responsive canvas helpers, and appearance system:
+
+```bash
+bunx skills add chirayuChhabra/mr-md --skill mr-md-simulations --global
+```
+
+This is a one-time installation into your coding agent; it does not install
+mr-md into a project or require cloning this repository. Continue running
+mr-md normally with `bunx mr-md dev .` and `bunx mr-md build .`.
+
 ## Quick Start (CLI)
 
 The easiest way to get started is by using the CLI on a single file.
