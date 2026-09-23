@@ -21,14 +21,14 @@ To create a quiz, create a `.quiz.md` file. Inside, you write questions using a 
 Here is an example `checkup.quiz.md`:
 
 ```markdown
-## How do you mount an interactive sandboxed JavaScript simulation in Mr Markdown v3?
+## How do you mount an interactive sandboxed JavaScript simulation in Mr Markdown?
 
 -- By using an `<iframe>` tag
 ++ By linking to a `.js` or `.ts` file using standard Markdown image syntax
 -- By using the `<script>` tag
 -- By using the `<columns>` tag
 
-> In `mr-md` v3, you can embed interactive JavaScript sandboxes natively using a link to a script file, e.g. `![Simulation](./sim.js)`.
+> In `mr-md`, you can embed interactive JavaScript sandboxes natively using a link to a script file, e.g. `![Simulation](./sim.js)`.
 
 ## How do you add a red callout box for critical information?
 

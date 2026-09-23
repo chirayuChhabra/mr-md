@@ -10,7 +10,7 @@ slug: agent-skills
 
 ## What is an Agent Skill?
 
-An agent skill is a structured set of instructions, references, and templates that AI coding assistants (like GitHub Copilot, Cursor, or Antigravity) can use to understand how to work with a framework. The `mr-md` simulation skill teaches agents about the runtime API, theme system, canvas lifecycle, and visual quality standards.
+An agent skill is a structured set of instructions, references, and templates that AI coding assistants (like **Claude Code**, **Cursor**, **Codex**, or **Antigravity**) can use to understand how to work with a framework. The `mr-md` simulation skill teaches agents about the runtime API, theme system, canvas lifecycle, and visual quality standards.
 
 ## Installing the Skill
 

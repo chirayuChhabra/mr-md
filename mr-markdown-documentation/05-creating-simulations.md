@@ -8,17 +8,36 @@ slug: creating-simulations
 
 `mr-md` embeds interactive JavaScript simulations natively within a secure, sandboxed `iframe`. These simulations can respond to user inputs, adapt to dark/light mode themes seamlessly, and are optimized for high-DPI displays.
 
-Whether you're building a simple interactive diagram or a complex physics sandbox, `mr-md` provides a simple yet powerful API to get you up and running quickly.
-
 Check out this interactive pathfinding simulation built with the `mr-md` API:
 
 ![Pathfinder Simulation](./sims/pathfinder.js)
 
 ---
 
-## 1. Getting Started
+## 1. AI-Assisted Creation
 
-Creating a simulation involves two pieces: a JavaScript file that contains your simulation logic, and a simple Markdown embed to display it.
+The fastest and most robust way to build a simulation is to let an AI coding assistant (like **Claude Code**, **Cursor**, **Codex**, or **Antigravity**) do the heavy lifting.
+
+`mr-md` provides an official Agent Skill that teaches AI exactly how to use the `mr-md` runtime API, handle `.config.json` properties, and match the framework's visual style.
+
+Just install the skill in your project:
+
+```bash
+bunx mr-md skill install
+```
+
+Once installed, simply ask your AI agent:
+> "Create a simulation of the A* pathfinding algorithm. Let the user click to toggle walls on the grid, and animate the search path when they press a start button."
+
+The AI will automatically write the script, wire up the interactive UI controls, hook into the live theming engine, and embed it using the correct Markdown syntax!
+
+See the [Agent Skills](./agent-skills.html) guide for full details on the skill system.
+
+---
+
+## 2. Manual Creation
+
+If you prefer to write simulations by hand, it involves two pieces: a JavaScript file that contains your simulation logic, and a simple Markdown embed to display it.
 
 ### Step 1: Write your Simulation Script
 Create a new file called `mysim.js` (or `.ts`) in your project. We'll use the `mr-md` global API to draw a simple rectangle:
@@ -48,7 +67,7 @@ That's it! `mr-md` automatically wraps your script in a sandbox, provisions a hi
 
 ---
 
-## 2. Configuration & Interactive UI (`.config.json`)
+## 3. Configuration & Interactive UI (`.config.json`)
 
 One of the most powerful features of `mr-md` simulations is the ability to expose **interactive controls** (sliders, toggles) directly to the reader without writing any UI code.
 
@@ -95,7 +114,7 @@ window.bkSetup(1280, 720, function(ctx, width, height) {
 
 ---
 
-## 3. The `bk` API Reference
+## 4. The `bk` API Reference
 
 To ensure simulations scale perfectly and match the host's theme seamlessly, `mr-md` injects several `bk` (BlogKit) global functions into the iframe sandbox.
 
@@ -132,17 +151,3 @@ canvas.addEventListener("pointermove", (e) => {
 
 ### `window.bkFitCanvas(canvas, requestedW, requestedH, options)`
 If you are doing custom canvas rendering (like WebGL instead of the 2D context provided by `bkSetup`), call this manually to apply the CSS scaling transforms needed to make your canvas responsive inside the `mr-md` layout container.
-
----
-
-## 4. AI-Assisted Simulation Creation
-
-`mr-md` v4 introduces an agent skill that enables AI coding assistants to generate simulations that follow all the conventions above automatically.
-
-Install the skill and let your AI agent handle the boilerplate:
-
-```bash
-bunx mr-md skill install
-```
-
-See the [Agent Skills](./agent-skills) guide for full details on the skill system.
