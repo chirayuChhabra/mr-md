@@ -2,10 +2,15 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import matter from "@11ty/gray-matter";
+import pkg from "../../package.json" with { type: "json" };
 import { logger } from "./logger.js";
 
 export const SIMULATION_SKILL_NAME = "mr-md-simulations";
-export const SIMULATION_SKILL_SOURCE = "chirayuChhabra/mr-md";
+
+// For local testing, allow override. Otherwise, strictly pin to the exact git tag
+// that matches this npm package version (e.g., v4.0.0-beta.1) to guarantee sync.
+const gitRef = process.env.MR_MD_SKILL_REF || `v${pkg.version}`;
+export const SIMULATION_SKILL_SOURCE = `chirayuChhabra/mr-md#${gitRef}`;
 
 const HELP = `Usage: mr-md skill <command>
 
