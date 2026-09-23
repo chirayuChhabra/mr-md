@@ -122,7 +122,7 @@ describe("Block Renderers", () => {
 		test("should contain the logical canvas and theme the letterbox area", () => {
 			const doc = iframeDoc("", "{}", false);
 
-			expect(doc).toContain("Math.min(scaleX, scaleY)");
+			expect(doc).toContain("Math.max(scaleX, scaleY)");
 			expect(doc).toContain("document.body.style.backgroundColor = background");
 		});
 	});

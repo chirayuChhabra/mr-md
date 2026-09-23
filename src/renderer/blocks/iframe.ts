@@ -81,7 +81,7 @@ window.bkFitCanvas = function(c, requestedW, requestedH, options) {
   
   const scaleX = window.innerWidth / w;
   const scaleY = window.innerHeight / h;
-  const cssScale = Math.min(scaleX, scaleY);
+  const cssScale = Math.max(scaleX, scaleY);
   
   c.style.transform = "scale(" + cssScale + ")";
   
