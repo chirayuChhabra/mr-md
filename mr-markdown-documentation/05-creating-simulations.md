@@ -27,7 +27,7 @@ bunx mr-md skill install
 ```
 
 Once installed, simply ask your AI agent:
-> *"Create a new mr-md simulation that demonstrates quantum wave interference. Embed it in my lesson."*
+> *"Create a simulation of the A* pathfinding algorithm. Let the user click to toggle walls on the grid, and animate the search path when they press a start button."*
 
 The AI will automatically write the script, wire up the interactive UI controls, hook into the live theming engine, and embed it using the correct Markdown syntax!
 
