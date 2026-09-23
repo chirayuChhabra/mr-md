@@ -8,6 +8,61 @@ slug: modules
 
 `mr-md` leverages standard Markdown syntax to elegantly construct complex modules.
 
+## Simulations
+
+Embed interactive JavaScript/TypeScript sandboxes natively using a link to a `.js` or `.ts` file:
+
+> [!important]
+> If a `.config.json` file is placed next to your script, its properties will automatically be injected into your simulation as `window.__simProps`.
+
+**Syntax:**
+```markdown
+![QCD Simulation](./sims/qcd.js)
+```
+
+**Result:**
+
+![QCD Simulation](./sims/qcd.js)
+
+---
+
+## Quizzes
+
+To embed an interactive quiz, create a `.quiz.md` file containing the quiz configuration, and link to it like an image:
+
+```markdown
+![Test your knowledge](./quizzes/sample.quiz.md)
+```
+
+Quizzes are written using a simple markdown syntax! See the [Creating Quizzes](./creating-quizzes.md) guide for details.
+
+**Result:**
+
+![Test your knowledge](./quizzes/sample.quiz.md)
+
+---
+
+## Columns Layout
+
+When you need side-by-side layouts, use the `<columns>` tag. You can pass raw markdown, code, or LaTeX into individual columns via attributes.
+
+**Syntax:**
+```html
+<columns label="Compare">
+  <column markdown="**Classical Mechanics**\n\nClassical mechanics describes the motion of macroscopic objects, from projectiles to parts of machinery, and astronomical objects." />
+  <column markdown="**Quantum Mechanics**\n\nQuantum mechanics describes the physical properties of nature at the scale of atoms and subatomic particles." />
+</columns>
+```
+
+**Result:**
+
+<columns label="Compare">
+  <column markdown="**Classical Mechanics**\n\nClassical mechanics describes the motion of macroscopic objects, from projectiles to parts of machinery, and astronomical objects." />
+  <column markdown="**Quantum Mechanics**\n\nQuantum mechanics describes the physical properties of nature at the scale of atoms and subatomic particles." />
+</columns>
+
+---
+
 ## The Live Theming Engine
 
 `mr-md` features a built-in, real-time theming engine. Click the **Settings Gear** in the corner of your screen to customize the visual presentation of your course.
@@ -19,6 +74,50 @@ You can instantly:
 
 > [!tip]
 > **Easter Egg:** Double-click on any of the color palette icons in the Settings panel to unlock secret "Pro" color palettes!
+
+---
+
+## Media
+
+Instead of using HTML or shortcodes, `mr-md` extends the standard Markdown image syntax `![caption](src)`.
+
+### Images
+
+**Syntax:**
+```markdown
+![A beautiful landscape](./media/nature.jpg)
+```
+
+**Result:**
+
+![A beautiful landscape](./media/nature.jpg)
+
+### Video and Audio
+If the URL ends in `.mp4`, `.webm`, or `.mov`, it renders as a video player. For `.mp3` or `.wav`, it renders as an audio player.
+
+**Syntax:**
+```markdown
+![Demo Video](https://www.w3schools.com/html/mov_bbb.mp4)
+![Horse Sound Effect](https://www.w3schools.com/html/horse.mp3)
+```
+
+**Result:**
+
+![Demo Video](https://www.w3schools.com/html/mov_bbb.mp4)
+
+![Horse Sound Effect](https://www.w3schools.com/html/horse.mp3)
+
+### YouTube
+If the URL contains `youtube.com` or `youtu.be`, it embeds a YouTube player:
+
+**Syntax:**
+```markdown
+![Khan Academy Tutorial](https://youtube.com/watch?v=dQCsA2cCdvA)
+```
+
+**Result:**
+
+![Khan Academy Tutorial](https://youtube.com/watch?v=dQCsA2cCdvA)
 
 ---
 
@@ -89,102 +188,3 @@ Nested ordered and unordered lists are also perfectly formatted out of the box.
 2. Second item
    - Nested unordered
    - Another one
-
----
-
-## Media
-
-Instead of using HTML or shortcodes, `mr-md` v3 extends the standard Markdown image syntax `![caption](src)`.
-
-### Images
-
-**Syntax:**
-```markdown
-![A beautiful landscape](./media/nature.jpg)
-```
-
-**Result:**
-
-![A beautiful landscape](./media/nature.jpg)
-
-### Video and Audio
-If the URL ends in `.mp4`, `.webm`, or `.mov`, it renders as a video player. For `.mp3` or `.wav`, it renders as an audio player.
-
-**Syntax:**
-```markdown
-![Demo Video](https://www.w3schools.com/html/mov_bbb.mp4)
-![Horse Sound Effect](https://www.w3schools.com/html/horse.mp3)
-```
-
-**Result:**
-
-![Demo Video](https://www.w3schools.com/html/mov_bbb.mp4)
-
-![Horse Sound Effect](https://www.w3schools.com/html/horse.mp3)
-
-### YouTube
-If the URL contains `youtube.com` or `youtu.be`, it embeds a YouTube player:
-
-**Syntax:**
-```markdown
-![Khan Academy Tutorial](https://youtube.com/watch?v=dQCsA2cCdvA)
-```
-
-**Result:**
-
-![Khan Academy Tutorial](https://youtube.com/watch?v=dQCsA2cCdvA)
-
----
-
-## Quizzes
-
-To embed an interactive quiz, create a `.quiz.md` file containing the quiz configuration, and link to it like an image:
-
-```markdown
-![Test your knowledge](./quizzes/sample.quiz.md)
-```
-
-Quizzes are written using a simple markdown syntax! See the [Creating Quizzes](./creating-quizzes.md) guide for details.
-
-**Result:**
-
-![Test your knowledge](./quizzes/sample.quiz.md)
-
----
-
-## Simulations
-
-Embed interactive JavaScript sandboxes natively using a link to a `.js` or `.ts` file:
-
-> [!important]
-> If a `.config.json` file is placed next to your script, its properties will automatically be injected into your simulation as `window.__simProps`.
-
-**Syntax:**
-```markdown
-![QCD Simulation](./sims/qcd.js)
-```
-
-**Result:**
-
-![QCD Simulation](./sims/qcd.js)
-
----
-
-## Columns Layout
-
-When you need side-by-side layouts, use the `<columns>` tag. You can pass raw markdown, code, or LaTeX into individual columns via attributes.
-
-**Syntax:**
-```html
-<columns label="Compare">
-  <column markdown="**Classical Mechanics**\n\nClassical mechanics describes the motion of macroscopic objects, from projectiles to parts of machinery, and astronomical objects." />
-  <column markdown="**Quantum Mechanics**\n\nQuantum mechanics describes the physical properties of nature at the scale of atoms and subatomic particles." />
-</columns>
-```
-
-**Result:**
-
-<columns label="Compare">
-  <column markdown="**Classical Mechanics**\n\nClassical mechanics describes the motion of macroscopic objects, from projectiles to parts of machinery, and astronomical objects." />
-  <column markdown="**Quantum Mechanics**\n\nQuantum mechanics describes the physical properties of nature at the scale of atoms and subatomic particles." />
-</columns>
