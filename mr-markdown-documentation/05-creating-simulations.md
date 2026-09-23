@@ -27,9 +27,11 @@ bunx mr-md skill install
 ```
 
 Once installed, simply ask your AI agent:
-> *"Create a simulation of the A* pathfinding algorithm. Let the user click to toggle walls on the grid, and animate the search path when they press a start button."*
+> "Create a simulation of the A* pathfinding algorithm. Let the user click to toggle walls on the grid, and animate the search path when they press a start button."
 
 The AI will automatically write the script, wire up the interactive UI controls, hook into the live theming engine, and embed it using the correct Markdown syntax!
+
+See the [Agent Skills](./agent-skills.html) guide for full details on the skill system.
 
 ---
 
