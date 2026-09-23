@@ -5,10 +5,12 @@
 
 let mazeDensity = 25;
 let diagonal = false;
+let showStats = true;
 
 if (window.__simProps) {
   if (window.__simProps.mazeDensity !== undefined) mazeDensity = window.__simProps.mazeDensity;
   if (window.__simProps.diagonal !== undefined) diagonal = window.__simProps.diagonal;
+  if (window.__simProps.showStats !== undefined) showStats = window.__simProps.showStats;
 }
 
 window.addEventListener("bk:props", (e) => {
@@ -23,6 +25,9 @@ window.addEventListener("bk:props", (e) => {
   if (p.diagonal !== undefined && p.diagonal !== diagonal) {
     diagonal = p.diagonal;
     needSolve = true;
+  }
+  if (p.showStats !== undefined && p.showStats !== showStats) {
+    showStats = p.showStats;
   }
   
   if (needMazeRegen) {
@@ -259,6 +264,33 @@ function draw(ctx, logicalW, logicalH) {
     initGrid();
     generateMaze();
     solveAlgorithm();
+
+    // Create HTML HUD Overlay for blur effect
+    const hud = document.createElement('div');
+    hud.style.position = 'absolute';
+    hud.style.top = '15px';
+    hud.style.left = '15px';
+    hud.style.pointerEvents = 'none'; // allow clicks to pass through to grid
+    hud.style.fontFamily = 'monospace';
+    hud.style.zIndex = '10';
+    hud.style.transition = 'opacity 0.25s ease';
+    hud.style.overflow = 'hidden';
+    hud.style.boxSizing = 'border-box';
+    hud.style.borderRadius = '12px';
+    hud.style.padding = '12px 16px';
+    
+    // WebKit specific blur for Safari
+    hud.style.backdropFilter = 'blur(12px)';
+    hud.style.webkitBackdropFilter = 'blur(12px)';
+
+    if (canvas.parentElement) {
+      if (getComputedStyle(canvas.parentElement).position === 'static') {
+        canvas.parentElement.style.position = 'relative';
+      }
+      canvas.parentElement.appendChild(hud);
+    }
+    window.__pathfinderHUD = hud;
+
     initialized = true;
   }
   
@@ -300,30 +332,46 @@ function draw(ctx, logicalW, logicalH) {
       
       if (ui === "neo") {
         if (node.wall) {
-          // Neo Brutalist Wall
-          ctx.fillStyle = bkColor('text');
+          // Original Neo Brutalism vibe, but prevent white "glowing" edges in dark mode
+          let shadowColor = isDark ? "rgba(0, 0, 0, 1)" : bkColor('text');
+          let borderColor = isDark ? bkColor('line') : bkColor('text');
+          
+          ctx.fillStyle = shadowColor;
           ctx.fillRect(x + 4, y + 4, cellW - 2, cellH - 2); // Hard shadow
           ctx.fillStyle = bkColor('line-strong');
           ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
-          ctx.strokeStyle = bkColor('text');
+          ctx.strokeStyle = borderColor;
           ctx.lineWidth = 2;
           ctx.strokeRect(x + 1, y + 1, cellW - 2, cellH - 2);
         } else {
-          ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+          ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2); // Open/Closed set fill
           ctx.strokeStyle = bkColor('line');
           ctx.lineWidth = 1;
           ctx.strokeRect(x + 1, y + 1, cellW - 2, cellH - 2);
         }
       } else if (ui === "playful") {
-        // Playful Rounded Wall
-        ctx.beginPath();
-        ctx.roundRect(x + 2, y + 2, cellW - 4, cellH - 4, cellW * 0.3);
-        ctx.fill();
+        let cx = x + cellW / 2;
+        let cy = y + cellH / 2;
+        
         if (node.wall) {
-          ctx.fillStyle = isDark ? bkColor('line-strong') : "rgba(0, 0, 0, 0.4)";
+          // Playful walls: line-strong for dark mode, 65% opacity black for light mode
+          ctx.fillStyle = isDark ? bkColor('line-strong') : "rgba(0, 0, 0, 0.65)";
           ctx.beginPath();
-          ctx.roundRect(x + 4, y + 4, cellW - 8, cellH - 8, cellW * 0.2);
+          ctx.arc(cx, cy, cellW * 0.35, 0, Math.PI * 2);
           ctx.fill();
+        } else {
+          // If it has a color from open/closed set/path, draw a large soft circle
+          if (closedSet.includes(node) || openSet.includes(node) || path.includes(node)) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, cellW * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // Empty space is just a tiny subtle dot pattern
+            ctx.fillStyle = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       } else {
         // Standard sleek style
@@ -372,7 +420,13 @@ function draw(ctx, logicalW, logicalH) {
       // Hover
       if (c === hoverC && r === hoverR && !node.wall) {
         ctx.fillStyle = bkThemeMode() === "dark" ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.1)";
-        ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+        if (ui === "playful") {
+          ctx.beginPath();
+          ctx.arc(x + cellW / 2, y + cellH / 2, cellW * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+        }
       }
     }
   }
@@ -411,20 +465,36 @@ function draw(ctx, logicalW, logicalH) {
     ctx.restore();
   }
 
-  // HUD
-  ctx.save();
-  ctx.globalCompositeOperation = "source-over";
-  ctx.fillStyle = bkColor('text');
-  ctx.font = "14px monospace";
-  ctx.fillText("Drag START (Green) or END (Red). Drag space to draw WALLS.", 10, 20);
-  if (noSolution) {
-    ctx.fillStyle = "rgba(255, 50, 50, 0.9)";
-    ctx.fillText("NO PATH FOUND!", 10, 40);
-  } else if (algorithmDone) {
-    ctx.fillStyle = "rgba(50, 255, 100, 0.9)";
-    ctx.fillText(`Shortest Path Length: ${path.length} steps`, 10, 40);
+  // Update HTML HUD
+  if (window.__pathfinderHUD) {
+    const isDarkHUD = bkThemeMode() === "dark";
+    
+    // Dynamic styling for theme
+    window.__pathfinderHUD.style.background = isDarkHUD ? 'rgba(25, 25, 30, 0.6)' : 'rgba(255, 255, 255, 0.35)'; // More transparent for better blur in light mode
+    window.__pathfinderHUD.style.border = isDarkHUD ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.15)';
+    window.__pathfinderHUD.style.color = window.bkColor('text') || (isDarkHUD ? '#fff' : '#000');
+    window.__pathfinderHUD.style.boxShadow = isDarkHUD ? '0 4px 15px rgba(0,0,0,0.4)' : '0 4px 15px rgba(0,0,0,0.1)';
+
+    if (showStats) {
+      window.__pathfinderHUD.style.display = 'block';
+      window.__pathfinderHUD.style.opacity = '1';
+
+      let text2Html = '';
+      if (noSolution) {
+        text2Html = `<div style="font-weight: bold;">NO PATH FOUND!</div>`;
+      } else if (algorithmDone) {
+        const accentColor = window.bkColor('accent') || (isDarkHUD ? '#fff' : '#000');
+        text2Html = `<div style="color: ${accentColor}; font-weight: bold;">Shortest Path Length: ${path.length} steps</div>`;
+      }
+      
+      window.__pathfinderHUD.innerHTML = `
+        ${text2Html}
+      `;
+    } else {
+      window.__pathfinderHUD.style.display = 'none';
+      window.__pathfinderHUD.style.opacity = '0';
+    }
   }
-  ctx.restore();
 }
 
 window.bkSetup(1280, 720, draw);
