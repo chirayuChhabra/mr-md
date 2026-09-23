@@ -25,3 +25,4 @@ update-*.py
 playground/
 
 .idea/
+.agents/
