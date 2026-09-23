@@ -38,6 +38,7 @@ Embed images natively using Markdown syntax:
 Embed audio or video files directly by using their extensions:
 
 ![Demo Video](https://www.w3schools.com/html/mov_bbb.mp4)
+
 <small>_Video: Big Buck Bunny - © Blender Foundation_</small>
 
 Embed YouTube videos instantly:
