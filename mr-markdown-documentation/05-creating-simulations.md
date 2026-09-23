@@ -25,7 +25,7 @@ Create a new file called `mysim.js` (or `.ts`) in your project. We'll use the `m
 
 ```javascript
 // mysim.js
-window.bkSetup(800, 500, function(ctx, width, height) {
+window.bkSetup(1280, 720, function(ctx, width, height) {
   // Clear the canvas every frame
   ctx.clearRect(0, 0, width, height);
   
@@ -85,7 +85,7 @@ If you place a JSON file next to your script with the same name (e.g., `mysim.co
 Inside your simulation script, you can access these values—which update in real-time as the user interacts with the UI—via the `window.__simProps` object:
 
 ```javascript
-window.bkSetup(800, 500, function(ctx, width, height) {
+window.bkSetup(1280, 720, function(ctx, width, height) {
   const density = window.__simProps.mazeDensity;
   const allowDiag = window.__simProps.diagonal;
   

@@ -427,4 +427,4 @@ function draw(ctx, logicalW, logicalH) {
   ctx.restore();
 }
 
-window.bkSetup(1200, 800, draw);
+window.bkSetup(1280, 720, draw);
