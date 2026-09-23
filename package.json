@@ -50,7 +50,7 @@
     "type": "git",
     "url": "git+https://github.com/chirayuChhabra/mr-md.git"
   },
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@biomejs/biome": "^2.5.2",
     "@biomejs/cli-darwin-arm64": "2.5.2",

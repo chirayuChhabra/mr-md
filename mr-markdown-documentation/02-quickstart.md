@@ -55,6 +55,20 @@ bunx mr-md dev .
 
 `mr-md` will map your files to routes and generate navigation for the chapter based on your file structure.
 
+## AI-Assisted Simulations
+
+`mr-md` ships with a built-in agent skill that lets AI coding assistants generate interactive simulations for your lessons. To install the skill globally:
+
+```bash
+bunx mr-md skill install
+```
+
+Once installed, your AI coding agent can create context-aware simulations that integrate with the `mr-md` theme system, canvas API, and host-controlled UI — out of the box.
+
+See the [Agent Skills](./agent-skills) guide for details.
+
+---
+
 ## Building for Production
 
 When the content is ready to be published, you can compile the Markdown files into a static HTML bundle.

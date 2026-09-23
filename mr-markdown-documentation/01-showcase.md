@@ -6,7 +6,7 @@ slug: showcase
 
 # Showcase
 
-Welcome to `mr-md` version 3! This page is a kitchen sink of all the features and modules available in the framework.
+Welcome to `mr-md` version 4! This page is a kitchen sink of all the features and modules available in the framework.
 
 ## Rich Prose and Typography
 

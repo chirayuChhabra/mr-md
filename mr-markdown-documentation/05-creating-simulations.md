@@ -132,3 +132,17 @@ canvas.addEventListener("pointermove", (e) => {
 
 ### `window.bkFitCanvas(canvas, requestedW, requestedH, options)`
 If you are doing custom canvas rendering (like WebGL instead of the 2D context provided by `bkSetup`), call this manually to apply the CSS scaling transforms needed to make your canvas responsive inside the `mr-md` layout container.
+
+---
+
+## 4. AI-Assisted Simulation Creation
+
+`mr-md` v4 introduces an agent skill that enables AI coding assistants to generate simulations that follow all the conventions above automatically.
+
+Install the skill and let your AI agent handle the boilerplate:
+
+```bash
+bunx mr-md skill install
+```
+
+See the [Agent Skills](./agent-skills) guide for full details on the skill system.
