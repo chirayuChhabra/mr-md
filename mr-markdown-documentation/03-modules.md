@@ -6,7 +6,7 @@ slug: modules
 
 # Modules and Features
 
-`mr-md` version 3 leverages standard Markdown syntax to elegantly construct complex modules.
+`mr-md` leverages standard Markdown syntax to elegantly construct complex modules.
 
 ## The Live Theming Engine
 
