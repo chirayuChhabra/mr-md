@@ -15,6 +15,8 @@ Embed interactive JavaScript/TypeScript sandboxes natively using a link to a `.j
 > [!important]
 > If a `.config.json` file is placed next to your script, its properties will automatically be injected into your simulation as `window.__simProps`.
 
+Learn how to build and interact with these sandboxes in the [Creating Simulations](./creating-simulations.md) guide.
+
 **Syntax:**
 ```markdown
 ![QCD Simulation](./sims/qcd.js)
