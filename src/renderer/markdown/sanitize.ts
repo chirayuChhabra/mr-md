@@ -41,7 +41,9 @@ export function mdToHtml(
 	renderer.heading = function (token) {
 		const depth = token.depth;
 		const rawText = token.text;
-		const plainText = rawText.replace(/`/g, "").replace(/<[^>]+>/g, "");
+		const plainText = DOMPurify.sanitize(rawText.replace(/`/g, ""), {
+			ALLOWED_TAGS: [],
+		});
 		const slug = plainText
 			.toLowerCase()
 			.replace(/[^a-z0-9]+/g, "-")
