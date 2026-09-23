@@ -14,7 +14,7 @@ Check out this interactive pathfinding simulation built with the `mr-md` API:
 
 ---
 
-## 1. The Easy Way: AI-Assisted Creation
+## 1. AI-Assisted Creation
 
 The fastest and most robust way to build a simulation is to let an AI coding assistant (like **Claude Code**, **Cursor**, **Codex**, or **Antigravity**) do the heavy lifting.
 
@@ -33,7 +33,7 @@ The AI will automatically write the script, wire up the interactive UI controls,
 
 ---
 
-## 2. The Hard Way: Manual Creation
+## 2. Manual Creation
 
 If you prefer to write simulations by hand, it involves two pieces: a JavaScript file that contains your simulation logic, and a simple Markdown embed to display it.
 
