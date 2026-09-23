@@ -139,7 +139,7 @@ lesson project. Do not edit the installed skill's assets as project source.
 
 Follow this order:
 
-1. Define a stable logical coordinate system, commonly `800 × 500`, plus a safe
+1. Define a stable logical coordinate system, commonly `1280 × 720`, plus a safe
    content rectangle inside it.
 2. Read initial values from `window.__simProps`.
 3. Listen for `bk:props` and update local state when host controls change.
