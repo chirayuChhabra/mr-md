@@ -1,6 +1,19 @@
 // @ts-nocheck
 import { normalIcons, proIcons, proPalettes } from "./icons.js";
 
+export function bkThemeColors(styles) {
+	return {
+		bg: styles.getPropertyValue("--bg").trim(),
+		paper: styles.getPropertyValue("--paper").trim(),
+		line: styles.getPropertyValue("--line").trim(),
+		"line-strong": styles.getPropertyValue("--line-strong").trim(),
+		text: styles.getPropertyValue("--ink").trim(),
+		"text-light": styles.getPropertyValue("--muted").trim(),
+		accent: styles.getPropertyValue("--accent").trim(),
+		"accent-soft": styles.getPropertyValue("--accent-soft").trim(),
+	};
+}
+
 export function bkBroadcastTheme(targetWindow) {
 	const root = document.documentElement;
 	const styles = getComputedStyle(root);
@@ -8,16 +21,7 @@ export function bkBroadcastTheme(targetWindow) {
 		theme: root.dataset.theme || "light",
 		palette: root.dataset.palette || "ink",
 		ui: root.dataset.ui || "standard",
-		colors: {
-			bg: styles.getPropertyValue("--bg").trim(),
-			paper: styles.getPropertyValue("--paper").trim(),
-			line: styles.getPropertyValue("--line").trim(),
-			"line-strong": styles.getPropertyValue("--line-strong").trim(),
-			text: styles.getPropertyValue("--text").trim(),
-			"text-light": styles.getPropertyValue("--text-light").trim(),
-			accent: styles.getPropertyValue("--accent").trim(),
-			"accent-soft": styles.getPropertyValue("--accent-soft").trim(),
-		},
+		colors: bkThemeColors(styles),
 	};
 	if (targetWindow) {
 		targetWindow.postMessage({ type: "bk:theme-sync", state }, "*");

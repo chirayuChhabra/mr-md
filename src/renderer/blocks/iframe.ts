@@ -38,6 +38,11 @@ window.addEventListener("message", function(e) {
   if (e.source !== window.parent) return;
   if (e.data && e.data.type === "bk:theme-sync") {
     window.__bkTheme = e.data.state;
+    const background = window.__bkTheme.colors && window.__bkTheme.colors.bg;
+    if (background) {
+      document.documentElement.style.backgroundColor = background;
+      document.body.style.backgroundColor = background;
+    }
     window.dispatchEvent(new CustomEvent("bk:theme-changed", { detail: window.__bkTheme }));
   }
 });
@@ -76,7 +81,7 @@ window.bkFitCanvas = function(c, requestedW, requestedH, options) {
   
   const scaleX = window.innerWidth / w;
   const scaleY = window.innerHeight / h;
-  const cssScale = Math.max(scaleX, scaleY);
+  const cssScale = Math.min(scaleX, scaleY);
   
   c.style.transform = "scale(" + cssScale + ")";
   
