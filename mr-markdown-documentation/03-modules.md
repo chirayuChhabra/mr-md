@@ -15,7 +15,7 @@ Embed interactive JavaScript/TypeScript sandboxes natively using a link to a `.j
 > [!important]
 > If a `.config.json` file is placed next to your script, its properties will automatically be injected into your simulation as `window.__simProps`.
 
-Learn how to build and interact with these sandboxes in the [Creating Simulations](./creating-simulations.md) guide.
+Learn how to build and interact with these sandboxes in the [Creating Simulations](./creating-simulations.html) guide.
 
 **Syntax:**
 ```markdown
@@ -36,7 +36,7 @@ To embed an interactive quiz, create a `.quiz.md` file containing the quiz confi
 ![Test your knowledge](./quizzes/sample.quiz.md)
 ```
 
-Quizzes are written using a simple markdown syntax! See the [Creating Quizzes](./creating-quizzes.md) guide for details.
+Quizzes are written using a simple markdown syntax! See the [Creating Quizzes](./creating-quizzes.html) guide for details.
 
 **Result:**
 
