@@ -99,16 +99,15 @@ If the URL ends in `.mp4`, `.webm`, or `.mov`, it renders as a video player. For
 
 **Syntax:**
 ```markdown
-![Demo Video](https://www.w3schools.com/html/mov_bbb.mp4)
+![Demo Video: Big Buck Bunny - © Blender Foundation](https://www.w3schools.com/html/mov_bbb.mp4)
 
 ![Horse Sound Effect](https://www.w3schools.com/html/horse.mp3)
 ```
 
 **Result:**
 
-![Demo Video](https://www.w3schools.com/html/mov_bbb.mp4)
+![Demo Video: Big Buck Bunny - © Blender Foundation](https://www.w3schools.com/html/mov_bbb.mp4)
 
-<small>_Video: Big Buck Bunny - © Blender Foundation_</small>
 
 ![Horse Sound Effect](https://www.w3schools.com/html/horse.mp3)
 
