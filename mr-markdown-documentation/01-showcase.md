@@ -31,17 +31,13 @@ Structure your content side-by-side with responsive column components:
 
 ## Media
 
-Embed images natively using Markdown syntax:
-
+### Images
 ![Nature](./media/nature.jpg)
 
-Embed audio or video files directly by using their extensions:
-
+### Video and Audio
 ![Demo Video: Big Buck Bunny - © Blender Foundation](https://www.w3schools.com/html/mov_bbb.mp4)
 
-
-Embed YouTube videos instantly:
-
+### YouTube
 ![Mr Markdown Tutorial](https://youtube.com/watch?v=dQw4w9WgXcQ)
 
 ## Math
