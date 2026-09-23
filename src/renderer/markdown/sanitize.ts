@@ -50,7 +50,7 @@ export function mdToHtml(
 		if (depth === 2 || depth === 3) {
 			headings.push({ id, text: plainText, level: depth });
 		}
-		const parsedText = this.parser.parseInline(token.tokens);
+		const parsedText = sanitizeHtml(this.parser.parseInline(token.tokens));
 		return `<h${depth} id="${id}" class="bk-heading-${depth}">${parsedText}</h${depth}>`;
 	};
 
