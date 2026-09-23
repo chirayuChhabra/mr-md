@@ -38,18 +38,20 @@ export function mdToHtml(
 	let headingIdCounter = 0;
 
 	const renderer = new marked.Renderer();
-	renderer.heading = ({ depth, text }) => {
-		const plainText = text.replace(/<[^>]+>/g, "");
+	renderer.heading = function (token) {
+		const depth = token.depth;
+		const rawText = token.text;
+		const plainText = rawText.replace(/`/g, "").replace(/<[^>]+>/g, "");
 		const slug = plainText
 			.toLowerCase()
 			.replace(/[^a-z0-9]+/g, "-")
 			.replace(/(^-|-$)/g, "");
 		const id = `bk-${slug}-${headingIdCounter++}`;
 		if (depth === 2 || depth === 3) {
-			const plainText = text.replace(/<[^>]+>/g, "");
 			headings.push({ id, text: plainText, level: depth });
 		}
-		return `<h${depth} id="${id}" class="bk-heading-${depth}">${text}</h${depth}>`;
+		const parsedText = this.parser.parseInline(token.tokens);
+		return `<h${depth} id="${id}" class="bk-heading-${depth}">${parsedText}</h${depth}>`;
 	};
 
 	renderer.hr = () => {
