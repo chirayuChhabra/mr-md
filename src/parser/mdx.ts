@@ -2,6 +2,7 @@ import matter from "@11ty/gray-matter";
 import * as fs from "fs";
 import { marked, type Tokens } from "marked";
 import * as path from "path";
+import pc from "picocolors";
 import { z } from "zod";
 import {
 	extractYouTubeId,
@@ -418,7 +419,9 @@ export function buildLesson(
 		copyAssets(outDir);
 	}
 	const relPath = path.relative(process.cwd(), outPath);
-	logger.success(`Built lesson (${lesson.blocks.length} blocks) → ${relPath}`);
+	logger.log(
+		`  ${pc.gray("├─")} ${pc.green(relPath)} ${pc.gray(`(${lesson.blocks.length} blocks)`)}`,
+	);
 	return outPath;
 }
 
@@ -440,8 +443,8 @@ export function buildChapter(
 		copyAssets(outDir);
 	}
 	const relPath = path.relative(process.cwd(), outPath);
-	logger.success(
-		`Built chapter (${chapter.lessons.length} lessons) → ${relPath}`,
+	logger.log(
+		`  ${pc.gray("├─")} ${pc.green(relPath)} ${pc.gray(`(${chapter.lessons.length} lessons)`)}`,
 	);
 	return outPath;
 }

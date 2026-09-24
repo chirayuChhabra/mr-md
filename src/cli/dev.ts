@@ -60,7 +60,9 @@ export async function runDev(args: string[]) {
 	const contentBase = isDirectory ? targetPath : path.dirname(filePath);
 	const outDir = path.resolve(contentBase, "out");
 
-	logger.dev(`Preparing dev server for: ${targetPath}`);
+	const displayPath =
+		path.relative(process.cwd(), targetPath) || path.basename(targetPath);
+	logger.dev(`Preparing dev server for: ${displayPath}`);
 
 	let server: BunServer | undefined;
 	let singleFileSlug = "";
@@ -120,7 +122,9 @@ export async function runDev(args: string[]) {
 					buildLesson(lesson, { outDir, contentBase });
 				}
 			}
-			logger.succeedSpinner(`Build successful for ${targetPath}.`);
+			logger.succeedSpinner(
+				`Build successful for ${path.relative(process.cwd(), targetPath) || path.basename(targetPath)}.`,
+			);
 			if (previousFileSlug && previousFileSlug !== singleFileSlug) {
 				server?.publish("livereload", `redirect:/${singleFileSlug}.html`);
 			} else {
@@ -158,7 +162,9 @@ export async function runDev(args: string[]) {
 			}, 200);
 		},
 	);
-	logger.watch(`Watching ${contentBase} for changes...`);
+	logger.watch(
+		`Watching ${path.relative(process.cwd(), contentBase) || path.basename(contentBase)} for changes...`,
+	);
 
 	const basePort = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 	let port = basePort;
@@ -172,9 +178,6 @@ export async function runDev(args: string[]) {
 		const decodedPath = decodeURIComponent(url.pathname);
 
 		const isUpgrade = srv.upgrade(req);
-		if (!isUpgrade) {
-			logger.httpReq(clientIp, method, decodedPath);
-		}
 
 		const handle = async () => {
 			if (isUpgrade) return null;
@@ -313,7 +316,13 @@ export async function runDev(args: string[]) {
 
 		const res = await handle();
 		if (res) {
-			logger.httpRes(clientIp, res.status, Date.now() - start);
+			logger.http(
+				clientIp,
+				method,
+				decodedPath,
+				res.status,
+				Date.now() - start,
+			);
 			return res;
 		}
 	};

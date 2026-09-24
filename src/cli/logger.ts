@@ -1,8 +1,8 @@
 import boxen from "boxen";
-import clipboardy from "clipboardy";
 import { createConsola } from "consola";
 import ora from "ora";
 import pc from "picocolors";
+import { writeText } from "tinyclip";
 
 export const consola = createConsola({
 	level: 4,
@@ -45,6 +45,7 @@ export const logger = {
 		safeLog(`${badge("ERROR", pc.bgRed)} ${msg}`);
 		if (err) console.error(err);
 	},
+	log: (msg: string) => safeLog(msg),
 	dev: (msg: string) => safeLog(`${badge("DEV", pc.bgMagenta)} ${msg}`),
 	watch: (msg: string) => safeLog(`${badge("WATCH", pc.bgYellow)} ${msg}`),
 	startSpinner: (msg: string) => {
@@ -70,16 +71,22 @@ export const logger = {
 		safeLog(`${badge("BUILD", pc.bgRed)} ${pc.red(msg)}`);
 	},
 	box: (msg: string) => consola.box(msg),
-	httpReq: (ip: string, method: string, path: string) => {
-		const date = new Date().toLocaleString("en-US");
+	http: (
+		ip: string,
+		method: string,
+		path: string,
+		status: number,
+		ms: number,
+	) => {
+		const time = new Date().toLocaleTimeString("en-US", { hour12: false });
+		const colorStatus =
+			status >= 400
+				? pc.red(status)
+				: status >= 300
+					? pc.yellow(status)
+					: pc.green(status);
 		safeLog(
-			`${pc.bgCyan(pc.black(pc.bold(" HTTP ")))} ${pc.gray(date)} ${pc.yellow(ip)} ${pc.greenBright(method)} ${pc.greenBright(path)}`,
-		);
-	},
-	httpRes: (ip: string, status: number, ms: number) => {
-		const date = new Date().toLocaleString("en-US");
-		safeLog(
-			`${pc.bgCyan(pc.black(pc.bold(" HTTP ")))} ${pc.gray(date)} ${pc.yellow(ip)} ${pc.greenBright(`Returned ${status} in ${ms} ms`)}`,
+			`${pc.bgCyan(pc.black(pc.bold(" HTTP ")))} ${pc.gray(time)} ${pc.greenBright(method)} ${pc.cyan(path)} → ${colorStatus} ${pc.gray(`(${ms}ms)`)}`,
 		);
 	},
 	serveBox: (
@@ -100,13 +107,11 @@ export const logger = {
 
 		text += `\nCopied local address to clipboard!`;
 
-		try {
-			clipboardy.writeSync(localUrl);
-		} catch (err: unknown) {
+		writeText(localUrl).catch((err) => {
 			logger.warn(
 				`Failed to copy address to clipboard (may be headless environment): ${err instanceof Error ? err.message : String(err)}`,
 			);
-		}
+		});
 
 		safeLog(boxen(text, { padding: 1, margin: 1, borderColor: "green" }));
 	},
