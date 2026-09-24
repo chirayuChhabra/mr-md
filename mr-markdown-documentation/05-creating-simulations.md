@@ -10,6 +10,9 @@ slug: creating-simulations
 
 Check out this interactive pathfinding simulation built with the `mr-md` API:
 
+> [!TIP]
+> **Interactive:** Drag the **START** (Green) or **END** (Red) nodes to move them. Click and drag on empty space to draw **WALLS**.
+
 ![Pathfinder Simulation](./sims/pathfinder.js)
 
 ---
@@ -49,7 +52,7 @@ window.bkSetup(1280, 720, function(ctx, width, height) {
   ctx.clearRect(0, 0, width, height);
   
   // Use dynamically synced theme colors!
-  ctx.fillStyle = window.bkColor("primary");
+  ctx.fillStyle = window.bkColor("accent");
   
   // Draw something
   ctx.fillRect(10, 10, 50, 50);
@@ -79,7 +82,8 @@ If you place a JSON file next to your script with the same name (e.g., `mysim.co
 {
   "props": {
     "mazeDensity": 25,
-    "diagonal": false
+    "diagonal": false,
+    "showStats": true
   },
   "tunables": {
     "mazeDensity": { 
@@ -91,13 +95,17 @@ If you place a JSON file next to your script with the same name (e.g., `mysim.co
     "diagonal": { 
       "label": "Allow Diagonal", 
       "type": "boolean" 
+    },
+    "showStats": {
+      "label": "Show Stats",
+      "type": "boolean"
     }
   }
 }
 ```
 
 - **`props`**: The default values that are passed to your simulation.
-- **`tunables`**: Describes how `mr-md` should render the UI. A range slider will be generated for `mazeDensity`, and a toggle switch for `diagonal`.
+- **`tunables`**: Describes how `mr-md` should render the UI. A range slider will be generated for `mazeDensity`, and toggle switches for `diagonal` and `showStats`.
 
 ### Accessing Props in your Script
 
@@ -131,9 +139,9 @@ Bootstraps a 2D canvas simulation.
 Fetches a dynamically synced color from the `mr-md` theme system. If the user toggles dark mode on your site, these colors update automatically!
 
 ```javascript
-const primaryColor = window.bkColor("primary");
-const bgColor = window.bkColor("background");
-const textRed = window.bkColor("red");
+const accentColor = window.bkColor("accent");
+const bgColor = window.bkColor("bg");
+const textColor = window.bkColor("text");
 ```
 
 ### `window.bkCanvasPoint(event, canvas)`
