@@ -46,7 +46,7 @@ export function renderLayout(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escHtml(title)}</title>
 ${description ? `<meta name="description" content="${escHtml(description)}">` : ""}
-<link rel="icon" type="image/png" href="data:image/png;base64,${defaultFaviconBase64}">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${defaultFaviconBase64}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,650;9..144,760&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@600;700;800&family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
 

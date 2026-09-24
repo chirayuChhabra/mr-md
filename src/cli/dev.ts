@@ -187,7 +187,7 @@ export async function runDev(args: string[]) {
 					defaultFaviconBase64,
 				} = require("../renderer/templates/favicon.js");
 				return new Response(Buffer.from(defaultFaviconBase64, "base64"), {
-					headers: { "Content-Type": "image/png" },
+					headers: { "Content-Type": "image/svg+xml" },
 				});
 			}
 
