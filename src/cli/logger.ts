@@ -72,7 +72,7 @@ export const logger = {
 	},
 	box: (msg: string) => consola.box(msg),
 	http: (
-		ip: string,
+		_ip: string,
 		method: string,
 		path: string,
 		status: number,
@@ -107,7 +107,7 @@ export const logger = {
 
 		text += `\nCopied local address to clipboard!`;
 
-		writeText(localUrl).catch((err) => {
+		writeText(localUrl).catch((err: unknown) => {
 			logger.warn(
 				`Failed to copy address to clipboard (may be headless environment): ${err instanceof Error ? err.message : String(err)}`,
 			);
