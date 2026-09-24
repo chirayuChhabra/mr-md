@@ -182,6 +182,15 @@ export async function runDev(args: string[]) {
 		const handle = async () => {
 			if (isUpgrade) return null;
 
+			if (decodedPath === "/favicon.ico") {
+				const {
+					defaultFaviconBase64,
+				} = require("../renderer/templates/favicon.js");
+				return new Response(Buffer.from(defaultFaviconBase64, "base64"), {
+					headers: { "Content-Type": "image/png" },
+				});
+			}
+
 			if (
 				!isDirectory &&
 				(decodedPath === "/" || decodedPath === "/index.html") &&
