@@ -7,17 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0-alpha.1] - 2026-09-24
+
 ### Added
 - **Agent Skill System**: First-class simulation skill for AI coding agents (`skills/mr-md-simulations/`)
 - **Skill CLI**: `mr-md skill install|update|status|remove` commands for managing agent skills
 - **Theme color helper**: Exported `bkThemeColors()` utility for consistent theme token mapping
 
 ### Fixed
+- **Markdown video parsing**: Fix parser failing to extract video media elements due to trailing text in the same paragraph
+- **Heading parsing**: Parse inline markdown in headings and strip formatting for TOC, using DOMPurify to sanitize text and satisfy CodeQL
+- **Simulation size**: Standardize all simulation logical size to 1280×720 (16:9)
+- **Skill CLI**: Pin skill source to exact git tag for reliability
 - **Canvas fitting**: Simulations now use `Math.min` scaling to prevent clipping and overflow
 - **Dark-mode text contrast**: Theme bridge reads `--ink` and `--muted` CSS properties instead of undefined `--text` / `--text-light`
 - **Iframe background sync**: Simulation iframe background now syncs to host `--bg` color on theme change
 
 ### Changed
+- **UI styles**: Overhauled pathfinder HUD and simulation theme styles
+- **Dependencies & Logging**: Updated dependencies and refined CLI logs
+- **Documentation**: Various documentation improvements, standardizing AI assistant names, adding cross-references, and grouping media embeds
 - **License**: Changed from PolyForm Noncommercial 1.0.0 to Apache License 2.0
 
 ---
@@ -68,7 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated to Bun runtime
 - Replaced gray-matter with @11ty/gray-matter for js-yaml v4 support
 
-[Unreleased]: https://github.com/chirayuChhabra/mr-md/compare/v3.1.1...HEAD
+[Unreleased]: https://github.com/chirayuChhabra/mr-md/compare/v4.0.0-alpha.1...HEAD
+[4.0.0-alpha.1]: https://github.com/chirayuChhabra/mr-md/compare/v3.1.1...v4.0.0-alpha.1
 [3.1.1]: https://github.com/chirayuChhabra/mr-md/compare/v3.1.0...v3.1.1
 [3.1.0]: https://github.com/chirayuChhabra/mr-md/compare/v3.0.2...v3.1.0
 [3.0.2]: https://github.com/chirayuChhabra/mr-md/compare/v3.0.1...v3.0.2
