@@ -87,11 +87,6 @@ export function generateChapterContent(targetPath: string): string {
 		.replace(/[-_]/g, " ")
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 
-	const { logger } = require("./logger.js");
-	logger.info(
-		`Derived chapter title "${formattedTitle}" from folder name "${folderName}"`,
-	);
-
 	return `---
 title: ${formattedTitle}
 chapter: true
