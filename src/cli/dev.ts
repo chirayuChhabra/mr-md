@@ -155,6 +155,8 @@ export async function runDev(args: string[]) {
 		(_eventType, filename) => {
 			if (
 				!filename ||
+				filename === "mrmd.config.json" ||
+				filename.endsWith("mrmd.config.json") ||
 				!/\.(md|mdx|js|ts|jsx|tsx|json|css|png|jpg|jpeg|gif|svg|webp|ico)$/i.test(
 					filename,
 				)
@@ -252,7 +254,11 @@ export async function runDev(args: string[]) {
 			}
 
 			if (decodedPath === "/__api/config" && method === "POST") {
-				const { saveConfig, MrmdConfigSchema } = require("../config.js");
+				const {
+					loadConfig,
+					saveConfig,
+					MrmdConfigSchema,
+				} = require("../config.js");
 				try {
 					const body = await req.json();
 					const result = MrmdConfigSchema.safeParse(body);
@@ -262,8 +268,15 @@ export async function runDev(args: string[]) {
 							{ status: 400 },
 						);
 					}
+					const existing = loadConfig(contentBase);
 					saveConfig(contentBase, result.data);
-					await rebuild();
+
+					// Only trigger rebuild if lesson sequence or structure changed
+					const oldLessons = JSON.stringify(existing?.lessons ?? []);
+					const newLessons = JSON.stringify(result.data.lessons ?? []);
+					if (oldLessons !== newLessons) {
+						await rebuild();
+					}
 					return Response.json({ success: true });
 				} catch (err: unknown) {
 					return Response.json(

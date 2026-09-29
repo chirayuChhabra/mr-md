@@ -276,10 +276,13 @@ html, body {
 /* ── Infinite Horizontal Canvas (Niri Ribbon) ────── */
 
 .st-infinite-canvas {
+	position: relative;
 	flex: 1;
 	overflow-x: auto;
 	overflow-y: hidden;
-	scroll-behavior: auto;
+	scroll-snap-type: x proximity;
+	scroll-padding: 0 24px;
+	overscroll-behavior-x: contain;
 	display: flex;
 	align-items: stretch;
 	padding: 20px 24px;
@@ -313,6 +316,8 @@ html, body {
 
 .st-slab-curriculum {
 	width: 440px;
+	scroll-snap-align: start;
+	scroll-snap-stop: normal;
 }
 
 .st-slab-header {
@@ -686,6 +691,8 @@ html, body {
 .st-slab-course {
 	width: min(1360px, calc(100vw - 120px));
 	min-width: 1040px;
+	scroll-snap-align: center;
+	scroll-snap-stop: normal;
 	background: #000000;
 }
 
@@ -734,6 +741,8 @@ html, body {
 
 .st-slab-design {
 	width: 440px;
+	scroll-snap-align: end;
+	scroll-snap-stop: normal;
 	overflow-y: auto;
 }
 

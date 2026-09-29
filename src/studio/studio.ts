@@ -67,6 +67,9 @@ function smoothScrollTo(
 	}
 
 	isNavigatingAnimation = true;
+	// Temporarily bypass scroll-snap during programmatic glide so button clicks are silky-smooth
+	element.style.scrollSnapType = "none";
+
 	const startTime = performance.now();
 
 	function easeOutCubic(t: number): number {
@@ -81,6 +84,9 @@ function smoothScrollTo(
 		if (progress < 1) {
 			requestAnimationFrame(step);
 		} else {
+			element.scrollLeft = targetLeft;
+			// Re-enable magnetic docking detents once glide completes
+			element.style.scrollSnapType = "x proximity";
 			isNavigatingAnimation = false;
 			syncNavButtons();
 		}
@@ -92,26 +98,37 @@ function syncNavButtons() {
 	if (isNavigatingAnimation) return;
 	const canvas = $("st-infinite-canvas");
 	if (!canvas) return;
+
 	const scrollLeft = canvas.scrollLeft;
 	const clientWidth = canvas.clientWidth;
-	const center = scrollLeft + clientWidth / 2;
+	const scrollWidth = canvas.scrollWidth;
 
-	const curriculum = $("st-slab-curriculum");
-	const course = $("st-slab-course");
-	const design = $("st-slab-design");
+	const courseSlab = $("st-slab-course");
+	if (!courseSlab) return;
 
-	if (!course || !curriculum || !design) return;
-
-	const dCurriculum = Math.abs(
-		curriculum.offsetLeft + curriculum.offsetWidth / 2 - center,
+	// Calculate deterministic positions of the 3 magnetic dock detents:
+	// 1. Curriculum detent (left-docked)
+	const curriculumDetent = 0;
+	// 2. Desktop course detent (center-docked)
+	const courseDetent = Math.max(
+		0,
+		courseSlab.offsetLeft -
+			Math.max(0, (clientWidth - courseSlab.offsetWidth) / 2),
 	);
-	const dCourse = Math.abs(course.offsetLeft + course.offsetWidth / 2 - center);
-	const dDesign = Math.abs(design.offsetLeft + design.offsetWidth / 2 - center);
+	// 3. Themes & Design detent (right-docked)
+	const designDetent = Math.max(0, scrollWidth - clientWidth);
 
-	let activeTarget = "course";
+	const dCurriculum = Math.abs(scrollLeft - curriculumDetent);
+	const dCourse = Math.abs(scrollLeft - courseDetent);
+	const dDesign = Math.abs(scrollLeft - designDetent);
+
+	let activeTarget: "curriculum" | "course" | "design" = "course";
 	const min = Math.min(dCurriculum, dCourse, dDesign);
-	if (min === dCurriculum) activeTarget = "curriculum";
-	else if (min === dDesign) activeTarget = "design";
+	if (min === dCurriculum) {
+		activeTarget = "curriculum";
+	} else if (min === dDesign) {
+		activeTarget = "design";
+	}
 
 	document.querySelectorAll(".st-nav-slab-btn").forEach((btn) => {
 		if ((btn as HTMLElement).dataset.target === activeTarget) {
@@ -725,6 +742,15 @@ function wireEvents() {
 				scrollRaf = requestAnimationFrame(() => {
 					syncNavButtons();
 				});
+			},
+			{ passive: true },
+		);
+
+		// Synchronize active nav button when magnetic snap docking settles
+		canvas.addEventListener(
+			"scrollend",
+			() => {
+				syncNavButtons();
 			},
 			{ passive: true },
 		);
