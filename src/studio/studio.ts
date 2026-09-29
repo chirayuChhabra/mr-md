@@ -8,6 +8,10 @@ let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let editingCustomPaletteKey: string | null = null;
 let lessonSearchQuery = "";
 let activeLessonFile = "";
+let isInitialBoot = true;
+let isDraggingLesson = false;
+let draggedLessonIndex: number | null = null;
+let isNavigatingAnimation = false;
 
 const studioBroadcast =
 	typeof BroadcastChannel !== "undefined"
@@ -50,6 +54,74 @@ function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 
 // ── Niri Ribbon Spatial Navigation ─────────────────────────────────────────
 
+function smoothScrollTo(
+	element: HTMLElement,
+	targetLeft: number,
+	duration = 380,
+) {
+	const startLeft = element.scrollLeft;
+	const change = targetLeft - startLeft;
+	if (Math.abs(change) < 2) {
+		element.scrollLeft = targetLeft;
+		return;
+	}
+
+	isNavigatingAnimation = true;
+	const startTime = performance.now();
+
+	function easeOutCubic(t: number): number {
+		return 1 - (1 - t) ** 3;
+	}
+
+	function step(now: number) {
+		const elapsed = now - startTime;
+		const progress = Math.min(elapsed / duration, 1);
+		const eased = easeOutCubic(progress);
+		element.scrollLeft = startLeft + change * eased;
+		if (progress < 1) {
+			requestAnimationFrame(step);
+		} else {
+			isNavigatingAnimation = false;
+			syncNavButtons();
+		}
+	}
+	requestAnimationFrame(step);
+}
+
+function syncNavButtons() {
+	if (isNavigatingAnimation) return;
+	const canvas = $("st-infinite-canvas");
+	if (!canvas) return;
+	const scrollLeft = canvas.scrollLeft;
+	const clientWidth = canvas.clientWidth;
+	const center = scrollLeft + clientWidth / 2;
+
+	const curriculum = $("st-slab-curriculum");
+	const course = $("st-slab-course");
+	const design = $("st-slab-design");
+
+	if (!course || !curriculum || !design) return;
+
+	const dCurriculum = Math.abs(
+		curriculum.offsetLeft + curriculum.offsetWidth / 2 - center,
+	);
+	const dCourse = Math.abs(course.offsetLeft + course.offsetWidth / 2 - center);
+	const dDesign = Math.abs(design.offsetLeft + design.offsetWidth / 2 - center);
+
+	let activeTarget = "course";
+	const min = Math.min(dCurriculum, dCourse, dDesign);
+	if (min === dCurriculum) activeTarget = "curriculum";
+	else if (min === dDesign) activeTarget = "design";
+
+	document.querySelectorAll(".st-nav-slab-btn").forEach((btn) => {
+		if ((btn as HTMLElement).dataset.target === activeTarget) {
+			btn.classList.add("active");
+		} else {
+			btn.classList.remove("active");
+		}
+	});
+}
+
 function scrollToSlab(target: "curriculum" | "course" | "design") {
 	const canvas = $("st-infinite-canvas");
 	if (!canvas) return;
@@ -63,19 +135,21 @@ function scrollToSlab(target: "curriculum" | "course" | "design") {
 	});
 
 	if (target === "curriculum") {
-		canvas.scrollTo({ left: 0, behavior: "smooth" });
+		smoothScrollTo(canvas, 0);
 	} else if (target === "design") {
-		canvas.scrollTo({ left: canvas.scrollWidth, behavior: "smooth" });
+		smoothScrollTo(canvas, canvas.scrollWidth - canvas.clientWidth);
 	} else {
-		// Center the course slab
+		// Center the course slab smoothly
 		const courseSlab = $("st-slab-course");
 		if (courseSlab) {
 			const slabLeft = courseSlab.offsetLeft;
 			const slabWidth = courseSlab.offsetWidth;
 			const canvasWidth = canvas.clientWidth;
-			const targetScroll =
-				slabLeft - Math.max(0, (canvasWidth - slabWidth) / 2);
-			canvas.scrollTo({ left: targetScroll, behavior: "smooth" });
+			const targetScroll = Math.max(
+				0,
+				slabLeft - Math.max(0, (canvasWidth - slabWidth) / 2),
+			);
+			smoothScrollTo(canvas, targetScroll);
 		}
 	}
 }
@@ -102,10 +176,13 @@ async function fetchConfig() {
 		renderAll();
 		updateLiveViewport();
 
-		// Center the desktop course slab initially on load
-		setTimeout(() => {
-			scrollToSlab("course");
-		}, 150);
+		// Only center the desktop course slab on initial cold page load
+		if (isInitialBoot) {
+			isInitialBoot = false;
+			setTimeout(() => {
+				scrollToSlab("course");
+			}, 120);
+		}
 	} catch (err) {
 		console.error("Failed to load studio config:", err);
 		setStatus("unsaved", "Error loading");
@@ -282,15 +359,25 @@ function renderCurriculum() {
       </div>
     `;
 
-		// Select lesson and slide into viewport
+		// Select lesson without snapping the camera
 		card.addEventListener("click", (e) => {
+			if (isDraggingLesson) return;
+			if ((e.target as HTMLElement).closest(".st-card-actions")) return;
+			updateLiveViewport(file);
+		});
+
+		// Double-click to select AND smoothly glide camera to desktop course
+		card.addEventListener("dblclick", (e) => {
+			if (isDraggingLesson) return;
 			if ((e.target as HTMLElement).closest(".st-card-actions")) return;
 			updateLiveViewport(file);
 			scrollToSlab("course");
 		});
 
-		// Drag & drop handlers
+		// Drag & drop handlers with tactile indicators
 		card.addEventListener("dragstart", (e) => {
+			isDraggingLesson = true;
+			draggedLessonIndex = idx;
 			card.classList.add("dragging");
 			e.dataTransfer?.setData("text/plain", String(idx));
 			if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
@@ -299,37 +386,76 @@ function renderCurriculum() {
 		card.addEventListener("dragend", () => {
 			card.classList.remove("dragging");
 			document.querySelectorAll(".st-lesson-card").forEach((i) => {
-				i.classList.remove("drag-over");
+				i.classList.remove(
+					"drop-indicator-top",
+					"drop-indicator-bottom",
+					"drag-over",
+				);
 			});
+			const endZone = $("st-lesson-list")?.querySelector(".st-drop-end-zone");
+			if (endZone) endZone.classList.remove("active");
+			setTimeout(() => {
+				isDraggingLesson = false;
+				draggedLessonIndex = null;
+			}, 120);
 		});
 
 		card.addEventListener("dragover", (e) => {
 			e.preventDefault();
-			card.classList.add("drag-over");
 			if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+
+			const rect = card.getBoundingClientRect();
+			const isBelow = e.clientY > rect.top + rect.height / 2;
+
+			document.querySelectorAll(".st-lesson-card").forEach((c) => {
+				if (c !== card) {
+					c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
+				}
+			});
+
+			if (isBelow) {
+				card.classList.remove("drop-indicator-top");
+				card.classList.add("drop-indicator-bottom");
+			} else {
+				card.classList.remove("drop-indicator-bottom");
+				card.classList.add("drop-indicator-top");
+			}
 		});
 
-		card.addEventListener("dragleave", () => {
-			card.classList.remove("drag-over");
+		card.addEventListener("dragleave", (e) => {
+			const rel = e.relatedTarget as Node | null;
+			if (!rel || !card.contains(rel)) {
+				card.classList.remove("drop-indicator-top", "drop-indicator-bottom");
+			}
 		});
 
 		card.addEventListener("drop", (e) => {
 			e.preventDefault();
-			card.classList.remove("drag-over");
-			const fromIdx = parseInt(
-				e.dataTransfer?.getData("text/plain") || "-1",
-				10,
-			);
-			const toIdx = idx;
+			e.stopPropagation();
+			card.classList.remove("drop-indicator-top", "drop-indicator-bottom");
 
-			if (fromIdx >= 0 && fromIdx !== toIdx) {
-				const list = [...(currentConfig.lessons || [])];
-				const [moved] = list.splice(fromIdx, 1);
-				list.splice(toIdx, 0, moved);
-				currentConfig.lessons = list;
-				renderCurriculum();
-				saveConfig();
+			const fromIdx =
+				draggedLessonIndex !== null
+					? draggedLessonIndex
+					: parseInt(e.dataTransfer?.getData("text/plain") || "-1", 10);
+
+			if (fromIdx < 0) return;
+
+			const rect = card.getBoundingClientRect();
+			const isBelow = e.clientY > rect.top + rect.height / 2;
+			const targetSlot = isBelow ? idx + 1 : idx;
+
+			if (targetSlot === fromIdx || targetSlot === fromIdx + 1) {
+				return;
 			}
+
+			const list = [...(currentConfig.lessons || [])];
+			const [moved] = list.splice(fromIdx, 1);
+			const newIndex = fromIdx < targetSlot ? targetSlot - 1 : targetSlot;
+			list.splice(newIndex, 0, moved);
+			currentConfig.lessons = list;
+			renderCurriculum();
+			saveConfig();
 		});
 
 		// Remove lesson
@@ -357,6 +483,51 @@ function renderCurriculum() {
 
 		container.appendChild(card);
 	});
+
+	// Dedicated drop zone at the bottom of curriculum list
+	const endDropZone = document.createElement("div");
+	endDropZone.className = "st-drop-end-zone";
+	endDropZone.innerHTML = `
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14M19 12l-7 7-7-7"/>
+    </svg>
+    <span>Drop here to place at bottom</span>
+  `;
+
+	endDropZone.addEventListener("dragover", (e) => {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+		endDropZone.classList.add("active");
+		document.querySelectorAll(".st-lesson-card").forEach((c) => {
+			c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
+		});
+	});
+
+	endDropZone.addEventListener("dragleave", () => {
+		endDropZone.classList.remove("active");
+	});
+
+	endDropZone.addEventListener("drop", (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		endDropZone.classList.remove("active");
+
+		const fromIdx =
+			draggedLessonIndex !== null
+				? draggedLessonIndex
+				: parseInt(e.dataTransfer?.getData("text/plain") || "-1", 10);
+
+		const list = [...(currentConfig.lessons || [])];
+		if (fromIdx >= 0 && fromIdx < list.length - 1) {
+			const [moved] = list.splice(fromIdx, 1);
+			list.push(moved);
+			currentConfig.lessons = list;
+			renderCurriculum();
+			saveConfig();
+		}
+	});
+
+	container.appendChild(endDropZone);
 }
 
 function renderUnassigned() {
@@ -541,6 +712,41 @@ function wireEvents() {
 				scrollToSlab(target);
 			}
 		});
+	});
+
+	// Canvas scroll sync with segmented nav buttons
+	const canvas = $("st-infinite-canvas");
+	if (canvas) {
+		let scrollRaf: number | null = null;
+		canvas.addEventListener(
+			"scroll",
+			() => {
+				if (scrollRaf) cancelAnimationFrame(scrollRaf);
+				scrollRaf = requestAnimationFrame(() => {
+					syncNavButtons();
+				});
+			},
+			{ passive: true },
+		);
+	}
+
+	// Keyboard navigation shortcuts (1: Curriculum, 2: Course, 3: Design)
+	window.addEventListener("keydown", (e) => {
+		const target = e.target as HTMLElement | null;
+		const isEditing =
+			target &&
+			(target.tagName === "INPUT" ||
+				target.tagName === "TEXTAREA" ||
+				target.isContentEditable);
+		if (!isEditing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+			if (e.key === "1") {
+				scrollToSlab("curriculum");
+			} else if (e.key === "2") {
+				scrollToSlab("course");
+			} else if (e.key === "3") {
+				scrollToSlab("design");
+			}
+		}
 	});
 
 	// Viewport reload button
