@@ -6,6 +6,7 @@ let currentConfig: MrmdConfig = {};
 let unassignedFiles: string[] = [];
 let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let editingCustomPaletteKey: string | null = null;
+let lessonSearchQuery = "";
 
 const studioBroadcast =
 	typeof BroadcastChannel !== "undefined"
@@ -42,7 +43,7 @@ function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 		dot.classList.add("dirty");
 		text.textContent = msg || "Unsaved changes";
 	} else {
-		text.textContent = msg || "All changes saved";
+		text.textContent = msg || "All changes synced";
 	}
 }
 
@@ -264,22 +265,53 @@ function renderLiveAppearancePreview() {
 	}
 }
 
+function inferLessonTag(fileName: string, title: string): string {
+	const text = `${fileName} ${title}`.toLowerCase();
+	if (
+		text.includes("wave") ||
+		text.includes("sim") ||
+		text.includes("interactive")
+	) {
+		return "Simulation";
+	}
+	if (text.includes("quiz") || text.includes("exam") || text.includes("test")) {
+		return "Quiz";
+	}
+	if (
+		text.includes("welcome") ||
+		text.includes("intro") ||
+		text.includes("start")
+	) {
+		return "Overview";
+	}
+	return "Lesson";
+}
+
 function renderCurriculum() {
 	const container = $("st-lesson-list");
+	const countPill = $("st-lesson-count-pill");
 	if (!container) return;
 
-	const lessons = currentConfig.lessons || [];
+	const allLessons = currentConfig.lessons || [];
+
+	if (countPill) {
+		countPill.textContent = `${allLessons.length} ${allLessons.length === 1 ? "lesson" : "lessons"}`;
+	}
+
 	container.innerHTML = "";
 
-	if (lessons.length === 0) {
+	if (allLessons.length === 0) {
 		container.innerHTML = `
-      <div style="padding: 24px; text-align: center; color: var(--st-text-muted); font-size: 13px;">
-        No lessons in course yet. Click "New Lesson" or add from unassigned files below.
+      <div style="padding: 36px 20px; text-align: center; color: var(--st-text-muted); font-size: 13px; background: var(--st-surface-elevated); border: 1px dashed var(--st-border); border-radius: var(--st-radius);">
+        <p style="font-weight: 600; color: var(--st-text); margin-bottom: 4px;">No lessons in course yet</p>
+        <p style="font-size: 12px;">Click "+ New Lesson" above or add from unassigned drafts below.</p>
       </div>`;
 		return;
 	}
 
-	lessons.forEach((entry, idx) => {
+	const query = lessonSearchQuery.trim().toLowerCase();
+
+	allLessons.forEach((entry, idx) => {
 		const file = typeof entry === "string" ? entry : entry.file;
 		const title =
 			typeof entry === "string"
@@ -290,6 +322,18 @@ function renderCurriculum() {
 						.replace(/\b\w/g, (c) => c.toUpperCase())
 				: entry.title || file;
 
+		// Search filtering
+		if (
+			query &&
+			!title.toLowerCase().includes(query) &&
+			!file.toLowerCase().includes(query)
+		) {
+			return;
+		}
+
+		const tag = inferLessonTag(file, title);
+		const formattedNum = String(idx + 1).padStart(2, "0");
+
 		const el = document.createElement("div");
 		el.className = "st-lesson-item";
 		el.draggable = true;
@@ -297,19 +341,31 @@ function renderCurriculum() {
 
 		el.innerHTML = `
       <div class="st-lesson-left">
-        <span class="st-drag-handle">⠿</span>
-        <span class="st-lesson-num">${idx + 1}</span>
+        <span class="st-drag-handle" title="Drag to reorder">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="8" cy="5" r="2.2"/>
+            <circle cx="16" cy="5" r="2.2"/>
+            <circle cx="8" cy="12" r="2.2"/>
+            <circle cx="16" cy="12" r="2.2"/>
+            <circle cx="8" cy="19" r="2.2"/>
+            <circle cx="16" cy="19" r="2.2"/>
+          </svg>
+        </span>
+        <span class="st-lesson-num">${formattedNum}</span>
         <div class="st-lesson-info">
-          <div class="st-lesson-title">${escapeHtml(title)}</div>
+          <div class="st-lesson-title-row">
+            <span class="st-lesson-title">${escapeHtml(title)}</span>
+            <span class="st-lesson-pill-tag">${tag}</span>
+          </div>
           <div class="st-lesson-file">${escapeHtml(file)}</div>
         </div>
       </div>
       <div class="st-lesson-actions">
-        <a class="st-btn st-btn-sm" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Preview lesson">
-          ↗
+        <a class="st-btn st-btn-sm st-btn-ghost" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Preview lesson in new tab">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
-        <button class="st-btn st-btn-sm st-btn-danger-ghost st-btn-remove-lesson" data-index="${idx}" title="Remove from course">
-          ✕
+        <button class="st-btn st-btn-sm st-btn-danger-ghost st-btn-remove-lesson" data-index="${idx}" title="Remove from course curriculum">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     `;
@@ -381,7 +437,12 @@ function renderCurriculum() {
 function renderUnassigned() {
 	const panel = $("st-unassigned-panel");
 	const container = $("st-unassigned-list");
+	const countPill = $("st-unassigned-count-pill");
 	if (!panel || !container) return;
+
+	if (countPill) {
+		countPill.textContent = `${unassignedFiles.length} ${unassignedFiles.length === 1 ? "draft" : "drafts"}`;
+	}
 
 	if (unassignedFiles.length === 0) {
 		panel.style.display = "none";
@@ -396,7 +457,7 @@ function renderUnassigned() {
 		pill.className = "st-unassigned-pill";
 		pill.innerHTML = `
       <span>${escapeHtml(file)}</span>
-      <button type="button" title="Add to curriculum">＋</button>
+      <button type="button" title="Add to course curriculum">＋ Add</button>
     `;
 
 		pill.querySelector("button")?.addEventListener("click", () => {
@@ -415,10 +476,14 @@ function renderMetadata() {
 	const titleInput = $<HTMLInputElement>("st-meta-title");
 	const descInput = $<HTMLTextAreaElement>("st-meta-desc");
 	const authorInput = $<HTMLInputElement>("st-meta-author");
+	const headerTitle = $("st-header-title");
+
+	const courseTitle = currentConfig.title || "Interactive Course";
 
 	if (titleInput) titleInput.value = currentConfig.title || "";
 	if (descInput) descInput.value = currentConfig.description || "";
 	if (authorInput) authorInput.value = currentConfig.author || "";
+	if (headerTitle) headerTitle.textContent = courseTitle;
 }
 
 function renderThemeMode() {
@@ -472,8 +537,8 @@ function renderCustomPalettes() {
 
 	if (keys.length === 0) {
 		container.innerHTML = `
-      <div style="font-size: 12px; color: var(--st-text-faint); padding: 8px 0;">
-        No custom themes created yet.
+      <div style="font-size: 12px; color: var(--st-text-muted); padding: 12px 14px; background: var(--st-surface-elevated); border: 1px dashed var(--st-border); border-radius: var(--st-radius-sm); text-align: center;">
+        No custom themes created yet. Click "+ New Theme" to design your own.
       </div>`;
 		return;
 	}
@@ -483,20 +548,34 @@ function renderCustomPalettes() {
 		const item = document.createElement("div");
 		item.className = `st-custom-theme-item ${activePalette === key ? "active" : ""}`;
 
+		const lightBg = p.light?.bg || "#f8fafc";
+		const lightPaper = p.light?.paper || "#ffffff";
+
 		item.innerHTML = `
       <div class="st-custom-theme-info">
-        <span class="st-swatch-circle" style="background: ${escapeHtml(p.accent)};"></span>
-        <span style="font-size: 13px; font-weight: 600;">${escapeHtml(p.name || key)}</span>
+        <div class="st-theme-swatch-pill" title="Accent, card & background preview">
+          <span style="flex: 2; background: ${escapeHtml(p.accent)};"></span>
+          <span style="flex: 1; background: ${escapeHtml(lightPaper)};"></span>
+          <span style="flex: 1; background: ${escapeHtml(lightBg)};"></span>
+        </div>
+        <div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--st-text);">${escapeHtml(p.name || key)}</div>
+          <div style="font-size: 11px; color: var(--st-text-muted); font-family: var(--st-mono);">${escapeHtml(p.accent)}</div>
+        </div>
       </div>
       <div style="display: flex; gap: 4px;">
-        <button class="st-btn st-btn-sm st-edit-palette-btn" title="Edit theme">✎</button>
-        <button class="st-btn st-btn-sm st-btn-danger-ghost st-delete-palette-btn" title="Delete theme">✕</button>
+        <button class="st-btn st-btn-sm st-btn-ghost st-edit-palette-btn" title="Edit theme colors">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        </button>
+        <button class="st-btn st-btn-sm st-btn-danger-ghost st-delete-palette-btn" title="Delete theme">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </div>
     `;
 
 		// Select as active palette on item click
 		item.addEventListener("click", (e) => {
-			if ((e.target as HTMLElement).tagName === "BUTTON") return;
+			if ((e.target as HTMLElement).closest("button")) return;
 			currentConfig.palette = key;
 			localStorage.setItem("bk-palette", key);
 			renderPalettes();
@@ -538,9 +617,18 @@ function renderCustomPalettes() {
 // ── Modals & Interactive Events ────────────────────────────────────────────
 
 function wireEvents() {
+	// Search filter
+	$("st-lesson-search")?.addEventListener("input", (e) => {
+		lessonSearchQuery = (e.target as HTMLInputElement).value;
+		renderCurriculum();
+	});
+
 	// Metadata inputs
 	$("st-meta-title")?.addEventListener("input", (e) => {
-		currentConfig.title = (e.target as HTMLInputElement).value;
+		const val = (e.target as HTMLInputElement).value;
+		currentConfig.title = val;
+		const headerTitle = $("st-header-title");
+		if (headerTitle) headerTitle.textContent = val || "Interactive Course";
 		queueSave();
 	});
 	$("st-meta-desc")?.addEventListener("input", (e) => {
@@ -650,6 +738,24 @@ function wireEvents() {
 	$("st-modal-cancel-theme")?.addEventListener("click", () => {
 		const m = $("st-modal-custom-theme");
 		if (m) m.style.display = "none";
+	});
+
+	// Close modals on clicking backdrop
+	[newLessonModal, $("st-modal-custom-theme")].forEach((modal) => {
+		modal?.addEventListener("click", (e) => {
+			if (e.target === modal) {
+				modal.style.display = "none";
+			}
+		});
+	});
+
+	// Escape key to dismiss modals
+	window.addEventListener("keydown", (e) => {
+		if (e.key === "Escape") {
+			if (newLessonModal) newLessonModal.style.display = "none";
+			const customThemeModal = $("st-modal-custom-theme");
+			if (customThemeModal) customThemeModal.style.display = "none";
+		}
 	});
 
 	wireCustomThemeInputs();
