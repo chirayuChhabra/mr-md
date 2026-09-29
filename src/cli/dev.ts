@@ -279,7 +279,7 @@ export async function runDev(args: string[]) {
 					const oldLessons = JSON.stringify(existing?.lessons ?? []);
 					const newLessons = JSON.stringify(result.data.lessons ?? []);
 					if (oldLessons !== newLessons) {
-						await rebuild(false);
+						await rebuild(true);
 					}
 					return Response.json({ success: true });
 				} catch (err: unknown) {

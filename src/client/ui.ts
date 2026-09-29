@@ -263,7 +263,15 @@ export function bkWireLastLessonTracking() {
 					?.replace(".html", "");
 
 				if (cardPath === lastLesson) {
-					card.scrollIntoView({ behavior: "auto", block: "center" });
+					if (window.self !== window.top) {
+						// Inside iframe (e.g. Studio): scroll only the iframe window vertically
+						window.scrollTo({
+							top: (card as HTMLElement).offsetTop - 120,
+							behavior: "auto",
+						});
+					} else {
+						card.scrollIntoView({ behavior: "auto", block: "center" });
+					}
 					card.classList.add("bk-last-opened");
 					break;
 				}

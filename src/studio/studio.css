@@ -280,7 +280,7 @@ html, body {
 	flex: 1;
 	overflow-x: auto;
 	overflow-y: hidden;
-	scroll-snap-type: none;
+	scroll-snap-type: x mandatory;
 	scroll-padding: 0 24px;
 	overscroll-behavior-x: contain;
 	overflow-anchor: none;
@@ -318,7 +318,7 @@ html, body {
 .st-slab-curriculum {
 	width: 440px;
 	scroll-snap-align: start;
-	scroll-snap-stop: always;
+	scroll-snap-stop: normal;
 }
 
 .st-slab-header {
@@ -692,7 +692,7 @@ html, body {
 .st-slab-design {
 	width: 440px;
 	scroll-snap-align: end;
-	scroll-snap-stop: always;
+	scroll-snap-stop: normal;
 	overflow-y: auto;
 }
 

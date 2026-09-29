@@ -54,50 +54,6 @@ function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 
 // ── Niri Ribbon Spatial Navigation ─────────────────────────────────────────
 
-let snapDisarmTimer: ReturnType<typeof setTimeout> | null = null;
-let lockedScrollLeft = 0;
-let isUserGesture = false;
-let userGestureTimer: ReturnType<typeof setTimeout> | null = null;
-
-function markUserGesture() {
-	if (isNavigatingAnimation) return;
-	isUserGesture = true;
-	armScrollSnap();
-	if (userGestureTimer) clearTimeout(userGestureTimer);
-	userGestureTimer = setTimeout(() => {
-		isUserGesture = false;
-		const canvas = $("st-infinite-canvas");
-		if (canvas) lockedScrollLeft = canvas.scrollLeft;
-		disarmScrollSnap();
-	}, 400);
-}
-
-function armScrollSnap() {
-	if (isNavigatingAnimation) return;
-	const canvas = $("st-infinite-canvas");
-	if (!canvas) return;
-
-	if (canvas.style.scrollSnapType !== "x mandatory") {
-		canvas.style.scrollSnapType = "x mandatory";
-	}
-	if (snapDisarmTimer) clearTimeout(snapDisarmTimer);
-	snapDisarmTimer = setTimeout(() => {
-		disarmScrollSnap();
-	}, 600);
-}
-
-function disarmScrollSnap() {
-	if (isNavigatingAnimation) return;
-	if (snapDisarmTimer) {
-		clearTimeout(snapDisarmTimer);
-		snapDisarmTimer = null;
-	}
-	const canvas = $("st-infinite-canvas");
-	if (canvas && canvas.style.scrollSnapType !== "none") {
-		canvas.style.scrollSnapType = "none";
-	}
-}
-
 function smoothScrollTo(
 	element: HTMLElement,
 	targetLeft: number,
@@ -107,15 +63,12 @@ function smoothScrollTo(
 	const change = targetLeft - startLeft;
 	if (Math.abs(change) < 2) {
 		element.scrollLeft = targetLeft;
-		lockedScrollLeft = targetLeft;
 		syncNavButtons();
 		return;
 	}
 
 	isNavigatingAnimation = true;
-	isUserGesture = false;
-	if (snapDisarmTimer) clearTimeout(snapDisarmTimer);
-	if (userGestureTimer) clearTimeout(userGestureTimer);
+	// Temporarily bypass scroll-snap during programmatic glide so button clicks are silky-smooth
 	element.style.scrollSnapType = "none";
 
 	const startTime = performance.now();
@@ -133,8 +86,8 @@ function smoothScrollTo(
 			requestAnimationFrame(step);
 		} else {
 			element.scrollLeft = targetLeft;
-			lockedScrollLeft = targetLeft;
-			element.style.scrollSnapType = "none";
+			// Re-enable native magnetic hardware snap detents once glide lands
+			element.style.scrollSnapType = "x mandatory";
 			isNavigatingAnimation = false;
 			syncNavButtons();
 		}
@@ -733,47 +686,13 @@ function wireEvents() {
 		});
 	});
 
-	// Canvas scroll sync with segmented nav buttons & dynamic gesture snap
+	// Canvas scroll sync with segmented nav buttons
 	const canvas = $("st-infinite-canvas");
 	if (canvas) {
 		let scrollRaf: number | null = null;
-
-		// Arm mandatory scroll snap on active user gestures (trackpad swipe / mouse wheel / touch / scrollbar)
-		canvas.addEventListener("wheel", markUserGesture, { passive: true });
-		canvas.addEventListener("touchstart", markUserGesture, { passive: true });
-		canvas.addEventListener(
-			"pointerdown",
-			() => {
-				isUserGesture = true;
-			},
-			{ passive: true },
-		);
-		window.addEventListener(
-			"pointerup",
-			() => {
-				if (isUserGesture && !isNavigatingAnimation) {
-					setTimeout(() => {
-						isUserGesture = false;
-						lockedScrollLeft = canvas.scrollLeft;
-					}, 60);
-				}
-			},
-			{ passive: true },
-		);
-
 		canvas.addEventListener(
 			"scroll",
 			() => {
-				// Suppress accidental focus scrolling jumps caused by off-screen clicks or iframe navigation
-				if (!isUserGesture && !isNavigatingAnimation) {
-					if (Math.abs(canvas.scrollLeft - lockedScrollLeft) > 1) {
-						canvas.scrollLeft = lockedScrollLeft;
-						return;
-					}
-				}
-
-				lockedScrollLeft = canvas.scrollLeft;
-
 				if (scrollRaf) cancelAnimationFrame(scrollRaf);
 				scrollRaf = requestAnimationFrame(() => {
 					syncNavButtons();
@@ -782,14 +701,11 @@ function wireEvents() {
 			{ passive: true },
 		);
 
-		// Synchronize active nav button when magnetic snap docking settles & disarm snap
+		// Synchronize active nav button when magnetic snap docking settles
 		canvas.addEventListener(
 			"scrollend",
 			() => {
-				isUserGesture = false;
-				lockedScrollLeft = canvas.scrollLeft;
 				syncNavButtons();
-				disarmScrollSnap();
 			},
 			{ passive: true },
 		);
