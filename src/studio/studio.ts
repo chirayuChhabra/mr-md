@@ -13,6 +13,12 @@ let isDraggingLesson = false;
 let draggedLessonIndex: number | null = null;
 let isNavigatingAnimation = false;
 let pendingDeleteThemeKey: string | null = null;
+let currentGlideRaf: number | null = null;
+let cachedDetents: {
+	curriculum: number;
+	course: number;
+	design: number;
+} | null = null;
 
 const BUILTIN_PALETTES = ["ink", "field", "ember", "elixir", "trunk", "lava"];
 
@@ -57,15 +63,40 @@ function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 
 // ── Niri Ribbon Spatial Navigation ─────────────────────────────────────────
 
+function updateCachedDetents() {
+	const canvas = $("st-infinite-canvas");
+	const courseSlab = $("st-slab-course");
+	if (!canvas || !courseSlab) return;
+
+	const clientWidth = canvas.clientWidth;
+	const scrollWidth = canvas.scrollWidth;
+	const slabLeft = courseSlab.offsetLeft;
+	const slabWidth = courseSlab.offsetWidth;
+
+	cachedDetents = {
+		curriculum: 0,
+		course: Math.max(0, slabLeft - Math.max(0, (clientWidth - slabWidth) / 2)),
+		design: Math.max(0, scrollWidth - clientWidth),
+	};
+}
+
 function smoothScrollTo(
 	element: HTMLElement,
 	targetLeft: number,
-	duration = 380,
+	duration = 240,
 ) {
+	// Cancel any currently running glide immediately so multiple keypresses never fight
+	if (currentGlideRaf !== null) {
+		cancelAnimationFrame(currentGlideRaf);
+		currentGlideRaf = null;
+	}
+
 	const startLeft = element.scrollLeft;
 	const change = targetLeft - startLeft;
 	if (Math.abs(change) < 2) {
 		element.scrollLeft = targetLeft;
+		element.classList.remove("is-gliding");
+		isNavigatingAnimation = false;
 		syncNavButtons();
 		return;
 	}
@@ -85,19 +116,20 @@ function smoothScrollTo(
 		const elapsed = now - startTime;
 		const progress = Math.min(elapsed / duration, 1);
 		const eased = easeOutCubic(progress);
-		element.scrollLeft = startLeft + change * eased;
+		element.scrollLeft = Math.round(startLeft + change * eased);
 		if (progress < 1) {
-			requestAnimationFrame(step);
+			currentGlideRaf = requestAnimationFrame(step);
 		} else {
 			element.scrollLeft = targetLeft;
 			// Re-enable native magnetic hardware snap detents once glide lands
 			element.style.scrollSnapType = "x mandatory";
 			element.classList.remove("is-gliding");
 			isNavigatingAnimation = false;
+			currentGlideRaf = null;
 			syncNavButtons();
 		}
 	}
-	requestAnimationFrame(step);
+	currentGlideRaf = requestAnimationFrame(step);
 }
 
 function syncNavButtons() {
@@ -105,28 +137,15 @@ function syncNavButtons() {
 	const canvas = $("st-infinite-canvas");
 	if (!canvas) return;
 
+	if (!cachedDetents) {
+		updateCachedDetents();
+	}
+	if (!cachedDetents) return;
+
 	const scrollLeft = canvas.scrollLeft;
-	const clientWidth = canvas.clientWidth;
-	const scrollWidth = canvas.scrollWidth;
-
-	const courseSlab = $("st-slab-course");
-	if (!courseSlab) return;
-
-	// Calculate deterministic positions of the 3 magnetic dock detents:
-	// 1. Curriculum detent (left-docked)
-	const curriculumDetent = 0;
-	// 2. Desktop course detent (center-docked)
-	const courseDetent = Math.max(
-		0,
-		courseSlab.offsetLeft -
-			Math.max(0, (clientWidth - courseSlab.offsetWidth) / 2),
-	);
-	// 3. Themes & Design detent (right-docked)
-	const designDetent = Math.max(0, scrollWidth - clientWidth);
-
-	const dCurriculum = Math.abs(scrollLeft - curriculumDetent);
-	const dCourse = Math.abs(scrollLeft - courseDetent);
-	const dDesign = Math.abs(scrollLeft - designDetent);
+	const dCurriculum = Math.abs(scrollLeft - cachedDetents.curriculum);
+	const dCourse = Math.abs(scrollLeft - cachedDetents.course);
+	const dDesign = Math.abs(scrollLeft - cachedDetents.design);
 
 	let activeTarget: "curriculum" | "course" | "design" = "course";
 	const min = Math.min(dCurriculum, dCourse, dDesign);
@@ -149,6 +168,7 @@ function scrollToSlab(target: "curriculum" | "course" | "design") {
 	const canvas = $("st-infinite-canvas");
 	if (!canvas) return;
 
+	// Instant visual feedback on ribbon nav
 	document.querySelectorAll(".st-nav-slab-btn").forEach((btn) => {
 		if ((btn as HTMLElement).dataset.target === target) {
 			btn.classList.add("active");
@@ -157,23 +177,21 @@ function scrollToSlab(target: "curriculum" | "course" | "design") {
 		}
 	});
 
+	if (!cachedDetents) {
+		updateCachedDetents();
+	}
+	const detents = cachedDetents || {
+		curriculum: 0,
+		course: 500,
+		design: 1000,
+	};
+
 	if (target === "curriculum") {
-		smoothScrollTo(canvas, 0);
+		smoothScrollTo(canvas, detents.curriculum);
 	} else if (target === "design") {
-		smoothScrollTo(canvas, canvas.scrollWidth - canvas.clientWidth);
+		smoothScrollTo(canvas, detents.design);
 	} else {
-		// Center the course slab smoothly
-		const courseSlab = $("st-slab-course");
-		if (courseSlab) {
-			const slabLeft = courseSlab.offsetLeft;
-			const slabWidth = courseSlab.offsetWidth;
-			const canvasWidth = canvas.clientWidth;
-			const targetScroll = Math.max(
-				0,
-				slabLeft - Math.max(0, (canvasWidth - slabWidth) / 2),
-			);
-			smoothScrollTo(canvas, targetScroll);
-		}
+		smoothScrollTo(canvas, detents.course);
 	}
 }
 
@@ -199,6 +217,7 @@ async function fetchConfig() {
 		if (isInitialBoot) {
 			isInitialBoot = false;
 			setTimeout(() => {
+				updateCachedDetents();
 				scrollToSlab("course");
 			}, 120);
 		}
@@ -708,6 +727,111 @@ function renderCustomPalettes() {
 	});
 }
 
+// ── Universal Input Editing Detection & Shortcuts ──────────────────────────
+
+function isEditingActive(e?: KeyboardEvent | Event): boolean {
+	const checkElement = (el: HTMLElement | null | undefined): boolean => {
+		if (!el) return false;
+		const tag = el.tagName?.toUpperCase();
+		if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+			return true;
+		}
+		if (el.isContentEditable) {
+			return true;
+		}
+		if (
+			typeof el.closest === "function" &&
+			el.closest("input, textarea, select, [contenteditable='true']")
+		) {
+			return true;
+		}
+		return false;
+	};
+
+	if (checkElement(e?.target as HTMLElement)) {
+		return true;
+	}
+
+	if (checkElement(document.activeElement as HTMLElement)) {
+		return true;
+	}
+
+	const iframe = $<HTMLIFrameElement>("st-course-iframe");
+	try {
+		if (checkElement(iframe?.contentDocument?.activeElement as HTMLElement)) {
+			return true;
+		}
+	} catch {}
+
+	return false;
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+	const isKey1 = e.key === "1" || e.code === "Digit1" || e.code === "Numpad1";
+	const isKey2 = e.key === "2" || e.code === "Digit2" || e.code === "Numpad2";
+	const isKey3 = e.key === "3" || e.code === "Digit3" || e.code === "Numpad3";
+
+	// Escape key: clears focus from active inputs so 1/2/3 spatial navigation can resume immediately
+	if (e.key === "Escape") {
+		if (isEditingActive(e)) {
+			(document.activeElement as HTMLElement)?.blur?.();
+			try {
+				const iframe = $<HTMLIFrameElement>("st-course-iframe");
+				(iframe?.contentDocument?.activeElement as HTMLElement)?.blur?.();
+			} catch {}
+		}
+		return;
+	}
+
+	// Alt / Option + 1, 2, 3: Power shortcut that always jumps to the slab, even if editing
+	if (e.altKey && !e.metaKey && !e.ctrlKey) {
+		if (isKey1) {
+			e.preventDefault();
+			scrollToSlab("curriculum");
+			return;
+		}
+		if (isKey2) {
+			e.preventDefault();
+			scrollToSlab("course");
+			return;
+		}
+		if (isKey3) {
+			e.preventDefault();
+			scrollToSlab("design");
+			return;
+		}
+	}
+
+	const isEditing = isEditingActive(e);
+
+	// Cmd/Ctrl + K focuses search (when not actively inside a field)
+	if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !isEditing) {
+		e.preventDefault();
+		$("st-lesson-search")?.focus();
+		return;
+	}
+
+	// If editing is active or modifier keys (Cmd, Ctrl, Alt) are pressed, ignore bare keys
+	// This guarantees numbers like "10", "3.14", or "2026" typed in any field NEVER cause camera jumps!
+	if (isEditing || e.metaKey || e.ctrlKey || e.altKey) {
+		return;
+	}
+
+	if (isKey1) {
+		e.preventDefault();
+		scrollToSlab("curriculum");
+	} else if (isKey2) {
+		e.preventDefault();
+		scrollToSlab("course");
+	} else if (isKey3) {
+		e.preventDefault();
+		scrollToSlab("design");
+	} else if (e.key === "/") {
+		e.preventDefault();
+		$("st-lesson-search")?.focus();
+	}
+}
+
 // ── Event Wiring ───────────────────────────────────────────────────────────
 
 function wireEvents() {
@@ -824,8 +948,21 @@ function wireEvents() {
 
 	// Live preview iframe navigation listener (sync URL & active card without moving canvas)
 	const iframe = $<HTMLIFrameElement>("st-course-iframe");
+	const wireIframeShortcuts = () => {
+		try {
+			if (iframe?.contentWindow) {
+				iframe.contentWindow.removeEventListener(
+					"keydown",
+					handleGlobalKeydown,
+				);
+				iframe.contentWindow.addEventListener("keydown", handleGlobalKeydown);
+			}
+		} catch {}
+	};
+
 	if (iframe) {
 		iframe.addEventListener("load", () => {
+			wireIframeShortcuts();
 			try {
 				const path = iframe.contentWindow?.location.pathname;
 				if (path) {
@@ -868,32 +1005,13 @@ function wireEvents() {
 	}
 
 	// Keyboard navigation shortcuts (1: Curriculum, 2: Course, 3: Design)
-	window.addEventListener("keydown", (e) => {
-		const target = e.target as HTMLElement | null;
-		const isEditing =
-			target &&
-			(target.tagName === "INPUT" ||
-				target.tagName === "TEXTAREA" ||
-				target.isContentEditable);
-		if (!isEditing && !e.metaKey && !e.ctrlKey && !e.altKey) {
-			if (e.key === "1") {
-				scrollToSlab("curriculum");
-			} else if (e.key === "2") {
-				scrollToSlab("course");
-			} else if (e.key === "3") {
-				scrollToSlab("design");
-			} else if (e.key === "/") {
-				e.preventDefault();
-				$("st-lesson-search")?.focus();
-			}
-		} else if (
-			(e.metaKey || e.ctrlKey) &&
-			e.key.toLowerCase() === "k" &&
-			!isEditing
-		) {
-			e.preventDefault();
-			$("st-lesson-search")?.focus();
-		}
+	window.addEventListener("keydown", handleGlobalKeydown);
+	wireIframeShortcuts();
+
+	// Window resize: recompute detents and active nav button
+	window.addEventListener("resize", () => {
+		updateCachedDetents();
+		syncNavButtons();
 	});
 
 	// Viewport reload button
