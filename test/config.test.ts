@@ -100,8 +100,10 @@ describe("Config Engine", () => {
 		expect(existsSync(join(tempDir, "mrmd.config.json"))).toBe(true);
 	});
 
-	test("configToBuildOptions extracts appearance settings", () => {
+	test("configToBuildOptions extracts appearance and metadata settings", () => {
 		const config: MrmdConfig = {
+			title: "Quantum Physics",
+			author: "Dr. Feynman",
 			theme: "dark",
 			palette: "neon",
 			ui: "playful",
@@ -119,5 +121,25 @@ describe("Config Engine", () => {
 		expect(opts.ui).toBe("playful");
 		expect(opts.font).toBe("Inter, sans-serif");
 		expect(opts.customPalettes?.neon?.accent).toBe("#ff00ff");
+		expect(opts.author).toBe("Dr. Feynman");
+		expect(opts.courseTitle).toBe("Quantum Physics");
+	});
+
+	test("generateChapterContent includes title, description, and author", async () => {
+		const { generateChapterContent } = await import("../src/cli/chapter.js");
+		const config: MrmdConfig = {
+			title: "Electronics 101",
+			description: "Learn circuits: from scratch",
+			author: "Ada Lovelace",
+			lessons: ["intro.md"],
+		};
+		await writeFile(join(tempDir, "intro.md"), "# Intro");
+		saveConfig(tempDir, config);
+
+		const chapterMd = generateChapterContent(tempDir);
+		expect(chapterMd).toContain('title: "Electronics 101"');
+		expect(chapterMd).toContain('description: "Learn circuits: from scratch"');
+		expect(chapterMd).toContain('author: "Ada Lovelace"');
+		expect(chapterMd).toContain("- [Intro](./intro.md)");
 	});
 });

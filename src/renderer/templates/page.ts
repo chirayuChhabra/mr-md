@@ -55,8 +55,9 @@ export function renderPage(
 	const extraSidebar = `
 		${lesson.meta.parentSlug ? `<div style="margin-top: 8px;"><a href="index.html" class="bk-back-link" aria-label="Back to Chapter" style="margin-bottom: 12px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>Back to Chapter</a></div>` : `<div style="margin-top: 8px;"></div>`}
 	`;
-	const authorHtml = lesson.meta.author
-		? `<div class="bk-sidebar-author">By ${escHtml(lesson.meta.author)}</div>`
+	const effectiveAuthor = lesson.meta.author || opts.author;
+	const authorHtml = effectiveAuthor
+		? `<div class="bk-sidebar-author">By ${escHtml(effectiveAuthor)}</div>`
 		: "";
 	const tagsHtml = lesson.meta.tags?.length
 		? `<div class="bk-tag-row">${lesson.meta.tags.map((tag) => `<span>${escHtml(tag)}</span>`).join("")}</div>`

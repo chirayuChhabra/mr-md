@@ -41,21 +41,25 @@ export function generateChapterContent(targetPath: string): string {
 		})
 		.join("\n");
 
-	const title =
-		config.title ??
+	const rawTitle =
+		config.title?.trim() ||
 		path
 			.basename(targetPath)
 			.replace(/^\d+[-_]/, "")
 			.replace(/[-_]/g, " ")
 			.replace(/\b\w/g, (c) => c.toUpperCase());
 
-	const description = config.description
-		? `description: ${config.description}\n`
+	const descLine = config.description?.trim()
+		? `description: ${JSON.stringify(config.description.trim())}\n`
+		: "";
+
+	const authorLine = config.author?.trim()
+		? `author: ${JSON.stringify(config.author.trim())}\n`
 		: "";
 
 	return `---
-title: ${title}
-${description}chapter: true
+title: ${JSON.stringify(rawTitle)}
+${descLine}${authorLine}chapter: true
 ---
 ${listItems}
 `;

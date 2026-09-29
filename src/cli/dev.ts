@@ -101,6 +101,9 @@ export async function runDev(args: string[]) {
 			} else {
 				const content = fs.readFileSync(filePath, "utf-8");
 				await preloadLanguagesFromMarkdown(content);
+				const { ensureConfig, configToBuildOptions } = require("../config.js");
+				const config = ensureConfig(contentBase);
+				const configOpts = configToBuildOptions(config);
 				const parsed = require("@11ty/gray-matter")(content);
 				const isChapter =
 					parsed.data.chapter === true || parsed.data.type === "chapter";
@@ -108,14 +111,14 @@ export async function runDev(args: string[]) {
 				if (isChapter) {
 					const chapter = parseChapter(
 						content,
-						{ outDir, contentBase },
+						{ outDir, contentBase, ...configOpts },
 						contentBase,
 					);
-					buildChapter(chapter, { outDir, contentBase });
+					buildChapter(chapter, { outDir, contentBase, ...configOpts });
 				} else {
 					const lesson = parseLesson(
 						content,
-						{ outDir, contentBase },
+						{ outDir, contentBase, ...configOpts },
 						contentBase,
 						undefined,
 						path.basename(filePath),
@@ -126,7 +129,7 @@ export async function runDev(args: string[]) {
 						if (fs.existsSync(staleFile)) fs.unlinkSync(staleFile);
 					}
 					singleFileSlug = newSlug;
-					buildLesson(lesson, { outDir, contentBase });
+					buildLesson(lesson, { outDir, contentBase, ...configOpts });
 				}
 			}
 			logger.succeedSpinner(
@@ -275,10 +278,20 @@ export async function runDev(args: string[]) {
 					const existing = loadConfig(contentBase);
 					saveConfig(contentBase, result.data);
 
-					// Only trigger rebuild if lesson sequence or structure changed
-					const oldLessons = JSON.stringify(existing?.lessons ?? []);
-					const newLessons = JSON.stringify(result.data.lessons ?? []);
-					if (oldLessons !== newLessons) {
+					// Trigger rebuild if lessons or course metadata (title, description, author) changed
+					const oldSnapshot = JSON.stringify({
+						lessons: existing?.lessons ?? [],
+						title: existing?.title ?? "",
+						description: existing?.description ?? "",
+						author: existing?.author ?? "",
+					});
+					const newSnapshot = JSON.stringify({
+						lessons: result.data.lessons ?? [],
+						title: result.data.title ?? "",
+						description: result.data.description ?? "",
+						author: result.data.author ?? "",
+					});
+					if (oldSnapshot !== newSnapshot) {
 						await rebuild(true);
 					}
 					return Response.json({ success: true });

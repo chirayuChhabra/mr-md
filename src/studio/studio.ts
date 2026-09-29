@@ -553,9 +553,15 @@ function renderMetadata() {
 
 	const courseTitle = currentConfig.title || "Interactive Course";
 
-	if (titleInput) titleInput.value = currentConfig.title || "";
-	if (descInput) descInput.value = currentConfig.description || "";
-	if (authorInput) authorInput.value = currentConfig.author || "";
+	if (titleInput && document.activeElement !== titleInput) {
+		titleInput.value = currentConfig.title || "";
+	}
+	if (descInput && document.activeElement !== descInput) {
+		descInput.value = currentConfig.description || "";
+	}
+	if (authorInput && document.activeElement !== authorInput) {
+		authorInput.value = currentConfig.author || "";
+	}
 	if (headerTitle) headerTitle.textContent = courseTitle;
 }
 
@@ -859,6 +865,14 @@ function wireEvents() {
 	$("st-meta-author")?.addEventListener("input", (e) => {
 		currentConfig.author = (e.target as HTMLInputElement).value;
 		queueSave();
+	});
+
+	// Immediate save on blur / change
+	["st-meta-title", "st-meta-desc", "st-meta-author"].forEach((id) => {
+		$(id)?.addEventListener("change", () => {
+			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+			saveConfig();
+		});
 	});
 
 	// Theme mode segmented control

@@ -261,6 +261,10 @@ export interface BuildOptions {
 	standalone?: boolean;
 	/** Custom palette definitions from mrmd.config.json */
 	customPalettes?: Record<string, CustomPalette>;
+	/** Course author from mrmd.config.json */
+	author?: string;
+	/** Course title from mrmd.config.json */
+	courseTitle?: string;
 }
 
 /** Configuration for simulation blocks */
@@ -325,6 +329,7 @@ export interface ChapterMeta {
 	title: string;
 	slug: string;
 	description?: string;
+	author?: string;
 	status?: "completed" | "active" | "locked";
 }
 

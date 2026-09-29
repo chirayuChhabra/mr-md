@@ -16,16 +16,26 @@ export function renderChapter(
 
 	const timelineHtml = renderChapterTimeline(chapter);
 
+	const author = chapter.meta.author || opts.author;
+	const authorHtml = author
+		? `<p class="bk-deck" style="margin-top: 6px; font-size: 13px; color: var(--muted); font-weight: 500;">By ${escHtml(author)}</p>`
+		: "";
+
 	const contentHtml = `
     <article class="bk-content" style="max-width: 1000px; margin: 0 auto;">
       <header class="bk-hero" style="border-bottom: none;">
-        <p class="bk-eyebrow">Chapter</p>
+        <p class="bk-eyebrow">Course</p>
         <h1>${escHtml(chapter.meta.title)}</h1>
         ${chapter.meta.description ? `<p class="bk-deck">${escHtml(chapter.meta.description)}</p>` : ""}
+        ${authorHtml}
       </header>
       ${timelineHtml}
     </article>
 	`;
+
+	const extraSidebar = author
+		? `<div class="bk-sidebar-author" style="margin-top: 4px;">By ${escHtml(author)}</div>`
+		: "";
 
 	return renderLayout(
 		chapter.meta.title,
@@ -33,5 +43,6 @@ export function renderChapter(
 		navHtml,
 		contentHtml,
 		opts,
+		extraSidebar,
 	);
 }

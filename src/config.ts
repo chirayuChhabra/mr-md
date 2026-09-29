@@ -146,6 +146,8 @@ export function configToBuildOptions(
 	if (config.favicon) opts.favicon = config.favicon;
 	if (config.head) opts.head = config.head;
 	if (config.customPalettes) opts.customPalettes = config.customPalettes;
+	if (config.author) opts.author = config.author;
+	if (config.title) opts.courseTitle = config.title;
 	return opts;
 }
 

@@ -297,6 +297,7 @@ const ChapterFrontmatterSchema = z
 		title: z.string().optional(),
 		slug: z.string().optional(),
 		description: z.string().optional(),
+		author: z.string().optional(),
 		status: z.enum(["completed", "active", "locked"]).optional(),
 		chapter: z.boolean().optional(),
 		type: z.string().optional(),
