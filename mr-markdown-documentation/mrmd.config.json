@@ -1,0 +1,15 @@
+{
+  "title": "Mr Markdown Documentation",
+  "description": "An opinionated Markdown framework for building interactive learning pages.",
+  "theme": "auto",
+  "palette": "ink",
+  "ui": "standard",
+  "lessons": [
+    "01-showcase.md",
+    "02-quickstart.md",
+    "03-modules.md",
+    "04-creating-quizzes.md",
+    "05-creating-simulations.md",
+    "06-agent-skills.md"
+  ]
+}
