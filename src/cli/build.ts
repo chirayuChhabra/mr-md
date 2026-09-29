@@ -83,6 +83,9 @@ export async function runBuild(args: string[]) {
 	if (fs.statSync(targetPath).isDirectory()) {
 		try {
 			const { generateChapterContent } = require("./chapter.js");
+			const { ensureConfig, configToBuildOptions } = require("../config.js");
+			const config = ensureConfig(targetPath);
+			const configOpts = configToBuildOptions(config);
 			const chapterContent = generateChapterContent(targetPath);
 			await preloadLanguagesFromMarkdown(chapterContent);
 
@@ -94,10 +97,10 @@ export async function runBuild(args: string[]) {
 
 			const chapter = parseChapter(
 				chapterContent,
-				{ outDir, contentBase },
+				{ outDir, contentBase, ...configOpts },
 				contentBase,
 			);
-			buildChapter(chapter, { outDir, contentBase });
+			buildChapter(chapter, { outDir, contentBase, ...configOpts });
 
 			logger.succeedSpinner(
 				`Build successful for directory ${path.relative(process.cwd(), targetPath) || path.basename(targetPath)}.`,

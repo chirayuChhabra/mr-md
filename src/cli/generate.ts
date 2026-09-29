@@ -4,6 +4,7 @@ import * as path from "path";
 
 const require = createRequire(import.meta.url);
 
+import { loadConfig, saveConfig } from "../config.js";
 import { logger } from "./logger.js";
 import { getOriginalCwd } from "./utils.js";
 
@@ -19,8 +20,6 @@ export function runGenerate(args: string[]) {
 }
 
 function generateSingle(rawName: string) {
-	const originalName = rawName;
-
 	// Normalize all slashes to POSIX-style for consistent parsing across platforms
 	const normalizedPath = rawName.replace(/\\/g, "/");
 	const parsedPath = path.parse(normalizedPath);
@@ -37,9 +36,10 @@ function generateSingle(rawName: string) {
 	}
 
 	if (parsedPath.ext === ".md" || rawName.endsWith(".md")) {
-		logger.info(`Stripped '.md' extension from input name: '${originalName}'`);
+		logger.info(`Stripped '.md' extension from input name: '${rawName}'`);
 	}
 
+	// Strip any existing numeric prefix (e.g., "01-intro" → "intro")
 	const prefixMatch = fileNameBase.match(/^\d+-*/);
 	if (prefixMatch) {
 		fileNameBase = fileNameBase.replace(/^\d+-*/, "");
@@ -52,40 +52,7 @@ function generateSingle(rawName: string) {
 		fileNameBase = "untitled";
 	}
 
-	rawName = fileNameBase;
-
-	let files: string[] = [];
-	if (fs.existsSync(targetDir)) {
-		files = fs.readdirSync(targetDir).filter((f) => {
-			return f.endsWith(".md") && fs.statSync(path.join(targetDir, f)).isFile();
-		});
-	}
-
-	let maxIndex = 0;
-
-	if (files.length > 0) {
-		const matter = require("@11ty/gray-matter");
-		for (const f of files) {
-			try {
-				const content = fs.readFileSync(path.join(targetDir, f), "utf-8");
-				const parsed = matter(content);
-				if (parsed.data.index !== undefined && parsed.data.index !== null) {
-					const index = Number(parsed.data.index);
-					if (Number.isInteger(index) && index > maxIndex) {
-						maxIndex = index;
-					}
-				}
-			} catch (e: unknown) {
-				logger.warn(
-					`Failed to parse file while determining max index: ${e instanceof Error ? e.message : String(e)}`,
-				);
-			}
-		}
-	}
-
-	const newIndex = maxIndex + 1;
-	const prefix = String(newIndex).padStart(2, "0");
-	const fileName = `${prefix}-${rawName}.md`;
+	const fileName = `${fileNameBase}.md`;
 	const targetPath = path.resolve(targetDir, fileName);
 
 	if (fs.existsSync(targetPath)) {
@@ -96,18 +63,27 @@ function generateSingle(rawName: string) {
 	const currentDate = new Date().toISOString().split("T")[0];
 
 	const content = `---
-index: ${newIndex}
+title: ${fileNameBase}
 date: ${currentDate}
 author: ""
 tags: []
 ---
 
-# ${rawName}
+# ${fileNameBase}
 
 Start writing your lesson here.
 
 `;
 
 	fs.writeFileSync(targetPath, content);
-	logger.info(`Generated ${fileName} with index ${newIndex}`);
+
+	// Append to mrmd.config.json if it exists
+	const config = loadConfig(targetDir);
+	if (config) {
+		config.lessons = [...(config.lessons ?? []), fileName];
+		saveConfig(targetDir, config);
+		logger.info(`Generated ${fileName} and added to mrmd.config.json`);
+	} else {
+		logger.info(`Generated ${fileName}`);
+	}
 }

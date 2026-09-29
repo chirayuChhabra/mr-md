@@ -171,6 +171,60 @@ export interface QuizFile {
 	questions: QuizQuestion[];
 }
 
+// ─── Custom Palette Types ────────────────────────────────────────────────────
+
+/** CSS custom property overrides for a custom palette (light or dark mode). */
+export interface CustomPaletteTokens {
+	accent?: string;
+	accentSoft?: string;
+	bg?: string;
+	paper?: string;
+	panel?: string;
+	panelStrong?: string;
+	ink?: string;
+	muted?: string;
+	faint?: string;
+	line?: string;
+	lineStrong?: string;
+}
+
+/** A user-defined color palette with light/dark mode variants. */
+export interface CustomPalette {
+	name?: string;
+	accent: string;
+	accentSoft?: string;
+	light?: CustomPaletteTokens;
+	dark?: CustomPaletteTokens;
+}
+
+// ─── Config Schema ───────────────────────────────────────────────────────────
+
+/** A lesson entry in mrmd.config.json — either a filename string or a detailed route. */
+export interface LessonRoute {
+	file: string;
+	title?: string;
+	slug?: string;
+	description?: string;
+}
+
+/**
+ * Root configuration schema for mrmd.config.json.
+ * Manages curriculum ordering, appearance, and custom palettes.
+ */
+export interface MrmdConfig {
+	title?: string;
+	description?: string;
+	author?: string;
+	theme?: "light" | "dark" | "auto";
+	palette?: string;
+	ui?: "standard" | "neo" | "playful";
+	font?: string;
+	favicon?: string;
+	head?: string;
+	lessons?: (string | LessonRoute)[];
+	customPalettes?: Record<string, CustomPalette>;
+}
+
 // ─── Build Options ────────────────────────────────────────────────────────────
 
 /**
@@ -184,8 +238,8 @@ export interface BuildOptions {
 	contentBase?: string;
 	/** Light or dark mode. Default: `'auto'` */
 	theme?: "light" | "dark" | "auto";
-	/** Visual color palette of the generated page. Default: `'ink'` */
-	palette?: "ink" | "field" | "ember" | "elixir" | "trunk" | "lava";
+	/** Visual color palette of the generated page. Default: `'ink'` (supports custom palette keys) */
+	palette?: string;
 	/**
 	 * Structural layout styling.
 	 * - `standard`: clean, rounded standard aesthetic
@@ -205,6 +259,8 @@ export interface BuildOptions {
 	strict?: boolean;
 	/** If true, inlines CSS and JS into a single HTML file. If false, outputs assets to an `assets/` folder. Default: `true` */
 	standalone?: boolean;
+	/** Custom palette definitions from mrmd.config.json */
+	customPalettes?: Record<string, CustomPalette>;
 }
 
 /** Configuration for simulation blocks */
