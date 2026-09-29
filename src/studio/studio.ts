@@ -7,6 +7,7 @@ let unassignedFiles: string[] = [];
 let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let editingCustomPaletteKey: string | null = null;
 let lessonSearchQuery = "";
+let activeLessonFile = "";
 
 const studioBroadcast =
 	typeof BroadcastChannel !== "undefined"
@@ -38,12 +39,12 @@ function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 	dot.className = "st-status-dot";
 	if (status === "saving") {
 		dot.classList.add("saving");
-		text.textContent = msg || "Saving changes...";
+		text.textContent = msg || "Saving...";
 	} else if (status === "unsaved") {
 		dot.classList.add("dirty");
-		text.textContent = msg || "Unsaved changes";
+		text.textContent = msg || "Unsaved";
 	} else {
-		text.textContent = msg || "All changes synced";
+		text.textContent = msg || "Synced";
 	}
 }
 
@@ -56,10 +57,22 @@ async function fetchConfig() {
 		const data = await res.json();
 		currentConfig = data.config || {};
 		unassignedFiles = data.unassignedFiles || [];
+
+		// Default active lesson to first lesson in curriculum if not set
+		if (
+			!activeLessonFile &&
+			currentConfig.lessons &&
+			currentConfig.lessons.length > 0
+		) {
+			const first = currentConfig.lessons[0];
+			activeLessonFile = typeof first === "string" ? first : first.file;
+		}
+
 		renderAll();
+		updateLiveViewport();
 	} catch (err) {
 		console.error("Failed to load studio config:", err);
-		setStatus("unsaved", "Error loading config");
+		setStatus("unsaved", "Error loading");
 	}
 }
 
@@ -87,80 +100,46 @@ function queueSave() {
 	}, 600);
 }
 
-const BUILTIN_PALETTES: Record<
-	string,
-	{
-		name: string;
-		accent: string;
-		lightBg: string;
-		lightPaper: string;
-		darkBg: string;
-		darkPaper: string;
-		lightInk: string;
-		darkInk: string;
+// ── Viewport Control ───────────────────────────────────────────────────────
+
+function updateLiveViewport(targetFile?: string) {
+	if (targetFile) {
+		activeLessonFile = targetFile;
 	}
-> = {
-	ink: {
-		name: "Ink",
-		accent: "#2563eb",
-		lightBg: "#f5f8fc",
-		lightPaper: "#ffffff",
-		darkBg: "#07090c",
-		darkPaper: "#121212",
-		lightInk: "#09090b",
-		darkInk: "#f0f0f0",
-	},
-	field: {
-		name: "Field",
-		accent: "#0d9488",
-		lightBg: "#f2fcf5",
-		lightPaper: "#ffffff",
-		darkBg: "#050a0a",
-		darkPaper: "#121212",
-		lightInk: "#09090b",
-		darkInk: "#f0f0f0",
-	},
-	ember: {
-		name: "Ember",
-		accent: "#ea580c",
-		lightBg: "#fffcf8",
-		lightPaper: "#ffffff",
-		darkBg: "#0d0a08",
-		darkPaper: "#121212",
-		lightInk: "#09090b",
-		darkInk: "#f0f0f0",
-	},
-	elixir: {
-		name: "Elixir",
-		accent: "#a855f7",
-		lightBg: "#f8f5fc",
-		lightPaper: "#ffffff",
-		darkBg: "#0b0a0e",
-		darkPaper: "#121212",
-		lightInk: "#09090b",
-		darkInk: "#f0f0f0",
-	},
-	trunk: {
-		name: "Trunk",
-		accent: "#78350f",
-		lightBg: "#fdfaf8",
-		lightPaper: "#ffffff",
-		darkBg: "#0c0a09",
-		darkPaper: "#121212",
-		lightInk: "#09090b",
-		darkInk: "#f0f0f0",
-	},
-	lava: {
-		name: "Lava",
-		accent: "#ef4444",
-		lightBg: "#fff5f5",
-		lightPaper: "#ffffff",
-		darkBg: "#0f0808",
-		darkPaper: "#121212",
-		lightInk: "#09090b",
-		darkInk: "#f0f0f0",
-	},
-};
+
+	const iframe = $<HTMLIFrameElement>("st-course-iframe");
+	const urlDisplay = $("st-viewport-url");
+	const openTabBtn = $<HTMLAnchorElement>("st-btn-open-active-tab");
+
+	let htmlPath = "/";
+	if (activeLessonFile) {
+		htmlPath = `/${activeLessonFile.replace(/\.md$/, "")}.html`;
+	}
+
+	if (iframe) {
+		const fullUrl = new URL(htmlPath, window.location.origin).href;
+		if (iframe.src !== fullUrl) {
+			iframe.src = htmlPath;
+		}
+	}
+
+	if (urlDisplay) {
+		urlDisplay.textContent = `${window.location.origin}${htmlPath}`;
+	}
+
+	if (openTabBtn) {
+		openTabBtn.href = htmlPath;
+	}
+
+	// Update active card highlight in sidebar
+	document.querySelectorAll(".st-lesson-card").forEach((card) => {
+		if ((card as HTMLElement).dataset.file === activeLessonFile) {
+			card.classList.add("active");
+		} else {
+			card.classList.remove("active");
+		}
+	});
+}
 
 // ── Rendering ──────────────────────────────────────────────────────────────
 
@@ -172,119 +151,20 @@ function renderAll() {
 	renderUiMode();
 	renderPalettes();
 	renderCustomPalettes();
-	renderLiveAppearancePreview();
 }
 
-function renderLiveAppearancePreview() {
-	const box = $("st-live-preview-box");
-	const tag = $("st-prev-tag");
-	const title = $("st-prev-title");
-	const body = $("st-prev-body");
-	const btn = $("st-prev-btn");
-	const badge = $("st-appearance-preview-badge");
-	if (!box || !btn) return;
-
-	const theme = currentConfig.theme || "auto";
-	const ui = currentConfig.ui || "standard";
-	const paletteKey = currentConfig.palette || "ink";
-
-	const isDark =
-		theme === "dark" ||
-		(theme === "auto" &&
-			typeof window !== "undefined" &&
-			window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-	// Resolve palette colors
-	let accent = "#2563eb";
-	let paper = isDark ? "#121212" : "#ffffff";
-	let ink = isDark ? "#f0f0f0" : "#09090b";
-	let paletteName = paletteKey;
-
-	const builtin = BUILTIN_PALETTES[paletteKey];
-	if (builtin) {
-		accent = builtin.accent;
-		paper = isDark ? builtin.darkPaper : builtin.lightPaper;
-		ink = isDark ? builtin.darkInk : builtin.lightInk;
-		paletteName = builtin.name;
-	} else if (currentConfig.customPalettes?.[paletteKey]) {
-		const custom = currentConfig.customPalettes[paletteKey];
-		accent = custom.accent || "#3b82f6";
-		if (isDark) {
-			paper = custom.dark?.paper || "#121620";
-			ink = custom.dark?.ink || "#f0f0f0";
-		} else {
-			paper = custom.light?.paper || "#ffffff";
-			ink = custom.light?.ink || "#09090b";
-		}
-		paletteName = custom.name || paletteKey;
+function inferBadge(
+	file: string,
+	title: string,
+): { text: string; cls: string } | null {
+	const t = `${file} ${title}`.toLowerCase();
+	if (t.includes("wave") || t.includes("sim") || t.includes("interactive")) {
+		return { text: "SIM", cls: "sim" };
 	}
-
-	if (badge) {
-		badge.textContent = `${theme.toUpperCase()} · ${ui.toUpperCase()} · ${paletteName}`;
+	if (t.includes("quiz") || t.includes("exam") || t.includes("test")) {
+		return { text: "QUIZ", cls: "quiz" };
 	}
-
-	// Apply colors
-	box.style.backgroundColor = paper;
-	box.style.color = ink;
-	if (title) title.style.color = ink;
-	if (body) body.style.color = ink;
-	if (tag) {
-		tag.style.backgroundColor = `${accent}20`;
-		tag.style.color = accent;
-	}
-
-	// Apply UI aesthetic
-	if (ui === "neo") {
-		box.style.borderRadius = "0px";
-		box.style.border = `2px solid ${ink}`;
-		box.style.boxShadow = `4px 4px 0px 0px ${ink}`;
-		box.style.fontFamily = '"Archivo", sans-serif';
-		btn.style.borderRadius = "0px";
-		btn.style.border = `2px solid ${ink}`;
-		btn.style.boxShadow = `2px 2px 0px 0px ${ink}`;
-		btn.style.backgroundColor = accent;
-	} else if (ui === "playful") {
-		box.style.borderRadius = "20px";
-		box.style.border = `1px solid ${accent}30`;
-		box.style.boxShadow = `0 10px 25px -5px ${accent}25`;
-		box.style.fontFamily = '"Nunito", -apple-system, sans-serif';
-		btn.style.borderRadius = "14px";
-		btn.style.border = "none";
-		btn.style.boxShadow = `0 4px 12px ${accent}40`;
-		btn.style.backgroundColor = accent;
-	} else {
-		// standard
-		box.style.borderRadius = "8px";
-		box.style.border = "1px solid var(--st-border)";
-		box.style.boxShadow = "0 4px 14px rgba(0, 0, 0, 0.08)";
-		box.style.fontFamily = "inherit";
-		btn.style.borderRadius = "6px";
-		btn.style.border = "none";
-		btn.style.boxShadow = "none";
-		btn.style.backgroundColor = accent;
-	}
-}
-
-function inferLessonTag(fileName: string, title: string): string {
-	const text = `${fileName} ${title}`.toLowerCase();
-	if (
-		text.includes("wave") ||
-		text.includes("sim") ||
-		text.includes("interactive")
-	) {
-		return "Simulation";
-	}
-	if (text.includes("quiz") || text.includes("exam") || text.includes("test")) {
-		return "Quiz";
-	}
-	if (
-		text.includes("welcome") ||
-		text.includes("intro") ||
-		text.includes("start")
-	) {
-		return "Overview";
-	}
-	return "Lesson";
+	return null;
 }
 
 function renderCurriculum() {
@@ -295,16 +175,15 @@ function renderCurriculum() {
 	const allLessons = currentConfig.lessons || [];
 
 	if (countPill) {
-		countPill.textContent = `${allLessons.length} ${allLessons.length === 1 ? "lesson" : "lessons"}`;
+		countPill.textContent = String(allLessons.length);
 	}
 
 	container.innerHTML = "";
 
 	if (allLessons.length === 0) {
 		container.innerHTML = `
-      <div style="padding: 36px 20px; text-align: center; color: var(--st-text-muted); font-size: 13px; background: var(--st-surface-elevated); border: 1px dashed var(--st-border); border-radius: var(--st-radius);">
-        <p style="font-weight: 600; color: var(--st-text); margin-bottom: 4px;">No lessons in course yet</p>
-        <p style="font-size: 12px;">Click "+ New Lesson" above or add from unassigned drafts below.</p>
+      <div style="padding: 24px 14px; text-align: center; color: var(--st-text-muted); font-size: 12px;">
+        No lessons in course yet.<br>Click "+ New Lesson" above.
       </div>`;
 		return;
 	}
@@ -322,7 +201,6 @@ function renderCurriculum() {
 						.replace(/\b\w/g, (c) => c.toUpperCase())
 				: entry.title || file;
 
-		// Search filtering
 		if (
 			query &&
 			!title.toLowerCase().includes(query) &&
@@ -331,72 +209,77 @@ function renderCurriculum() {
 			return;
 		}
 
-		const tag = inferLessonTag(file, title);
+		const badge = inferBadge(file, title);
 		const formattedNum = String(idx + 1).padStart(2, "0");
+		const isActive = file === activeLessonFile;
 
-		const el = document.createElement("div");
-		el.className = "st-lesson-item";
-		el.draggable = true;
-		el.dataset.index = String(idx);
+		const card = document.createElement("div");
+		card.className = `st-lesson-card ${isActive ? "active" : ""}`;
+		card.draggable = true;
+		card.dataset.index = String(idx);
+		card.dataset.file = file;
 
-		el.innerHTML = `
-      <div class="st-lesson-left">
-        <span class="st-drag-handle" title="Drag to reorder">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="8" cy="5" r="2.2"/>
-            <circle cx="16" cy="5" r="2.2"/>
-            <circle cx="8" cy="12" r="2.2"/>
-            <circle cx="16" cy="12" r="2.2"/>
-            <circle cx="8" cy="19" r="2.2"/>
-            <circle cx="16" cy="19" r="2.2"/>
+		card.innerHTML = `
+      <div class="st-card-left">
+        <span class="st-card-drag" title="Drag to reorder">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="8" cy="5" r="2.2"/><circle cx="16" cy="5" r="2.2"/>
+            <circle cx="8" cy="12" r="2.2"/><circle cx="16" cy="12" r="2.2"/>
+            <circle cx="8" cy="19" r="2.2"/><circle cx="16" cy="19" r="2.2"/>
           </svg>
         </span>
-        <span class="st-lesson-num">${formattedNum}</span>
-        <div class="st-lesson-info">
-          <div class="st-lesson-title-row">
-            <span class="st-lesson-title">${escapeHtml(title)}</span>
-            <span class="st-lesson-pill-tag">${tag}</span>
+        <span class="st-card-num">${formattedNum}</span>
+        <div class="st-card-text">
+          <div style="display: flex; align-items: center;">
+            <span class="st-card-title">${escapeHtml(title)}</span>
+            ${badge ? `<span class="st-card-badge ${badge.cls}">${badge.text}</span>` : ""}
           </div>
-          <div class="st-lesson-file">${escapeHtml(file)}</div>
+          <span class="st-card-file">${escapeHtml(file)}</span>
         </div>
       </div>
-      <div class="st-lesson-actions">
-        <a class="st-btn st-btn-sm st-btn-ghost" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Preview lesson in new tab">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      <div class="st-card-actions">
+        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open in new window">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
-        <button class="st-btn st-btn-sm st-btn-danger-ghost st-btn-remove-lesson" data-index="${idx}" title="Remove from course curriculum">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <button class="st-card-btn danger st-remove-btn" title="Remove from course">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     `;
 
+		// Select lesson on click
+		card.addEventListener("click", (e) => {
+			if ((e.target as HTMLElement).closest(".st-card-actions")) return;
+			updateLiveViewport(file);
+		});
+
 		// Drag & drop handlers
-		el.addEventListener("dragstart", (e) => {
-			el.classList.add("dragging");
+		card.addEventListener("dragstart", (e) => {
+			card.classList.add("dragging");
 			e.dataTransfer?.setData("text/plain", String(idx));
 			if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
 		});
 
-		el.addEventListener("dragend", () => {
-			el.classList.remove("dragging");
-			document.querySelectorAll(".st-lesson-item").forEach((i) => {
+		card.addEventListener("dragend", () => {
+			card.classList.remove("dragging");
+			document.querySelectorAll(".st-lesson-card").forEach((i) => {
 				i.classList.remove("drag-over");
 			});
 		});
 
-		el.addEventListener("dragover", (e) => {
+		card.addEventListener("dragover", (e) => {
 			e.preventDefault();
-			el.classList.add("drag-over");
+			card.classList.add("drag-over");
 			if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
 		});
 
-		el.addEventListener("dragleave", () => {
-			el.classList.remove("drag-over");
+		card.addEventListener("dragleave", () => {
+			card.classList.remove("drag-over");
 		});
 
-		el.addEventListener("drop", (e) => {
+		card.addEventListener("drop", (e) => {
 			e.preventDefault();
-			el.classList.remove("drag-over");
+			card.classList.remove("drag-over");
 			const fromIdx = parseInt(
 				e.dataTransfer?.getData("text/plain") || "-1",
 				10,
@@ -413,9 +296,9 @@ function renderCurriculum() {
 			}
 		});
 
-		// Remove lesson handler
-		const removeBtn = el.querySelector(".st-btn-remove-lesson");
-		removeBtn?.addEventListener("click", () => {
+		// Remove lesson
+		card.querySelector(".st-remove-btn")?.addEventListener("click", (e) => {
+			e.stopPropagation();
 			const list = [...(currentConfig.lessons || [])];
 			const removed = list.splice(idx, 1)[0];
 			currentConfig.lessons = list;
@@ -425,12 +308,18 @@ function renderCurriculum() {
 				unassignedFiles.push(fileName);
 			}
 
+			if (activeLessonFile === fileName && list.length > 0) {
+				const next = list[0];
+				activeLessonFile = typeof next === "string" ? next : next.file;
+				updateLiveViewport();
+			}
+
 			renderCurriculum();
 			renderUnassigned();
 			saveConfig();
 		});
 
-		container.appendChild(el);
+		container.appendChild(card);
 	});
 }
 
@@ -441,7 +330,7 @@ function renderUnassigned() {
 	if (!panel || !container) return;
 
 	if (countPill) {
-		countPill.textContent = `${unassignedFiles.length} ${unassignedFiles.length === 1 ? "draft" : "drafts"}`;
+		countPill.textContent = String(unassignedFiles.length);
 	}
 
 	if (unassignedFiles.length === 0) {
@@ -453,14 +342,14 @@ function renderUnassigned() {
 	container.innerHTML = "";
 
 	unassignedFiles.forEach((file) => {
-		const pill = document.createElement("div");
-		pill.className = "st-unassigned-pill";
-		pill.innerHTML = `
+		const chip = document.createElement("div");
+		chip.className = "st-unassigned-chip";
+		chip.innerHTML = `
       <span>${escapeHtml(file)}</span>
-      <button type="button" title="Add to course curriculum">＋ Add</button>
+      <button type="button" title="Add to curriculum">＋</button>
     `;
 
-		pill.querySelector("button")?.addEventListener("click", () => {
+		chip.querySelector("button")?.addEventListener("click", () => {
 			currentConfig.lessons = [...(currentConfig.lessons || []), file];
 			unassignedFiles = unassignedFiles.filter((f) => f !== file);
 			renderCurriculum();
@@ -468,7 +357,7 @@ function renderUnassigned() {
 			saveConfig();
 		});
 
-		container.appendChild(pill);
+		container.appendChild(chip);
 	});
 }
 
@@ -515,12 +404,12 @@ function renderUiMode() {
 function renderPalettes() {
 	const active = currentConfig.palette || "ink";
 	document
-		.querySelectorAll<HTMLButtonElement>("#st-builtin-palettes button")
-		.forEach((btn) => {
-			if (btn.dataset.palette === active) {
-				btn.classList.add("active");
+		.querySelectorAll<HTMLElement>("#st-builtin-palettes [data-palette]")
+		.forEach((card) => {
+			if (card.dataset.palette === active) {
+				card.classList.add("active");
 			} else {
-				btn.classList.remove("active");
+				card.classList.remove("active");
 			}
 		});
 }
@@ -537,64 +426,53 @@ function renderCustomPalettes() {
 
 	if (keys.length === 0) {
 		container.innerHTML = `
-      <div style="font-size: 12px; color: var(--st-text-muted); padding: 12px 14px; background: var(--st-surface-elevated); border: 1px dashed var(--st-border); border-radius: var(--st-radius-sm); text-align: center;">
-        No custom themes created yet. Click "+ New Theme" to design your own.
+      <div style="font-size: 11px; color: var(--st-text-muted); padding: 8px 10px; background: var(--st-surface); border: 1px dashed var(--st-border); border-radius: var(--st-radius-sm); text-align: center;">
+        No custom themes. Click "+ New" above.
       </div>`;
 		return;
 	}
 
 	keys.forEach((key) => {
 		const p = palettes[key];
-		const item = document.createElement("div");
-		item.className = `st-custom-theme-item ${activePalette === key ? "active" : ""}`;
+		const card = document.createElement("div");
+		card.className = `st-custom-card ${activePalette === key ? "active" : ""}`;
 
-		const lightBg = p.light?.bg || "#f8fafc";
-		const lightPaper = p.light?.paper || "#ffffff";
-
-		item.innerHTML = `
-      <div class="st-custom-theme-info">
-        <div class="st-theme-swatch-pill" title="Accent, card & background preview">
-          <span style="flex: 2; background: ${escapeHtml(p.accent)};"></span>
-          <span style="flex: 1; background: ${escapeHtml(lightPaper)};"></span>
-          <span style="flex: 1; background: ${escapeHtml(lightBg)};"></span>
-        </div>
+		card.innerHTML = `
+      <div class="st-custom-card-left">
+        <span class="st-custom-pip" style="background: ${escapeHtml(p.accent)};"></span>
         <div>
-          <div style="font-size: 13px; font-weight: 600; color: var(--st-text);">${escapeHtml(p.name || key)}</div>
-          <div style="font-size: 11px; color: var(--st-text-muted); font-family: var(--st-mono);">${escapeHtml(p.accent)}</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--st-text);">${escapeHtml(p.name || key)}</div>
+          <div style="font-size: 10px; font-family: var(--st-mono); color: var(--st-text-muted);">${escapeHtml(p.accent)}</div>
         </div>
       </div>
-      <div style="display: flex; gap: 4px;">
-        <button class="st-btn st-btn-sm st-btn-ghost st-edit-palette-btn" title="Edit theme colors">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+      <div style="display: flex; gap: 2px;">
+        <button class="st-card-btn st-edit-palette-btn" title="Edit theme">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         </button>
-        <button class="st-btn st-btn-sm st-btn-danger-ghost st-delete-palette-btn" title="Delete theme">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <button class="st-card-btn danger st-delete-palette-btn" title="Delete theme">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     `;
 
-		// Select as active palette on item click
-		item.addEventListener("click", (e) => {
+		card.addEventListener("click", (e) => {
 			if ((e.target as HTMLElement).closest("button")) return;
 			currentConfig.palette = key;
 			localStorage.setItem("bk-palette", key);
 			renderPalettes();
 			renderCustomPalettes();
-			renderLiveAppearancePreview();
 			broadcastAppearanceChange();
 			saveConfig();
 		});
 
-		// Edit button
-		item
+		card
 			.querySelector(".st-edit-palette-btn")
 			?.addEventListener("click", (e) => {
 				e.stopPropagation();
 				openCustomThemeModal(key, p);
 			});
 
-		// Delete button
-		item
+		card
 			.querySelector(".st-delete-palette-btn")
 			?.addEventListener("click", (e) => {
 				e.stopPropagation();
@@ -605,19 +483,72 @@ function renderCustomPalettes() {
 				}
 				renderPalettes();
 				renderCustomPalettes();
-				renderLiveAppearancePreview();
 				broadcastAppearanceChange();
 				saveConfig();
 			});
 
-		container.appendChild(item);
+		container.appendChild(card);
 	});
 }
 
-// ── Modals & Interactive Events ────────────────────────────────────────────
+// ── Event Wiring ───────────────────────────────────────────────────────────
 
 function wireEvents() {
-	// Search filter
+	// Mode switcher (Curriculum / Split / Preview)
+	document.querySelectorAll("#st-mode-tabs .st-mode-tab").forEach((tab) => {
+		tab.addEventListener("click", () => {
+			document.querySelectorAll("#st-mode-tabs .st-mode-tab").forEach((t) => {
+				t.classList.remove("active");
+			});
+			tab.classList.add("active");
+
+			const mode = (tab as HTMLElement).dataset.mode;
+			const leftRail = $("st-sidebar-left");
+			const rightRail = $("st-sidebar-right");
+
+			if (mode === "curriculum") {
+				if (leftRail) leftRail.style.display = "flex";
+				if (rightRail) rightRail.style.display = "none";
+			} else if (mode === "preview") {
+				if (leftRail) leftRail.style.display = "none";
+				if (rightRail) rightRail.style.display = "none";
+			} else {
+				// split
+				if (leftRail) leftRail.style.display = "flex";
+				if (rightRail) rightRail.style.display = "flex";
+			}
+		});
+	});
+
+	// Device toggles (Desktop / Tablet / Mobile)
+	document
+		.querySelectorAll("#st-device-toggles .st-device-btn")
+		.forEach((btn) => {
+			btn.addEventListener("click", () => {
+				document
+					.querySelectorAll("#st-device-toggles .st-device-btn")
+					.forEach((b) => {
+						b.classList.remove("active");
+					});
+				btn.classList.add("active");
+
+				const device = (btn as HTMLElement).dataset.device || "desktop";
+				const wrapper = $("st-frame-wrapper");
+				if (wrapper) {
+					wrapper.className = `st-frame-wrapper ${device}`;
+				}
+			});
+		});
+
+	// Viewport reload button
+	$("st-btn-reload-frame")?.addEventListener("click", () => {
+		const iframe = $<HTMLIFrameElement>("st-course-iframe");
+		if (iframe?.contentWindow) {
+			iframe.contentWindow.location.reload();
+		}
+	});
+
+	// Lesson search input
 	$("st-lesson-search")?.addEventListener("input", (e) => {
 		lessonSearchQuery = (e.target as HTMLInputElement).value;
 		renderCurriculum();
@@ -627,8 +558,8 @@ function wireEvents() {
 	$("st-meta-title")?.addEventListener("input", (e) => {
 		const val = (e.target as HTMLInputElement).value;
 		currentConfig.title = val;
-		const headerTitle = $("st-header-title");
-		if (headerTitle) headerTitle.textContent = val || "Interactive Course";
+		const crumb = $("st-header-title");
+		if (crumb) crumb.textContent = val || "Interactive Course";
 		queueSave();
 	});
 	$("st-meta-desc")?.addEventListener("input", (e) => {
@@ -641,52 +572,51 @@ function wireEvents() {
 	});
 
 	// Theme mode segmented control
-	document
-		.querySelectorAll<HTMLButtonElement>("#st-theme-mode button")
-		.forEach((btn) => {
-			btn.addEventListener("click", () => {
-				const val = btn.dataset.value as "light" | "dark" | "auto";
-				currentConfig.theme = val;
-				localStorage.setItem("bk-theme", val);
-				renderThemeMode();
-				renderLiveAppearancePreview();
-				broadcastAppearanceChange();
-				saveConfig();
-			});
+	document.querySelectorAll("#st-theme-mode button").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const val = (btn as HTMLElement).dataset.value as
+				| "light"
+				| "dark"
+				| "auto";
+			currentConfig.theme = val;
+			localStorage.setItem("bk-theme", val);
+			renderThemeMode();
+			broadcastAppearanceChange();
+			saveConfig();
 		});
+	});
 
 	// UI style segmented control
-	document
-		.querySelectorAll<HTMLButtonElement>("#st-ui-mode button")
-		.forEach((btn) => {
-			btn.addEventListener("click", () => {
-				const val = btn.dataset.value as "standard" | "neo" | "playful";
-				currentConfig.ui = val;
-				localStorage.setItem("bk-ui", val);
-				renderUiMode();
-				renderLiveAppearancePreview();
-				broadcastAppearanceChange();
-				saveConfig();
-			});
+	document.querySelectorAll("#st-ui-mode button").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const val = (btn as HTMLElement).dataset.value as
+				| "standard"
+				| "neo"
+				| "playful";
+			currentConfig.ui = val;
+			localStorage.setItem("bk-ui", val);
+			renderUiMode();
+			broadcastAppearanceChange();
+			saveConfig();
 		});
+	});
 
-	// Built-in color swatches
+	// Builtin palette swatches
 	document
-		.querySelectorAll<HTMLButtonElement>("#st-builtin-palettes button")
-		.forEach((btn) => {
-			btn.addEventListener("click", () => {
-				const val = btn.dataset.palette;
+		.querySelectorAll("#st-builtin-palettes [data-palette]")
+		.forEach((card) => {
+			card.addEventListener("click", () => {
+				const val = (card as HTMLElement).dataset.palette;
 				currentConfig.palette = val;
 				if (val) localStorage.setItem("bk-palette", val);
 				renderPalettes();
 				renderCustomPalettes();
-				renderLiveAppearancePreview();
 				broadcastAppearanceChange();
 				saveConfig();
 			});
 		});
 
-	// New Lesson Modal
+	// New Lesson modal
 	const newLessonModal = $("st-modal-new-lesson");
 	const newLessonInput = $<HTMLInputElement>("st-new-lesson-name");
 
@@ -709,7 +639,7 @@ function wireEvents() {
 		const rawName = newLessonInput?.value.trim();
 		if (!rawName) return;
 
-		setStatus("saving", "Creating lesson...");
+		setStatus("saving", "Creating...");
 		try {
 			const res = await fetch("/__api/lessons/new", {
 				method: "POST",
@@ -722,7 +652,7 @@ function wireEvents() {
 			setStatus("saved");
 		} catch (err) {
 			console.error("Failed to create lesson:", err);
-			setStatus("unsaved", "Failed to create lesson");
+			setStatus("unsaved", "Failed");
 		}
 	});
 
@@ -730,7 +660,6 @@ function wireEvents() {
 	$("st-btn-new-theme")?.addEventListener("click", () => {
 		openCustomThemeModal();
 	});
-
 	$("st-modal-close-theme")?.addEventListener("click", () => {
 		const m = $("st-modal-custom-theme");
 		if (m) m.style.display = "none";
@@ -740,7 +669,7 @@ function wireEvents() {
 		if (m) m.style.display = "none";
 	});
 
-	// Close modals on clicking backdrop
+	// Click outside modal backdrop
 	[newLessonModal, $("st-modal-custom-theme")].forEach((modal) => {
 		modal?.addEventListener("click", (e) => {
 			if (e.target === modal) {
@@ -753,8 +682,8 @@ function wireEvents() {
 	window.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
 			if (newLessonModal) newLessonModal.style.display = "none";
-			const customThemeModal = $("st-modal-custom-theme");
-			if (customThemeModal) customThemeModal.style.display = "none";
+			const customModal = $("st-modal-custom-theme");
+			if (customModal) customModal.style.display = "none";
 		}
 	});
 
@@ -788,8 +717,6 @@ function openCustomThemeModal(key?: string, existing?: CustomPalette) {
 		setPickerColor("st-theme-dark-paper", "#121620");
 	}
 
-	updateThemePreview();
-
 	if (modal) {
 		modal.style.display = "flex";
 		nameInput?.focus();
@@ -811,18 +738,15 @@ function wireCustomThemeInputs() {
 
 		colorEl?.addEventListener("input", () => {
 			if (textEl) textEl.value = colorEl.value;
-			updateThemePreview();
 		});
 
 		textEl?.addEventListener("input", () => {
 			if (colorEl && /^#[0-9a-f]{6}$/i.test(textEl.value)) {
 				colorEl.value = textEl.value;
 			}
-			updateThemePreview();
 		});
 	});
 
-	// Save custom theme button
 	$("st-modal-save-theme")?.addEventListener("click", () => {
 		const nameInput = $<HTMLInputElement>("st-theme-name");
 		const rawName = nameInput?.value.trim() || "Custom Theme";
@@ -866,30 +790,9 @@ function wireCustomThemeInputs() {
 
 		renderPalettes();
 		renderCustomPalettes();
-		renderLiveAppearancePreview();
 		broadcastAppearanceChange();
 		saveConfig();
 	});
-}
-
-function updateThemePreview() {
-	const accent = getPickerColor("st-theme-accent");
-	const lightPaper = getPickerColor("st-theme-light-paper");
-
-	const card = $("st-theme-preview-card");
-	const heading = $("st-preview-heading");
-	const btn = $("st-preview-btn");
-
-	if (card) {
-		card.style.backgroundColor = lightPaper;
-		card.style.borderColor = accent;
-	}
-	if (heading) {
-		heading.style.color = accent;
-	}
-	if (btn) {
-		btn.style.backgroundColor = accent;
-	}
 }
 
 function getPickerColor(idPrefix: string): string {

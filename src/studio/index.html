@@ -10,303 +10,277 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- Header -->
-  <header class="st-header">
-    <div class="st-brand-wrap">
-      <div class="st-brand">
-        <div class="st-logo-badge">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
-          </svg>
-        </div>
-        <div class="st-brand-title">
+  <div class="st-app">
+    <!-- Top Studio Toolbar -->
+    <header class="st-topbar">
+      <div class="st-topbar-left">
+        <a class="st-logo-mark" href="/__studio">
+          <div class="st-logo-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
           <span>mr-md studio</span>
-          <span class="st-badge">v4</span>
+        </a>
+
+        <div class="st-topbar-sep"></div>
+
+        <span class="st-course-crumb" id="st-header-title">Loading course...</span>
+      </div>
+
+      <div class="st-topbar-center">
+        <!-- Workspace View Switcher -->
+        <div class="st-mode-tabs" id="st-mode-tabs">
+          <button class="st-mode-tab" data-mode="curriculum">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <span>Curriculum</span>
+          </button>
+          <button class="st-mode-tab active" data-mode="split">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            <span>Split Studio</span>
+          </button>
+          <button class="st-mode-tab" data-mode="preview">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>Live Viewport</span>
+          </button>
+        </div>
+
+        <!-- Device Preview Size Toggles -->
+        <div class="st-device-toggles" id="st-device-toggles">
+          <button class="st-device-btn active" data-device="desktop" title="Desktop View (100%)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          </button>
+          <button class="st-device-btn" data-device="tablet" title="Tablet View (768px)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+          </button>
+          <button class="st-device-btn" data-device="mobile" title="Mobile View (390px)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+          </button>
         </div>
       </div>
 
-      <div class="st-header-divider"></div>
-
-      <div class="st-course-context">
-        <span class="st-course-title-crumb" id="st-header-title">Loading course...</span>
-      </div>
-    </div>
-
-    <div class="st-header-actions">
-      <div class="st-status-pill" id="st-status">
-        <span class="st-status-dot" id="st-status-dot"></span>
-        <span id="st-status-text">All changes synced</span>
-      </div>
-
-      <button class="st-btn" id="st-btn-new-lesson">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        <span>New Lesson</span>
-      </button>
-
-      <a class="st-btn st-btn-primary" href="/" target="_blank" id="st-btn-view-site">
-        <span>View Site</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-          <polyline points="15 3 21 3 21 9"></polyline>
-          <line x1="10" y1="14" x2="21" y2="3"></line>
-        </svg>
-      </a>
-    </div>
-  </header>
-
-  <!-- Main Canvas -->
-  <main class="st-main">
-    <!-- Left Column: Curriculum Management -->
-    <section>
-      <div class="st-panel">
-        <div class="st-panel-header">
-          <div class="st-panel-header-left">
-            <h2 class="st-panel-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-              Course Curriculum
-            </h2>
-            <p class="st-panel-desc">Drag and drop lessons to reorder chapter chronology. Updates sync instantly to your course.</p>
-          </div>
-          <div class="st-panel-stats">
-            <span class="st-count-pill" id="st-lesson-count-pill">0 lessons</span>
-          </div>
+      <div class="st-topbar-right">
+        <div class="st-status-badge" id="st-status">
+          <span class="st-status-dot" id="st-status-dot"></span>
+          <span id="st-status-text">Synced</span>
         </div>
 
-        <!-- Quick Filter Toolbar -->
-        <div class="st-curriculum-toolbar">
-          <div class="st-search-wrap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="st-btn st-btn-sm" id="st-btn-new-lesson">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>New Lesson</span>
+        </button>
+
+        <a class="st-btn st-btn-sm st-btn-primary" href="/" target="_blank" id="st-btn-view-site">
+          <span>Open Course</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        </a>
+      </div>
+    </header>
+
+    <!-- Three-Pane Workspace -->
+    <div class="st-workspace">
+      <!-- Left Rail: Curriculum Storyboard -->
+      <aside class="st-sidebar-left" id="st-sidebar-left">
+        <div class="st-sidebar-header">
+          <span class="st-sidebar-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            Curriculum
+          </span>
+          <span class="st-sidebar-count" id="st-lesson-count-pill">0</span>
+        </div>
+
+        <div class="st-sidebar-search">
+          <div class="st-search-input-wrap">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="search" class="st-search-input" id="st-lesson-search" placeholder="Filter lessons by title or file...">
+            <input type="search" class="st-search-field" id="st-lesson-search" placeholder="Filter lessons...">
           </div>
         </div>
 
-        <!-- Interactive Drag & Drop List -->
-        <div class="st-lesson-list" id="st-lesson-list">
-          <!-- Lesson items injected by studio.ts -->
+        <div class="st-curriculum-scroll" id="st-lesson-list">
+          <!-- Injected lesson items -->
         </div>
-      </div>
 
-      <!-- Unassigned Files Drawer (Drafts & Staging Bin) -->
-      <div class="st-panel st-unassigned-panel" id="st-unassigned-panel" style="display: none;">
-        <div class="st-panel-header">
-          <div class="st-panel-header-left">
-            <h3 class="st-panel-title" style="font-size: 14px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="12" y1="18" x2="12" y2="12"></line>
-                <line x1="9" y1="15" x2="15" y2="15"></line>
-              </svg>
-              Unassigned Drafts & Markdown Files
-            </h3>
-            <p class="st-panel-desc">Found on disk but not yet arranged in course chronology. Click ＋ to add to curriculum.</p>
+        <!-- Drawer: Unassigned Drafts -->
+        <div class="st-sidebar-footer">
+          <div class="st-unassigned-drawer" id="st-unassigned-panel" style="display: none;">
+            <div class="st-unassigned-header">
+              <span>Unassigned Drafts</span>
+              <span id="st-unassigned-count-pill" style="font-family: var(--st-mono);">0</span>
+            </div>
+            <div class="st-unassigned-chips" id="st-unassigned-list">
+              <!-- Injected unassigned draft pills -->
+            </div>
           </div>
-          <span class="st-count-pill" id="st-unassigned-count-pill">0 drafts</span>
         </div>
-        <div class="st-unassigned-list" id="st-unassigned-list">
-          <!-- Injected pills -->
-        </div>
-      </div>
-    </section>
+      </aside>
 
-    <!-- Right Column: Settings & Theming Inspector -->
-    <aside>
-      <!-- Appearance & Themes -->
-      <div class="st-panel">
-        <div class="st-panel-header" style="margin-bottom: 14px;">
-          <h2 class="st-panel-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="m4.93 4.93 4.24 4.24"></path>
-              <path d="m14.83 9.17 4.24-4.24"></path>
-              <path d="m14.83 14.83 4.24 4.24"></path>
-              <path d="m9.17 14.83-4.24 4.24"></path>
-            </svg>
-            Appearance & Themes
-          </h2>
-        </div>
-
-        <div class="st-form-group">
-          <label class="st-label">Theme Mode</label>
-          <div class="st-segment-group" id="st-theme-mode">
-            <button class="st-segment-btn" data-value="light">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-              Light
+      <!-- Center Stage: The Living Interactive Course Viewport -->
+      <main class="st-viewport-stage" id="st-viewport-stage">
+        <div class="st-viewport-bar">
+          <span class="st-viewport-url" id="st-viewport-url">http://localhost:3333/</span>
+          <div class="st-viewport-actions">
+            <button class="st-viewport-btn" id="st-btn-reload-frame" title="Reload Viewport">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>Reload</span>
             </button>
-            <button class="st-segment-btn" data-value="auto">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-              System
-            </button>
-            <button class="st-segment-btn" data-value="dark">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-              Dark
-            </button>
+            <a class="st-viewport-btn" id="st-btn-open-active-tab" href="/" target="_blank" title="Pop out into new tab">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </a>
           </div>
         </div>
 
-        <div class="st-form-group">
-          <label class="st-label">UI Aesthetic</label>
-          <div class="st-segment-group" id="st-ui-mode">
-            <button class="st-segment-btn" data-value="standard">Standard</button>
-            <button class="st-segment-btn" data-value="neo">Neo</button>
-            <button class="st-segment-btn" data-value="playful">Playful</button>
+        <div class="st-frame-container">
+          <div class="st-frame-wrapper desktop" id="st-frame-wrapper">
+            <iframe src="/" id="st-course-iframe" class="st-live-iframe" title="Interactive Course Canvas"></iframe>
           </div>
         </div>
+      </main>
 
-        <div class="st-form-group">
-          <label class="st-label">Curated Color Palettes</label>
-          <div class="st-swatch-grid" id="st-builtin-palettes">
-            <button class="st-swatch-btn" data-palette="ink">
-              <div class="st-palette-strip">
-                <span class="st-palette-strip-accent" style="background: #2563eb;"></span>
-                <span class="st-palette-strip-paper" style="background: #ffffff;"></span>
+      <!-- Right Rail: Design & Palettes Inspector -->
+      <aside class="st-sidebar-right" id="st-sidebar-right">
+        <!-- Appearance & Aesthetic -->
+        <section class="st-inspector-section">
+          <div class="st-section-title">
+            <span>Appearance & Aesthetic</span>
+          </div>
+
+          <div class="st-field-group">
+            <label class="st-field-label">Theme Mode</label>
+            <div class="st-pill-selector" id="st-theme-mode">
+              <button class="st-pill-btn" data-value="light">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                Light
+              </button>
+              <button class="st-pill-btn" data-value="auto">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                Auto
+              </button>
+              <button class="st-pill-btn" data-value="dark">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                Dark
+              </button>
+            </div>
+          </div>
+
+          <div class="st-field-group">
+            <label class="st-field-label">UI Aesthetic</label>
+            <div class="st-pill-selector" id="st-ui-mode">
+              <button class="st-pill-btn" data-value="standard">Standard</button>
+              <button class="st-pill-btn" data-value="neo">Neo</button>
+              <button class="st-pill-btn" data-value="playful">Playful</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Curated Palettes -->
+        <section class="st-inspector-section">
+          <div class="st-section-title">
+            <span>Color Palettes</span>
+          </div>
+
+          <div class="st-palette-matrix" id="st-builtin-palettes">
+            <div class="st-swatch-card" data-palette="ink">
+              <div class="st-swatch-stripe" style="background: #2563eb;"></div>
+              <div class="st-swatch-text">
+                <span class="st-swatch-name">Ink</span>
+                <span class="st-swatch-hex">#2563eb</span>
               </div>
-              <div class="st-palette-meta">
-                <span class="st-palette-name">Ink</span>
-                <span class="st-swatch-circle" style="background: #2563eb;"></span>
+            </div>
+            <div class="st-swatch-card" data-palette="field">
+              <div class="st-swatch-stripe" style="background: #0d9488;"></div>
+              <div class="st-swatch-text">
+                <span class="st-swatch-name">Field</span>
+                <span class="st-swatch-hex">#0d9488</span>
               </div>
-            </button>
-            <button class="st-swatch-btn" data-palette="field">
-              <div class="st-palette-strip">
-                <span class="st-palette-strip-accent" style="background: #0d9488;"></span>
-                <span class="st-palette-strip-paper" style="background: #ffffff;"></span>
+            </div>
+            <div class="st-swatch-card" data-palette="ember">
+              <div class="st-swatch-stripe" style="background: #ea580c;"></div>
+              <div class="st-swatch-text">
+                <span class="st-swatch-name">Ember</span>
+                <span class="st-swatch-hex">#ea580c</span>
               </div>
-              <div class="st-palette-meta">
-                <span class="st-palette-name">Field</span>
-                <span class="st-swatch-circle" style="background: #0d9488;"></span>
+            </div>
+            <div class="st-swatch-card" data-palette="elixir">
+              <div class="st-swatch-stripe" style="background: #a855f7;"></div>
+              <div class="st-swatch-text">
+                <span class="st-swatch-name">Elixir</span>
+                <span class="st-swatch-hex">#a855f7</span>
               </div>
-            </button>
-            <button class="st-swatch-btn" data-palette="ember">
-              <div class="st-palette-strip">
-                <span class="st-palette-strip-accent" style="background: #ea580c;"></span>
-                <span class="st-palette-strip-paper" style="background: #ffffff;"></span>
+            </div>
+            <div class="st-swatch-card" data-palette="trunk">
+              <div class="st-swatch-stripe" style="background: #78350f;"></div>
+              <div class="st-swatch-text">
+                <span class="st-swatch-name">Trunk</span>
+                <span class="st-swatch-hex">#78350f</span>
               </div>
-              <div class="st-palette-meta">
-                <span class="st-palette-name">Ember</span>
-                <span class="st-swatch-circle" style="background: #ea580c;"></span>
+            </div>
+            <div class="st-swatch-card" data-palette="lava">
+              <div class="st-swatch-stripe" style="background: #ef4444;"></div>
+              <div class="st-swatch-text">
+                <span class="st-swatch-name">Lava</span>
+                <span class="st-swatch-hex">#ef4444</span>
               </div>
-            </button>
-            <button class="st-swatch-btn" data-palette="elixir">
-              <div class="st-palette-strip">
-                <span class="st-palette-strip-accent" style="background: #a855f7;"></span>
-                <span class="st-palette-strip-paper" style="background: #ffffff;"></span>
-              </div>
-              <div class="st-palette-meta">
-                <span class="st-palette-name">Elixir</span>
-                <span class="st-swatch-circle" style="background: #a855f7;"></span>
-              </div>
-            </button>
-            <button class="st-swatch-btn" data-palette="trunk">
-              <div class="st-palette-strip">
-                <span class="st-palette-strip-accent" style="background: #78350f;"></span>
-                <span class="st-palette-strip-paper" style="background: #ffffff;"></span>
-              </div>
-              <div class="st-palette-meta">
-                <span class="st-palette-name">Trunk</span>
-                <span class="st-swatch-circle" style="background: #78350f;"></span>
-              </div>
-            </button>
-            <button class="st-swatch-btn" data-palette="lava">
-              <div class="st-palette-strip">
-                <span class="st-palette-strip-accent" style="background: #ef4444;"></span>
-                <span class="st-palette-strip-paper" style="background: #ffffff;"></span>
-              </div>
-              <div class="st-palette-meta">
-                <span class="st-palette-name">Lava</span>
-                <span class="st-swatch-circle" style="background: #ef4444;"></span>
-              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Custom Palettes -->
+        <section class="st-inspector-section">
+          <div class="st-section-title">
+            <span>Author Custom Themes</span>
+            <button class="st-btn st-btn-sm st-btn-ghost" id="st-btn-new-theme">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>New</span>
             </button>
           </div>
-        </div>
 
-        <!-- Custom Palettes Section -->
-        <div style="margin-top: 18px; border-top: 1px solid var(--st-border); padding-top: 14px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <label class="st-label" style="margin-bottom: 0;">Author Custom Themes</label>
-            <button class="st-btn st-btn-sm" id="st-btn-new-theme">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>New Theme</span>
-            </button>
-          </div>
-          <div id="st-custom-palettes-list">
+          <div class="st-custom-list" id="st-custom-palettes-list">
             <!-- Custom palette cards injected here -->
           </div>
-        </div>
+        </section>
 
-        <!-- Live Miniature Course Preview -->
-        <div style="margin-top: 20px; border-top: 1px solid var(--st-border); padding-top: 16px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <label class="st-label" style="margin-bottom: 0;">Live Course Preview</label>
-            <span id="st-appearance-preview-badge" style="font-size: 11px; color: var(--st-text-muted); font-family: var(--st-mono);"></span>
+        <!-- Course Metadata -->
+        <section class="st-inspector-section">
+          <div class="st-section-title">
+            <span>Course Metadata</span>
           </div>
-          <div id="st-live-preview-box" class="st-live-preview-box">
-            <div class="st-live-preview-header">
-              <span class="st-live-preview-tag" id="st-prev-tag">Interactive Lesson</span>
-              <h4 class="st-live-preview-title" id="st-prev-title">Harmonic Oscillations</h4>
-            </div>
-            <p class="st-live-preview-body" id="st-prev-body">This interactive canvas reflects your active theme, UI aesthetic, and palette tokens in real time.</p>
-            <div class="st-live-preview-footer">
-              <span class="st-live-preview-btn" id="st-prev-btn">Launch Simulation ↗</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Course Metadata -->
-      <div class="st-panel">
-        <div class="st-panel-header" style="margin-bottom: 14px;">
-          <h2 class="st-panel-title">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            Course Metadata
-          </h2>
-        </div>
-        <div class="st-form-group">
-          <label class="st-label" for="st-meta-title">Course Title</label>
-          <input type="text" class="st-input" id="st-meta-title" placeholder="My Awesome Course">
-        </div>
-        <div class="st-form-group">
-          <label class="st-label" for="st-meta-desc">Description</label>
-          <textarea class="st-textarea" id="st-meta-desc" placeholder="A comprehensive interactive course..."></textarea>
-        </div>
-        <div class="st-form-group">
-          <label class="st-label" for="st-meta-author">Author</label>
-          <input type="text" class="st-input" id="st-meta-author" placeholder="Author name">
-        </div>
-      </div>
-    </aside>
-  </main>
+          <div class="st-field-group">
+            <label class="st-field-label" for="st-meta-title">Course Title</label>
+            <input type="text" class="st-field-input" id="st-meta-title" placeholder="Course Title">
+          </div>
+
+          <div class="st-field-group">
+            <label class="st-field-label" for="st-meta-desc">Description</label>
+            <textarea class="st-field-textarea" id="st-meta-desc" placeholder="Course synopsis..."></textarea>
+          </div>
+
+          <div class="st-field-group">
+            <label class="st-field-label" for="st-meta-author">Author</label>
+            <input type="text" class="st-field-input" id="st-meta-author" placeholder="Author name">
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
 
   <!-- Modal: Create New Lesson -->
   <div class="st-modal-backdrop" id="st-modal-new-lesson" style="display: none;">
     <div class="st-modal">
       <div class="st-modal-header">
         <h3 class="st-modal-title">Create New Lesson</h3>
-        <button class="st-btn st-btn-danger-ghost st-btn-sm" id="st-modal-close-lesson">✕</button>
+        <button class="st-btn st-btn-ghost st-btn-sm" id="st-modal-close-lesson">✕</button>
       </div>
       <div class="st-modal-body">
-        <div class="st-form-group">
-          <label class="st-label" for="st-new-lesson-name">Lesson Title or Topic</label>
-          <input type="text" class="st-input" id="st-new-lesson-name" placeholder="Introduction to Circuits">
+        <div class="st-field-group">
+          <label class="st-field-label" for="st-new-lesson-name">Lesson Title or Slug</label>
+          <input type="text" class="st-field-input" id="st-new-lesson-name" placeholder="Introduction to Circuits">
         </div>
-        <p style="font-size: 12px; color: var(--st-text-muted); line-height: 1.4;">A new clean markdown file will be created and added to your curriculum chronology.</p>
       </div>
       <div class="st-modal-footer">
         <button class="st-btn" id="st-modal-cancel-lesson">Cancel</button>
@@ -320,33 +294,33 @@
     <div class="st-modal">
       <div class="st-modal-header">
         <h3 class="st-modal-title" id="st-theme-modal-title">Custom Theme Builder</h3>
-        <button class="st-btn st-btn-danger-ghost st-btn-sm" id="st-modal-close-theme">✕</button>
+        <button class="st-btn st-btn-ghost st-btn-sm" id="st-modal-close-theme">✕</button>
       </div>
       <div class="st-modal-body">
-        <div class="st-form-group">
-          <label class="st-label" for="st-theme-name">Theme Name</label>
-          <input type="text" class="st-input" id="st-theme-name" placeholder="Cyberpunk Neon">
+        <div class="st-field-group">
+          <label class="st-field-label" for="st-theme-name">Theme Name</label>
+          <input type="text" class="st-field-input" id="st-theme-name" placeholder="Cyberpunk Neon">
         </div>
 
-        <div class="st-form-group">
-          <label class="st-label">Accent Color (Primary Highlight)</label>
+        <div class="st-field-group">
+          <label class="st-field-label">Accent Color</label>
           <div class="st-color-input-wrap">
             <input type="color" id="st-theme-accent-color" value="#3b82f6">
             <input type="text" id="st-theme-accent-text" value="#3b82f6">
           </div>
         </div>
 
-        <div style="margin: 14px 0 8px; font-size: 13px; font-weight: 700; color: var(--st-text);">Light Mode Overrides</div>
+        <div style="font-size: 11px; font-weight: 700; color: var(--st-text-secondary); margin: 12px 0 6px;">Light Mode Overrides</div>
         <div class="st-color-row">
           <div>
-            <label class="st-label">Background</label>
+            <label class="st-field-label">Background</label>
             <div class="st-color-input-wrap">
               <input type="color" id="st-theme-light-bg-color" value="#f8fafc">
               <input type="text" id="st-theme-light-bg-text" value="#f8fafc">
             </div>
           </div>
           <div>
-            <label class="st-label">Card / Paper</label>
+            <label class="st-field-label">Card / Paper</label>
             <div class="st-color-input-wrap">
               <input type="color" id="st-theme-light-paper-color" value="#ffffff">
               <input type="text" id="st-theme-light-paper-text" value="#ffffff">
@@ -354,30 +328,22 @@
           </div>
         </div>
 
-        <div style="margin: 14px 0 8px; font-size: 13px; font-weight: 700; color: var(--st-text);">Dark Mode Overrides</div>
+        <div style="font-size: 11px; font-weight: 700; color: var(--st-text-secondary); margin: 12px 0 6px;">Dark Mode Overrides</div>
         <div class="st-color-row">
           <div>
-            <label class="st-label">Background</label>
+            <label class="st-field-label">Background</label>
             <div class="st-color-input-wrap">
               <input type="color" id="st-theme-dark-bg-color" value="#090a0f">
               <input type="text" id="st-theme-dark-bg-text" value="#090a0f">
             </div>
           </div>
           <div>
-            <label class="st-label">Card / Paper</label>
+            <label class="st-field-label">Card / Paper</label>
             <div class="st-color-input-wrap">
               <input type="color" id="st-theme-dark-paper-color" value="#121620">
               <input type="text" id="st-theme-dark-paper-text" value="#121620">
             </div>
           </div>
-        </div>
-
-        <!-- Live Preview -->
-        <label class="st-label" style="margin-top: 14px;">Live Preview</label>
-        <div class="st-preview-card" id="st-theme-preview-card">
-          <div class="st-preview-card-header" id="st-preview-heading">Interactive Simulation</div>
-          <div class="st-preview-card-text" id="st-preview-text">This is how your course cards and interactive callouts will look with this palette.</div>
-          <span class="st-preview-card-btn" id="st-preview-btn">Interactive Lab</span>
         </div>
       </div>
       <div class="st-modal-footer">
