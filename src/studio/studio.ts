@@ -313,8 +313,10 @@ function renderCurriculum() {
 
 	if (allLessons.length === 0) {
 		container.innerHTML = `
-      <div style="padding: 32px 14px; text-align: center; color: var(--st-text-muted); font-size: 12px;">
-        No lessons in course yet.<br>Click "+ New Lesson" to get started.
+      <div class="st-empty-state">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+        <span>No lessons yet</span>
+        <p>Create a lesson to get started.</p>
       </div>`;
 		return;
 	}
@@ -354,22 +356,22 @@ function renderCurriculum() {
       <div class="st-card-left">
         <span class="st-card-drag" title="Drag to reorder">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="8" cy="5" r="2.4"/><circle cx="16" cy="5" r="2.4"/>
-            <circle cx="8" cy="12" r="2.4"/><circle cx="16" cy="12" r="2.4"/>
-            <circle cx="8" cy="19" r="2.4"/><circle cx="16" cy="19" r="2.4"/>
+            <circle cx="8" cy="5" r="2.2"/><circle cx="16" cy="5" r="2.2"/>
+            <circle cx="8" cy="12" r="2.2"/><circle cx="16" cy="12" r="2.2"/>
+            <circle cx="8" cy="19" r="2.2"/><circle cx="16" cy="19" r="2.2"/>
           </svg>
         </span>
         <span class="st-card-num">${formattedNum}</span>
         <div class="st-card-text">
           <span class="st-card-title">${escapeHtml(title)}</span>
-          ${badge ? `<span class="st-card-tag ${badge.cls}">${badge.text}</span>` : ""}
+          ${badge ? `<span class="st-card-tag ${badge.cls}"><span class="st-card-tag-dot"></span>${badge.text}</span>` : ""}
         </div>
       </div>
       <div class="st-card-actions">
-        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open directly in new tab">
+        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open lesson in new tab">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
-        <button class="st-card-btn danger st-remove-btn" title="Remove from curriculum">
+        <button class="st-card-btn danger st-remove-btn" title="Remove lesson">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -524,8 +526,11 @@ function renderUnassigned() {
 		const chip = document.createElement("div");
 		chip.className = "st-unassigned-chip";
 		chip.innerHTML = `
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
       <span>${escapeHtml(file)}</span>
-      <button type="button" title="Add to curriculum">＋</button>
+      <button type="button" class="st-chip-add-btn" title="Add to lessons">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
     `;
 
 		chip.querySelector("button")?.addEventListener("click", () => {
@@ -618,13 +623,15 @@ function renderCustomPalettes() {
 
 		card.innerHTML = `
       <div class="st-custom-card-left">
-        <span class="st-custom-pip" style="background: ${escapeHtml(p.accent)};"></span>
-        <div>
-          <div style="font-size: 12px; font-weight: 600; color: var(--st-text);">${escapeHtml(p.name || key)}</div>
-          <div style="font-size: 10px; font-family: var(--st-mono); color: var(--st-text-muted);">${escapeHtml(p.accent)}</div>
+        <div class="st-swatch-disc" style="--swatch-color: ${escapeHtml(p.accent)};">
+          <span class="st-swatch-inner" style="background: ${escapeHtml(p.accent)};"></span>
+        </div>
+        <div class="st-swatch-info">
+          <span class="st-swatch-name">${escapeHtml(p.name || key)}</span>
+          <span class="st-swatch-hex">${escapeHtml(p.accent)}</span>
         </div>
       </div>
-      <div style="display: flex; gap: 2px;">
+      <div class="st-custom-actions">
         <button class="st-card-btn st-edit-palette-btn" title="Edit theme">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         </button>
@@ -809,7 +816,17 @@ function wireEvents() {
 				scrollToSlab("course");
 			} else if (e.key === "3") {
 				scrollToSlab("design");
+			} else if (e.key === "/") {
+				e.preventDefault();
+				$("st-lesson-search")?.focus();
 			}
+		} else if (
+			(e.metaKey || e.ctrlKey) &&
+			e.key.toLowerCase() === "k" &&
+			!isEditing
+		) {
+			e.preventDefault();
+			$("st-lesson-search")?.focus();
 		}
 	});
 
