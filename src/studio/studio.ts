@@ -185,13 +185,9 @@ async function fetchConfig() {
 		currentConfig = data.config || {};
 		unassignedFiles = data.unassignedFiles || [];
 
-		if (
-			!activeLessonFile &&
-			currentConfig.lessons &&
-			currentConfig.lessons.length > 0
-		) {
-			const first = currentConfig.lessons[0];
-			activeLessonFile = typeof first === "string" ? first : first.file;
+		// Default to Course Home on initial load
+		if (isInitialBoot) {
+			activeLessonFile = "";
 		}
 
 		renderAll();
@@ -561,14 +557,21 @@ function renderUnassigned() {
 	});
 }
 
+function updateCourseTitles(val: string) {
+	const crumb = $("st-header-title");
+	if (crumb) crumb.textContent = val || "Interactive Course";
+
+	const homeTitle = $("st-course-home-title");
+	if (homeTitle) homeTitle.textContent = val || "Course Home";
+
+	const slabTitle = $("st-curriculum-course-title");
+	if (slabTitle) slabTitle.textContent = val || "";
+}
+
 function renderMetadata() {
 	const titleInput = $<HTMLInputElement>("st-meta-title");
 	const descInput = $<HTMLTextAreaElement>("st-meta-desc");
 	const authorInput = $<HTMLInputElement>("st-meta-author");
-	const headerTitle = $("st-header-title");
-
-	const courseTitle = currentConfig.title || "Interactive Course";
-	const homeTitle = $("st-course-home-title");
 
 	if (titleInput && document.activeElement !== titleInput) {
 		titleInput.value = currentConfig.title || "";
@@ -579,8 +582,8 @@ function renderMetadata() {
 	if (authorInput && document.activeElement !== authorInput) {
 		authorInput.value = currentConfig.author || "";
 	}
-	if (headerTitle) headerTitle.textContent = courseTitle;
-	if (homeTitle) homeTitle.textContent = currentConfig.title || "Course Home";
+
+	updateCourseTitles(currentConfig.title || "");
 }
 
 function renderThemeMode() {
@@ -920,8 +923,7 @@ function wireEvents() {
 	$("st-meta-title")?.addEventListener("input", (e) => {
 		const val = (e.target as HTMLInputElement).value;
 		currentConfig.title = val;
-		const crumb = $("st-header-title");
-		if (crumb) crumb.textContent = val || "Interactive Course";
+		updateCourseTitles(val);
 		queueSave();
 	});
 	$("st-meta-desc")?.addEventListener("input", (e) => {

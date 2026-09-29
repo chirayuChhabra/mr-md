@@ -86,6 +86,7 @@ html, body {
 /* ── Top Floating Navigation Shelf ───────────────── */
 
 .st-topbar {
+	position: relative;
 	height: 48px;
 	background: rgba(16, 18, 26, 0.85);
 	border-bottom: 1px solid var(--st-border);
@@ -104,6 +105,10 @@ html, body {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	max-width: calc(50% - 150px);
+	min-width: 0;
+	flex-shrink: 1;
+	z-index: 1;
 }
 
 .st-logo-mark {
@@ -112,6 +117,7 @@ html, body {
 	gap: 8px;
 	text-decoration: none;
 	color: var(--st-text);
+	flex-shrink: 0;
 }
 
 .st-logo-icon {
@@ -126,6 +132,7 @@ html, body {
 	color: #f8fafc;
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 	transition: all 0.15s ease;
+	flex-shrink: 0;
 }
 
 .st-logo-mark:hover .st-logo-icon {
@@ -139,6 +146,7 @@ html, body {
 	font-size: 13px;
 	letter-spacing: -0.02em;
 	color: var(--st-text);
+	flex-shrink: 0;
 }
 
 .st-crumb-slash {
@@ -146,24 +154,32 @@ html, body {
 	color: rgba(255, 255, 255, 0.2);
 	font-weight: 400;
 	margin: 0 1px;
+	flex-shrink: 0;
 }
 
 .st-course-crumb {
 	font-size: 12px;
 	font-weight: 500;
 	color: var(--st-text-secondary);
-	max-width: 260px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	letter-spacing: -0.01em;
+	min-width: 0;
+	flex: 1;
 }
 
 /* Center Niri Ribbon Controls */
 
 .st-topbar-center {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
 	display: flex;
 	align-items: center;
+	pointer-events: auto;
+	z-index: 2;
 }
 
 .st-ribbon-nav {
@@ -234,6 +250,8 @@ html, body {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	margin-left: auto;
+	z-index: 1;
 }
 
 .st-status-pill {
@@ -357,6 +375,17 @@ html, body {
 	padding: 2px 7px;
 	border-radius: 9999px;
 	border: 1px solid var(--st-border);
+}
+
+.st-curriculum-course-name {
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--st-text-muted);
+	max-width: 170px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	letter-spacing: -0.01em;
 }
 
 .st-search-bar {

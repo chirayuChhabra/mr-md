@@ -23,6 +23,7 @@ interface BunServer {
 declare const Bun: {
 	serve: (options: unknown) => BunServer;
 	file: (path: string) => Blob & { text: () => Promise<string> };
+	build: (options: unknown) => Promise<{ outputs: Blob[] }>;
 };
 
 export async function runDev(args: string[]) {
@@ -234,9 +235,37 @@ export async function runDev(args: string[]) {
 				return new Response("Studio not found", { status: 404 });
 			}
 
+			if (decodedPath === "/__studio/studio.bundle.js") {
+				let studioTsPath = path.resolve(__dirname, "../studio/studio.ts");
+				if (!fs.existsSync(studioTsPath)) {
+					studioTsPath = path.resolve(__dirname, "../../src/studio/studio.ts");
+				}
+				if (fs.existsSync(studioTsPath)) {
+					try {
+						const buildResult = await Bun.build({
+							entrypoints: [studioTsPath],
+							minify: false,
+						});
+						if (buildResult.outputs[0]) {
+							return new Response(buildResult.outputs[0], {
+								headers: {
+									"Content-Type": "application/javascript; charset=utf-8",
+									"Cache-Control": "no-cache",
+								},
+							});
+						}
+					} catch (e) {
+						logger.warn(`Failed to bundle studio.ts on the fly: ${e}`);
+					}
+				}
+			}
+
 			if (decodedPath.startsWith("/__studio/")) {
 				const assetName = decodedPath.slice("/__studio/".length);
 				let assetPath = path.resolve(__dirname, "../studio", assetName);
+				if (!fs.existsSync(assetPath)) {
+					assetPath = path.resolve(__dirname, "../../dist/studio", assetName);
+				}
 				if (!fs.existsSync(assetPath)) {
 					assetPath = path.resolve(__dirname, "../../src/studio", assetName);
 				}
@@ -247,7 +276,10 @@ export async function runDev(args: string[]) {
 							? "application/javascript; charset=utf-8"
 							: "application/octet-stream";
 					return new Response(Bun.file(assetPath), {
-						headers: { "Content-Type": contentType },
+						headers: {
+							"Content-Type": contentType,
+							"Cache-Control": "no-cache",
+						},
 					});
 				}
 			}
