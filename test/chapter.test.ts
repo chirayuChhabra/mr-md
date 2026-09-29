@@ -50,4 +50,42 @@ describe("Chapter Renderer", () => {
 		expect(html).toContain("No Desc");
 		expect(html).not.toContain('class="bk-deck"');
 	});
+
+	test("generateChapterContent generates chapter markdown from config", async () => {
+		const { generateChapterContent } = await import(
+			"../src/cli/chapter.js"
+		);
+		const { saveConfig } = await import("../src/config.js");
+		const { mkdir, rm, writeFile } = await import("node:fs/promises");
+		const { tmpdir } = await import("node:os");
+		const { join } = await import("node:path");
+
+		const tempDir = join(
+			tmpdir(),
+			`mr-md-ch-test-${Math.random().toString(36).substring(7)}`,
+		);
+		await mkdir(tempDir, { recursive: true });
+
+		try {
+			await writeFile(join(tempDir, "01-first.md"), "# First Lesson\n");
+			await writeFile(join(tempDir, "02-second.md"), "# Second Lesson\n");
+
+			saveConfig(tempDir, {
+				title: "My Configured Course",
+				description: "A great course",
+				lessons: ["02-second.md", "01-first.md"], // custom order!
+			});
+
+			const content = generateChapterContent(tempDir);
+			expect(content).toContain("title: My Configured Course");
+			expect(content).toContain("description: A great course");
+			// Second should come before First according to config order!
+			const idxSecond = content.indexOf("02-second.md");
+			const idxFirst = content.indexOf("01-first.md");
+			expect(idxSecond).toBeLessThan(idxFirst);
+		} finally {
+			await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+		}
+	});
 });
+

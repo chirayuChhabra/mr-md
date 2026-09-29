@@ -5,8 +5,12 @@ const require = createRequire(import.meta.url);
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
 import { getOriginalCwd } from "./utils.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface BunServer {
 	port: number;
@@ -83,14 +87,17 @@ export async function runDev(args: string[]) {
 
 			if (isDirectory) {
 				const { generateChapterContent } = require("./chapter.js");
+				const { ensureConfig, configToBuildOptions } = require("../config.js");
+				const config = ensureConfig(targetPath);
+				const configOpts = configToBuildOptions(config);
 				const chapterContent = generateChapterContent(targetPath);
 				await preloadLanguagesFromMarkdown(chapterContent);
 				const chapter = parseChapter(
 					chapterContent,
-					{ outDir, contentBase },
+					{ outDir, contentBase, ...configOpts },
 					contentBase,
 				);
-				buildChapter(chapter, { outDir, contentBase });
+				buildChapter(chapter, { outDir, contentBase, ...configOpts });
 			} else {
 				const content = fs.readFileSync(filePath, "utf-8");
 				await preloadLanguagesFromMarkdown(content);
@@ -181,6 +188,129 @@ export async function runDev(args: string[]) {
 
 		const handle = async () => {
 			if (isUpgrade) return null;
+
+			// ── Studio GUI Routes ──
+			if (
+				decodedPath === "/__studio" ||
+				decodedPath === "/__studio/" ||
+				decodedPath === "/___mrmd-studio"
+			) {
+				let studioHtmlPath = path.resolve(__dirname, "../studio/index.html");
+				if (!fs.existsSync(studioHtmlPath)) {
+					studioHtmlPath = path.resolve(
+						__dirname,
+						"../../src/studio/index.html",
+					);
+				}
+				if (fs.existsSync(studioHtmlPath)) {
+					const file = Bun.file(studioHtmlPath);
+					return new Response(file, {
+						headers: { "Content-Type": "text/html; charset=utf-8" },
+					});
+				}
+				return new Response("Studio not found", { status: 404 });
+			}
+
+			if (decodedPath.startsWith("/__studio/")) {
+				const assetName = decodedPath.slice("/__studio/".length);
+				let assetPath = path.resolve(__dirname, "../studio", assetName);
+				if (!fs.existsSync(assetPath)) {
+					assetPath = path.resolve(__dirname, "../../src/studio", assetName);
+				}
+				if (fs.existsSync(assetPath)) {
+					const contentType = assetName.endsWith(".css")
+						? "text/css; charset=utf-8"
+						: assetName.endsWith(".js")
+							? "application/javascript; charset=utf-8"
+							: "application/octet-stream";
+					return new Response(Bun.file(assetPath), {
+						headers: { "Content-Type": contentType },
+					});
+				}
+			}
+
+			// ── Studio REST API ──
+			if (decodedPath === "/__api/config" && method === "GET") {
+				const {
+					ensureConfig,
+					discoverMarkdownFiles,
+					getLessonFile,
+				} = require("../config.js");
+				const config = ensureConfig(contentBase);
+				const all = discoverMarkdownFiles(contentBase);
+				const configuredFiles = new Set(
+					(config.lessons ?? []).map((e: string | { file: string }) =>
+						getLessonFile(e),
+					),
+				);
+				const unassigned = all.filter((f: string) => !configuredFiles.has(f));
+				return Response.json({
+					config,
+					allFiles: all,
+					unassignedFiles: unassigned,
+				});
+			}
+
+			if (decodedPath === "/__api/config" && method === "POST") {
+				const { saveConfig, MrmdConfigSchema } = require("../config.js");
+				try {
+					const body = await req.json();
+					const result = MrmdConfigSchema.safeParse(body);
+					if (!result.success) {
+						return Response.json(
+							{ error: result.error.message },
+							{ status: 400 },
+						);
+					}
+					saveConfig(contentBase, result.data);
+					await rebuild();
+					return Response.json({ success: true });
+				} catch (err: unknown) {
+					return Response.json(
+						{ error: err instanceof Error ? err.message : String(err) },
+						{ status: 500 },
+					);
+				}
+			}
+
+			if (decodedPath === "/__api/lessons/new" && method === "POST") {
+				const { ensureConfig, saveConfig } = require("../config.js");
+				try {
+					const { name } = await req.json();
+					if (!name || typeof name !== "string") {
+						return Response.json(
+							{ error: "Lesson name required" },
+							{ status: 400 },
+						);
+					}
+					const safeName = name
+						.toLowerCase()
+						.replace(/[^a-z0-9-_]+/g, "-")
+						.replace(/(^-|-$)/g, "");
+					const fileName = `${safeName || "untitled"}.md`;
+					const targetFilePath = path.resolve(contentBase, fileName);
+					if (fs.existsSync(targetFilePath)) {
+						return Response.json(
+							{ error: `File already exists: ${fileName}` },
+							{ status: 409 },
+						);
+					}
+					const currentDate = new Date().toISOString().split("T")[0];
+					const content = `---\ntitle: ${name}\ndate: ${currentDate}\nauthor: ""\ntags: []\n---\n\n# ${name}\n\nStart writing your lesson here.\n\n`;
+					fs.writeFileSync(targetFilePath, content, "utf-8");
+
+					const config = ensureConfig(contentBase);
+					config.lessons = [...(config.lessons ?? []), fileName];
+					saveConfig(contentBase, config);
+					await rebuild();
+					return Response.json({ success: true, file: fileName });
+				} catch (err: unknown) {
+					return Response.json(
+						{ error: err instanceof Error ? err.message : String(err) },
+						{ status: 500 },
+					);
+				}
+			}
 
 			if (
 				!isDirectory &&
@@ -383,7 +513,8 @@ export async function runDev(args: string[]) {
 				if (networkUrl) break;
 			}
 
-			logger.serveBox(localUrl, networkUrl, basePort, port);
+			const studioUrl = `http://localhost:${server.port}/__studio`;
+			logger.serveBox(localUrl, networkUrl, basePort, port, studioUrl);
 			break;
 		} catch (err: unknown) {
 			if (

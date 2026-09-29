@@ -1,8 +1,5 @@
 import * as fs from "fs";
-import { createRequire } from "module";
 import * as path from "path";
-
-const require = createRequire(import.meta.url);
 
 import { loadConfig, saveConfig } from "../config.js";
 import { logger } from "./logger.js";

@@ -41,24 +41,28 @@ describe("CLI Deep Tests", () => {
       const result = await $`bun run ${CLI_PATH} generate "test-lesson"`.cwd(tempDir).quiet();
       expect(result.exitCode).toBe(0);
       
-      const filePath = join(tempDir, "01-test-lesson.md");
+      const filePath = join(tempDir, "test-lesson.md");
       expect(existsSync(filePath)).toBe(true);
       
       const content = await readFile(filePath, "utf-8");
-      expect(content).toContain("index: 1");
+      expect(content).toContain("title: test-lesson");
       expect(content).toContain("# test-lesson");
 
-      const buildResult = await $`bun run ${CLI_PATH} build 01-test-lesson.md`.cwd(tempDir).quiet();
+      const buildResult = await $`bun run ${CLI_PATH} build test-lesson.md`.cwd(tempDir).quiet();
       expect(buildResult.exitCode).toBe(0);
-      expect(existsSync(join(tempDir, "out", "01-test-lesson.html"))).toBe(true);
+      expect(existsSync(join(tempDir, "out", "test-lesson.html"))).toBe(true);
     });
 
-    test("Should correctly increment index for subsequent files", async () => {
+    test("Should correctly generate clean files and append to config when config exists", async () => {
+      await writeFile(join(tempDir, "mrmd.config.json"), JSON.stringify({ lessons: [] }));
       await $`bun run ${CLI_PATH} generate "first"`.cwd(tempDir).quiet();
       await $`bun run ${CLI_PATH} generate "second"`.cwd(tempDir).quiet();
       
-      const content = await readFile(join(tempDir, "02-second.md"), "utf-8");
-      expect(content).toContain("index: 2");
+      expect(existsSync(join(tempDir, "first.md"))).toBe(true);
+      expect(existsSync(join(tempDir, "second.md"))).toBe(true);
+      const config = JSON.parse(await readFile(join(tempDir, "mrmd.config.json"), "utf-8"));
+      expect(config.lessons).toContain("first.md");
+      expect(config.lessons).toContain("second.md");
     });
   });
 
@@ -179,5 +183,56 @@ describe("CLI Deep Tests", () => {
         devProc.kill();
       }
     }, 15000);
+
+    test("Should serve Studio dashboard and Studio REST APIs", async () => {
+      await writeFile(join(tempDir, "01-lesson.md"), "# Studio Lesson\n\nContent");
+
+      const devProc = Bun.spawn(["bun", "run", CLI_PATH, "dev", "."], {
+        cwd: tempDir,
+        env: { ...process.env, PORT: "4020" }
+      });
+
+      try {
+        await waitForServer("http://localhost:4020");
+
+        // 1. Studio HTML endpoint
+        const studioRes = await fetch("http://localhost:4020/__studio");
+        expect(studioRes.status).toBe(200);
+        const studioHtml = await studioRes.text();
+        expect(studioHtml).toContain("mr-md studio");
+
+        // 2. GET /__api/config
+        const configRes = await fetch("http://localhost:4020/__api/config");
+        expect(configRes.status).toBe(200);
+        const configData = await configRes.json();
+        expect(configData.config).toBeDefined();
+        expect(configData.allFiles).toContain("01-lesson.md");
+
+        // 3. POST /__api/config
+        const updateRes = await fetch("http://localhost:4020/__api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "Updated via Studio",
+            palette: "ember",
+            lessons: ["01-lesson.md"]
+          })
+        });
+        expect(updateRes.status).toBe(200);
+        const updateData = await updateRes.json();
+        expect(updateData.success).toBe(true);
+
+        // 4. POST /__api/lessons/new
+        const newLessonRes = await fetch("http://localhost:4020/__api/lessons/new", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "brand-new-lesson" })
+        });
+        expect(newLessonRes.status).toBe(200);
+        expect(existsSync(join(tempDir, "brand-new-lesson.md"))).toBe(true);
+      } finally {
+        devProc.kill();
+      }
+    }, 20000);
   });
 });

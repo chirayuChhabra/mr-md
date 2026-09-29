@@ -94,11 +94,15 @@ export const logger = {
 		networkUrl: string | null,
 		basePort?: number,
 		currentPort?: number,
+		studioUrl?: string,
 	) => {
 		let text = `${pc.greenBright("Serving!")}\n\n`;
 		text += `- ${pc.bold("Local:")}    ${localUrl}\n`;
 		if (networkUrl) {
 			text += `- ${pc.bold("Network:")}  ${networkUrl}\n`;
+		}
+		if (studioUrl) {
+			text += `- ${pc.bold("Studio:")}   ${pc.cyan(studioUrl)}\n`;
 		}
 
 		if (basePort && currentPort && basePort !== currentPort) {
@@ -107,7 +111,7 @@ export const logger = {
 
 		text += `\nCopied local address to clipboard!`;
 
-		writeText(localUrl).catch((err: unknown) => {
+		writeText(studioUrl || localUrl).catch((err: unknown) => {
 			logger.warn(
 				`Failed to copy address to clipboard (may be headless environment): ${err instanceof Error ? err.message : String(err)}`,
 			);
