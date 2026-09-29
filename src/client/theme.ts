@@ -94,22 +94,21 @@ export function bkWireThemeControls() {
 		});
 	}
 
-	if (savedTheme) {
-		updateThemeBtn(savedTheme);
-		applyThemeSetting(savedTheme);
-	}
+	const activeTheme = savedTheme || root.dataset.theme || "auto";
+	updateThemeBtn(activeTheme);
+	applyThemeSetting(activeTheme);
+
 	const shell = document.querySelector(".bk-shell");
-	if (savedPalette) {
-		const normalizedPalette = savedPalette === "green" ? "field" : savedPalette;
-		updatePaletteBtn(normalizedPalette);
-		root.setAttribute("data-palette", normalizedPalette);
-		if (shell) shell.setAttribute("data-palette", normalizedPalette);
-	}
-	if (savedUi) {
-		updateUiBtn(savedUi);
-		root.setAttribute("data-ui", savedUi);
-		if (shell) shell.setAttribute("data-ui", savedUi);
-	}
+	const activePalette = savedPalette || root.dataset.palette || "ink";
+	const normalizedPalette = activePalette === "green" ? "field" : activePalette;
+	updatePaletteBtn(normalizedPalette);
+	root.setAttribute("data-palette", normalizedPalette);
+	if (shell) shell.setAttribute("data-palette", normalizedPalette);
+
+	const activeUi = savedUi || root.dataset.ui || "standard";
+	updateUiBtn(activeUi);
+	root.setAttribute("data-ui", activeUi);
+	if (shell) shell.setAttribute("data-ui", activeUi);
 
 	button &&
 		panel &&

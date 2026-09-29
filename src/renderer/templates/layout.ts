@@ -84,19 +84,27 @@ export function renderLayout(
 <head>
 <script>
 (function() {
-	var t = localStorage.getItem("bk-theme") || "auto";
+	var root = document.documentElement;
+	var configTheme = root.getAttribute("data-theme") || "auto";
+	var configPalette = root.getAttribute("data-palette") || "ink";
+	var configUi = root.getAttribute("data-ui") || "standard";
+
+	var t = localStorage.getItem("bk-theme");
 	var p = localStorage.getItem("bk-palette");
 	var u = localStorage.getItem("bk-ui");
-	var root = document.documentElement;
-	
-	var resolvedTheme = t;
-	if (t === "auto") {
+
+	var themeSetting = t || configTheme;
+	var resolvedTheme = themeSetting;
+	if (themeSetting === "auto") {
 		resolvedTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 	}
 	root.setAttribute("data-theme", resolvedTheme);
 	
-	if (p) root.setAttribute("data-palette", p === "green" ? "field" : p);
-	if (u) root.setAttribute("data-ui", u);
+	var resolvedPalette = p || configPalette;
+	if (resolvedPalette) root.setAttribute("data-palette", resolvedPalette === "green" ? "field" : resolvedPalette);
+	
+	var resolvedUi = u || configUi;
+	if (resolvedUi) root.setAttribute("data-ui", resolvedUi);
 })();
 </script>
 <meta charset="UTF-8">

@@ -69,6 +69,81 @@ function queueSave() {
 	}, 600);
 }
 
+const BUILTIN_PALETTES: Record<
+	string,
+	{
+		name: string;
+		accent: string;
+		lightBg: string;
+		lightPaper: string;
+		darkBg: string;
+		darkPaper: string;
+		lightInk: string;
+		darkInk: string;
+	}
+> = {
+	ink: {
+		name: "Ink",
+		accent: "#2563eb",
+		lightBg: "#f5f8fc",
+		lightPaper: "#ffffff",
+		darkBg: "#07090c",
+		darkPaper: "#121212",
+		lightInk: "#09090b",
+		darkInk: "#f0f0f0",
+	},
+	field: {
+		name: "Field",
+		accent: "#0d9488",
+		lightBg: "#f2fcf5",
+		lightPaper: "#ffffff",
+		darkBg: "#050a0a",
+		darkPaper: "#121212",
+		lightInk: "#09090b",
+		darkInk: "#f0f0f0",
+	},
+	ember: {
+		name: "Ember",
+		accent: "#ea580c",
+		lightBg: "#fffcf8",
+		lightPaper: "#ffffff",
+		darkBg: "#0d0a08",
+		darkPaper: "#121212",
+		lightInk: "#09090b",
+		darkInk: "#f0f0f0",
+	},
+	elixir: {
+		name: "Elixir",
+		accent: "#a855f7",
+		lightBg: "#f8f5fc",
+		lightPaper: "#ffffff",
+		darkBg: "#0b0a0e",
+		darkPaper: "#121212",
+		lightInk: "#09090b",
+		darkInk: "#f0f0f0",
+	},
+	trunk: {
+		name: "Trunk",
+		accent: "#78350f",
+		lightBg: "#fdfaf8",
+		lightPaper: "#ffffff",
+		darkBg: "#0c0a09",
+		darkPaper: "#121212",
+		lightInk: "#09090b",
+		darkInk: "#f0f0f0",
+	},
+	lava: {
+		name: "Lava",
+		accent: "#ef4444",
+		lightBg: "#fff5f5",
+		lightPaper: "#ffffff",
+		darkBg: "#0f0808",
+		darkPaper: "#121212",
+		lightInk: "#09090b",
+		darkInk: "#f0f0f0",
+	},
+};
+
 // ── Rendering ──────────────────────────────────────────────────────────────
 
 function renderAll() {
@@ -79,6 +154,97 @@ function renderAll() {
 	renderUiMode();
 	renderPalettes();
 	renderCustomPalettes();
+	renderLiveAppearancePreview();
+}
+
+function renderLiveAppearancePreview() {
+	const box = $("st-live-preview-box");
+	const tag = $("st-prev-tag");
+	const title = $("st-prev-title");
+	const body = $("st-prev-body");
+	const btn = $("st-prev-btn");
+	const badge = $("st-appearance-preview-badge");
+	if (!box || !btn) return;
+
+	const theme = currentConfig.theme || "auto";
+	const ui = currentConfig.ui || "standard";
+	const paletteKey = currentConfig.palette || "ink";
+
+	const isDark =
+		theme === "dark" ||
+		(theme === "auto" &&
+			typeof window !== "undefined" &&
+			window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+	// Resolve palette colors
+	let accent = "#2563eb";
+	let paper = isDark ? "#121212" : "#ffffff";
+	let ink = isDark ? "#f0f0f0" : "#09090b";
+	let paletteName = paletteKey;
+
+	const builtin = BUILTIN_PALETTES[paletteKey];
+	if (builtin) {
+		accent = builtin.accent;
+		paper = isDark ? builtin.darkPaper : builtin.lightPaper;
+		ink = isDark ? builtin.darkInk : builtin.lightInk;
+		paletteName = builtin.name;
+	} else if (currentConfig.customPalettes?.[paletteKey]) {
+		const custom = currentConfig.customPalettes[paletteKey];
+		accent = custom.accent || "#3b82f6";
+		if (isDark) {
+			paper = custom.dark?.paper || "#121620";
+			ink = custom.dark?.ink || "#f0f0f0";
+		} else {
+			paper = custom.light?.paper || "#ffffff";
+			ink = custom.light?.ink || "#09090b";
+		}
+		paletteName = custom.name || paletteKey;
+	}
+
+	if (badge) {
+		badge.textContent = `${theme.toUpperCase()} · ${ui.toUpperCase()} · ${paletteName}`;
+	}
+
+	// Apply colors
+	box.style.backgroundColor = paper;
+	box.style.color = ink;
+	if (title) title.style.color = ink;
+	if (body) body.style.color = ink;
+	if (tag) {
+		tag.style.backgroundColor = `${accent}20`;
+		tag.style.color = accent;
+	}
+
+	// Apply UI aesthetic
+	if (ui === "neo") {
+		box.style.borderRadius = "0px";
+		box.style.border = `2px solid ${ink}`;
+		box.style.boxShadow = `4px 4px 0px 0px ${ink}`;
+		box.style.fontFamily = '"Archivo", sans-serif';
+		btn.style.borderRadius = "0px";
+		btn.style.border = `2px solid ${ink}`;
+		btn.style.boxShadow = `2px 2px 0px 0px ${ink}`;
+		btn.style.backgroundColor = accent;
+	} else if (ui === "playful") {
+		box.style.borderRadius = "20px";
+		box.style.border = `1px solid ${accent}30`;
+		box.style.boxShadow = `0 10px 25px -5px ${accent}25`;
+		box.style.fontFamily = '"Nunito", -apple-system, sans-serif';
+		btn.style.borderRadius = "14px";
+		btn.style.border = "none";
+		btn.style.boxShadow = `0 4px 12px ${accent}40`;
+		btn.style.backgroundColor = accent;
+	} else {
+		// standard
+		box.style.borderRadius = "8px";
+		box.style.border = "1px solid var(--st-border)";
+		box.style.boxShadow = "0 4px 14px rgba(0, 0, 0, 0.08)";
+		box.style.fontFamily = "inherit";
+		btn.style.borderRadius = "6px";
+		btn.style.border = "none";
+		btn.style.boxShadow = "none";
+		btn.style.backgroundColor = accent;
+	}
 }
 
 function renderCurriculum() {
@@ -315,8 +481,10 @@ function renderCustomPalettes() {
 		item.addEventListener("click", (e) => {
 			if ((e.target as HTMLElement).tagName === "BUTTON") return;
 			currentConfig.palette = key;
+			localStorage.setItem("bk-palette", key);
 			renderPalettes();
 			renderCustomPalettes();
+			renderLiveAppearancePreview();
 			queueSave();
 		});
 
@@ -336,9 +504,11 @@ function renderCustomPalettes() {
 				delete currentConfig.customPalettes?.[key];
 				if (currentConfig.palette === key) {
 					currentConfig.palette = "ink";
+					localStorage.setItem("bk-palette", "ink");
 				}
 				renderPalettes();
 				renderCustomPalettes();
+				renderLiveAppearancePreview();
 				queueSave();
 			});
 
@@ -368,8 +538,11 @@ function wireEvents() {
 		.querySelectorAll<HTMLButtonElement>("#st-theme-mode button")
 		.forEach((btn) => {
 			btn.addEventListener("click", () => {
-				currentConfig.theme = btn.dataset.value as "light" | "dark" | "auto";
+				const val = btn.dataset.value as "light" | "dark" | "auto";
+				currentConfig.theme = val;
+				localStorage.setItem("bk-theme", val);
 				renderThemeMode();
+				renderLiveAppearancePreview();
 				queueSave();
 			});
 		});
@@ -379,8 +552,11 @@ function wireEvents() {
 		.querySelectorAll<HTMLButtonElement>("#st-ui-mode button")
 		.forEach((btn) => {
 			btn.addEventListener("click", () => {
-				currentConfig.ui = btn.dataset.value as "standard" | "neo" | "playful";
+				const val = btn.dataset.value as "standard" | "neo" | "playful";
+				currentConfig.ui = val;
+				localStorage.setItem("bk-ui", val);
 				renderUiMode();
+				renderLiveAppearancePreview();
 				queueSave();
 			});
 		});
@@ -390,9 +566,12 @@ function wireEvents() {
 		.querySelectorAll<HTMLButtonElement>("#st-builtin-palettes button")
 		.forEach((btn) => {
 			btn.addEventListener("click", () => {
-				currentConfig.palette = btn.dataset.palette;
+				const val = btn.dataset.palette;
+				currentConfig.palette = val;
+				if (val) localStorage.setItem("bk-palette", val);
 				renderPalettes();
 				renderCustomPalettes();
+				renderLiveAppearancePreview();
 				queueSave();
 			});
 		});
@@ -552,12 +731,14 @@ function wireCustomThemeInputs() {
 		};
 
 		currentConfig.palette = key;
+		localStorage.setItem("bk-palette", key);
 
 		const modal = $("st-modal-custom-theme");
 		if (modal) modal.style.display = "none";
 
 		renderPalettes();
 		renderCustomPalettes();
+		renderLiveAppearancePreview();
 		queueSave();
 	});
 }
