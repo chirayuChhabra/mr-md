@@ -54,6 +54,50 @@ function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 
 // ── Niri Ribbon Spatial Navigation ─────────────────────────────────────────
 
+let snapDisarmTimer: ReturnType<typeof setTimeout> | null = null;
+let lockedScrollLeft = 0;
+let isUserGesture = false;
+let userGestureTimer: ReturnType<typeof setTimeout> | null = null;
+
+function markUserGesture() {
+	if (isNavigatingAnimation) return;
+	isUserGesture = true;
+	armScrollSnap();
+	if (userGestureTimer) clearTimeout(userGestureTimer);
+	userGestureTimer = setTimeout(() => {
+		isUserGesture = false;
+		const canvas = $("st-infinite-canvas");
+		if (canvas) lockedScrollLeft = canvas.scrollLeft;
+		disarmScrollSnap();
+	}, 400);
+}
+
+function armScrollSnap() {
+	if (isNavigatingAnimation) return;
+	const canvas = $("st-infinite-canvas");
+	if (!canvas) return;
+
+	if (canvas.style.scrollSnapType !== "x mandatory") {
+		canvas.style.scrollSnapType = "x mandatory";
+	}
+	if (snapDisarmTimer) clearTimeout(snapDisarmTimer);
+	snapDisarmTimer = setTimeout(() => {
+		disarmScrollSnap();
+	}, 600);
+}
+
+function disarmScrollSnap() {
+	if (isNavigatingAnimation) return;
+	if (snapDisarmTimer) {
+		clearTimeout(snapDisarmTimer);
+		snapDisarmTimer = null;
+	}
+	const canvas = $("st-infinite-canvas");
+	if (canvas && canvas.style.scrollSnapType !== "none") {
+		canvas.style.scrollSnapType = "none";
+	}
+}
+
 function smoothScrollTo(
 	element: HTMLElement,
 	targetLeft: number,
@@ -63,11 +107,15 @@ function smoothScrollTo(
 	const change = targetLeft - startLeft;
 	if (Math.abs(change) < 2) {
 		element.scrollLeft = targetLeft;
+		lockedScrollLeft = targetLeft;
+		syncNavButtons();
 		return;
 	}
 
 	isNavigatingAnimation = true;
-	// Temporarily bypass scroll-snap during programmatic glide so button clicks are silky-smooth
+	isUserGesture = false;
+	if (snapDisarmTimer) clearTimeout(snapDisarmTimer);
+	if (userGestureTimer) clearTimeout(userGestureTimer);
 	element.style.scrollSnapType = "none";
 
 	const startTime = performance.now();
@@ -85,8 +133,8 @@ function smoothScrollTo(
 			requestAnimationFrame(step);
 		} else {
 			element.scrollLeft = targetLeft;
-			// Re-enable magnetic docking detents once glide completes
-			element.style.scrollSnapType = "x proximity";
+			lockedScrollLeft = targetLeft;
+			element.style.scrollSnapType = "none";
 			isNavigatingAnimation = false;
 			syncNavButtons();
 		}
@@ -301,6 +349,7 @@ function renderCurriculum() {
 	const countPill = $("st-lesson-count-pill");
 	if (!container) return;
 
+	const prevScrollTop = container.scrollTop;
 	const allLessons = currentConfig.lessons || [];
 
 	if (countPill) {
@@ -351,23 +400,20 @@ function renderCurriculum() {
 		card.innerHTML = `
       <div class="st-card-left">
         <span class="st-card-drag" title="Drag to reorder">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="8" cy="5" r="2.2"/><circle cx="16" cy="5" r="2.2"/>
-            <circle cx="8" cy="12" r="2.2"/><circle cx="16" cy="12" r="2.2"/>
-            <circle cx="8" cy="19" r="2.2"/><circle cx="16" cy="19" r="2.2"/>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="8" cy="5" r="2.4"/><circle cx="16" cy="5" r="2.4"/>
+            <circle cx="8" cy="12" r="2.4"/><circle cx="16" cy="12" r="2.4"/>
+            <circle cx="8" cy="19" r="2.4"/><circle cx="16" cy="19" r="2.4"/>
           </svg>
         </span>
         <span class="st-card-num">${formattedNum}</span>
         <div class="st-card-text">
-          <div style="display: flex; align-items: center;">
-            <span class="st-card-title">${escapeHtml(title)}</span>
-            ${badge ? `<span class="st-card-tag ${badge.cls}">${badge.text}</span>` : ""}
-          </div>
-          <span class="st-card-file">${escapeHtml(file)}</span>
+          <span class="st-card-title">${escapeHtml(title)}</span>
+          ${badge ? `<span class="st-card-tag ${badge.cls}">${badge.text}</span>` : ""}
         </div>
       </div>
       <div class="st-card-actions">
-        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open directly in tab">
+        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open directly in new tab">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
         <button class="st-card-btn danger st-remove-btn" title="Remove from curriculum">
@@ -409,8 +455,6 @@ function renderCurriculum() {
 					"drag-over",
 				);
 			});
-			const endZone = $("st-lesson-list")?.querySelector(".st-drop-end-zone");
-			if (endZone) endZone.classList.remove("active");
 			setTimeout(() => {
 				isDraggingLesson = false;
 				draggedLessonIndex = null;
@@ -419,6 +463,7 @@ function renderCurriculum() {
 
 		card.addEventListener("dragover", (e) => {
 			e.preventDefault();
+			e.stopPropagation();
 			if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
 
 			const rect = card.getBoundingClientRect();
@@ -501,50 +546,7 @@ function renderCurriculum() {
 		container.appendChild(card);
 	});
 
-	// Dedicated drop zone at the bottom of curriculum list
-	const endDropZone = document.createElement("div");
-	endDropZone.className = "st-drop-end-zone";
-	endDropZone.innerHTML = `
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 5v14M19 12l-7 7-7-7"/>
-    </svg>
-    <span>Drop here to place at bottom</span>
-  `;
-
-	endDropZone.addEventListener("dragover", (e) => {
-		e.preventDefault();
-		if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-		endDropZone.classList.add("active");
-		document.querySelectorAll(".st-lesson-card").forEach((c) => {
-			c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
-		});
-	});
-
-	endDropZone.addEventListener("dragleave", () => {
-		endDropZone.classList.remove("active");
-	});
-
-	endDropZone.addEventListener("drop", (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-		endDropZone.classList.remove("active");
-
-		const fromIdx =
-			draggedLessonIndex !== null
-				? draggedLessonIndex
-				: parseInt(e.dataTransfer?.getData("text/plain") || "-1", 10);
-
-		const list = [...(currentConfig.lessons || [])];
-		if (fromIdx >= 0 && fromIdx < list.length - 1) {
-			const [moved] = list.splice(fromIdx, 1);
-			list.push(moved);
-			currentConfig.lessons = list;
-			renderCurriculum();
-			saveConfig();
-		}
-	});
-
-	container.appendChild(endDropZone);
+	container.scrollTop = prevScrollTop;
 }
 
 function renderUnassigned() {
@@ -731,13 +733,47 @@ function wireEvents() {
 		});
 	});
 
-	// Canvas scroll sync with segmented nav buttons
+	// Canvas scroll sync with segmented nav buttons & dynamic gesture snap
 	const canvas = $("st-infinite-canvas");
 	if (canvas) {
 		let scrollRaf: number | null = null;
+
+		// Arm mandatory scroll snap on active user gestures (trackpad swipe / mouse wheel / touch / scrollbar)
+		canvas.addEventListener("wheel", markUserGesture, { passive: true });
+		canvas.addEventListener("touchstart", markUserGesture, { passive: true });
+		canvas.addEventListener(
+			"pointerdown",
+			() => {
+				isUserGesture = true;
+			},
+			{ passive: true },
+		);
+		window.addEventListener(
+			"pointerup",
+			() => {
+				if (isUserGesture && !isNavigatingAnimation) {
+					setTimeout(() => {
+						isUserGesture = false;
+						lockedScrollLeft = canvas.scrollLeft;
+					}, 60);
+				}
+			},
+			{ passive: true },
+		);
+
 		canvas.addEventListener(
 			"scroll",
 			() => {
+				// Suppress accidental focus scrolling jumps caused by off-screen clicks or iframe navigation
+				if (!isUserGesture && !isNavigatingAnimation) {
+					if (Math.abs(canvas.scrollLeft - lockedScrollLeft) > 1) {
+						canvas.scrollLeft = lockedScrollLeft;
+						return;
+					}
+				}
+
+				lockedScrollLeft = canvas.scrollLeft;
+
 				if (scrollRaf) cancelAnimationFrame(scrollRaf);
 				scrollRaf = requestAnimationFrame(() => {
 					syncNavButtons();
@@ -746,14 +782,100 @@ function wireEvents() {
 			{ passive: true },
 		);
 
-		// Synchronize active nav button when magnetic snap docking settles
+		// Synchronize active nav button when magnetic snap docking settles & disarm snap
 		canvas.addEventListener(
 			"scrollend",
 			() => {
+				isUserGesture = false;
+				lockedScrollLeft = canvas.scrollLeft;
 				syncNavButtons();
+				disarmScrollSnap();
 			},
 			{ passive: true },
 		);
+	}
+
+	// Curriculum container whitespace drop handling (drop below cards places item at end)
+	const lessonContainer = $("st-lesson-list");
+	if (lessonContainer) {
+		lessonContainer.addEventListener("dragover", (e) => {
+			if (!isDraggingLesson) return;
+			e.preventDefault();
+			if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+
+			const cards = Array.from(
+				lessonContainer.querySelectorAll(".st-lesson-card"),
+			) as HTMLElement[];
+			if (cards.length > 0) {
+				const lastCard = cards[cards.length - 1];
+				const lastRect = lastCard.getBoundingClientRect();
+				if (e.clientY > lastRect.bottom) {
+					cards.forEach((c) => {
+						c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
+					});
+					lastCard.classList.add("drop-indicator-bottom");
+				}
+			}
+		});
+
+		lessonContainer.addEventListener("drop", (e) => {
+			if (!isDraggingLesson) return;
+			const targetCard = (e.target as HTMLElement).closest(".st-lesson-card");
+			if (targetCard) return; // handled by individual card drop handler
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			document.querySelectorAll(".st-lesson-card").forEach((c) => {
+				c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
+			});
+
+			const fromIdx =
+				draggedLessonIndex !== null
+					? draggedLessonIndex
+					: parseInt(e.dataTransfer?.getData("text/plain") || "-1", 10);
+
+			const list = [...(currentConfig.lessons || [])];
+			if (fromIdx >= 0 && fromIdx < list.length - 1) {
+				const [moved] = list.splice(fromIdx, 1);
+				list.push(moved);
+				currentConfig.lessons = list;
+				renderCurriculum();
+				saveConfig();
+			}
+		});
+	}
+
+	// Live preview iframe navigation listener (sync URL & active card without moving canvas)
+	const iframe = $<HTMLIFrameElement>("st-course-iframe");
+	if (iframe) {
+		iframe.addEventListener("load", () => {
+			try {
+				const path = iframe.contentWindow?.location.pathname;
+				if (path) {
+					const urlDisplay = $("st-viewport-url");
+					if (urlDisplay) {
+						urlDisplay.textContent = `${window.location.origin}${path}`;
+					}
+					const openTabBtn = $<HTMLAnchorElement>("st-btn-open-active-tab");
+					if (openTabBtn) {
+						openTabBtn.href = path;
+					}
+					const slug = path.replace(/^\//, "").replace(/\.html$/, "");
+					if (slug) {
+						const matchingFile = `${slug}.md`;
+						activeLessonFile = matchingFile;
+						document.querySelectorAll(".st-lesson-card").forEach((c) => {
+							if ((c as HTMLElement).dataset.file === matchingFile) {
+								c.classList.add("active");
+							} else {
+								c.classList.remove("active");
+							}
+						});
+					}
+				}
+			} catch {}
+		});
 	}
 
 	// Keyboard navigation shortcuts (1: Curriculum, 2: Course, 3: Design)

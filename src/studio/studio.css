@@ -280,9 +280,10 @@ html, body {
 	flex: 1;
 	overflow-x: auto;
 	overflow-y: hidden;
-	scroll-snap-type: x proximity;
+	scroll-snap-type: none;
 	scroll-padding: 0 24px;
 	overscroll-behavior-x: contain;
+	overflow-anchor: none;
 	display: flex;
 	align-items: stretch;
 	padding: 20px 24px;
@@ -317,7 +318,7 @@ html, body {
 .st-slab-curriculum {
 	width: 440px;
 	scroll-snap-align: start;
-	scroll-snap-stop: normal;
+	scroll-snap-stop: always;
 }
 
 .st-slab-header {
@@ -394,44 +395,44 @@ html, body {
 .st-curriculum-scroll {
 	flex: 1;
 	overflow-y: auto;
-	padding: 12px 14px;
+	padding: 10px 12px;
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 4px;
+	position: relative;
 }
 
-/* Individual Lesson Item Cards */
+/* Individual Lesson Item Cards - Minimalist Precision 38px */
 
 .st-lesson-card {
 	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 10px 12px;
+	height: 38px;
+	padding: 0 10px;
 	border-radius: var(--st-radius-sm);
 	background: var(--st-surface);
 	border: 1px solid var(--st-border);
 	cursor: pointer;
 	user-select: none;
-	transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+	transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .st-lesson-card:hover {
 	background: var(--st-surface-hover);
 	border-color: var(--st-border-hover);
-	transform: translateY(-1px);
 }
 
 .st-lesson-card.active {
-	background: var(--st-surface-hover);
-	border-color: var(--st-accent);
-	box-shadow: 0 0 0 1px var(--st-accent), 0 4px 14px rgba(59, 130, 246, 0.15);
+	background: rgba(59, 130, 246, 0.08);
+	border-color: rgba(59, 130, 246, 0.45);
+	box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
 }
 
 .st-lesson-card.dragging {
-	opacity: 0.28;
-	transform: scale(0.98);
-	background: var(--st-surface-active);
+	opacity: 0.25;
+	background: var(--st-surface);
 }
 
 /* Precise insertion indicator lines for drag & drop */
@@ -439,89 +440,35 @@ html, body {
 .st-lesson-card.drop-indicator-top::before {
 	content: "";
 	position: absolute;
-	top: -4px;
-	left: 6px;
-	right: 6px;
+	top: -3px;
+	left: 4px;
+	right: 4px;
 	height: 2px;
 	background: var(--st-accent);
 	border-radius: 2px;
-	box-shadow: 0 0 10px var(--st-accent-glow);
-	z-index: 20;
-	pointer-events: none;
-}
-
-.st-lesson-card.drop-indicator-top::after {
-	content: "";
-	position: absolute;
-	top: -6px;
-	left: 3px;
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: var(--st-accent);
 	box-shadow: 0 0 8px var(--st-accent-glow);
-	z-index: 21;
+	z-index: 20;
 	pointer-events: none;
 }
 
 .st-lesson-card.drop-indicator-bottom::before {
 	content: "";
 	position: absolute;
-	bottom: -4px;
-	left: 6px;
-	right: 6px;
+	bottom: -3px;
+	left: 4px;
+	right: 4px;
 	height: 2px;
 	background: var(--st-accent);
 	border-radius: 2px;
-	box-shadow: 0 0 10px var(--st-accent-glow);
+	box-shadow: 0 0 8px var(--st-accent-glow);
 	z-index: 20;
 	pointer-events: none;
-}
-
-.st-lesson-card.drop-indicator-bottom::after {
-	content: "";
-	position: absolute;
-	bottom: -6px;
-	left: 3px;
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: var(--st-accent);
-	box-shadow: 0 0 8px var(--st-accent-glow);
-	z-index: 21;
-	pointer-events: none;
-}
-
-/* Dedicated Drop End Zone */
-
-.st-drop-end-zone {
-	margin-top: 6px;
-	padding: 12px 14px;
-	border: 1px dashed rgba(255, 255, 255, 0.1);
-	border-radius: var(--st-radius-sm);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	font-size: 11px;
-	color: var(--st-text-muted);
-	cursor: default;
-	transition: all 0.15s ease;
-	user-select: none;
-}
-
-.st-drop-end-zone:hover,
-.st-drop-end-zone.active {
-	border-color: var(--st-accent);
-	background: var(--st-accent-soft);
-	color: var(--st-text);
-	box-shadow: 0 0 14px var(--st-accent-glow);
 }
 
 .st-card-left {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 9px;
 	min-width: 0;
 	flex: 1;
 }
@@ -532,77 +479,79 @@ html, body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 18px;
-	height: 18px;
+	width: 14px;
+	height: 14px;
 	flex-shrink: 0;
 	transition: color 0.12s ease;
 }
 
 .st-lesson-card:hover .st-card-drag {
-	color: var(--st-text-muted);
+	color: var(--st-text-secondary);
 }
 
 .st-card-num {
 	font-family: var(--st-mono);
-	font-size: 11px;
-	font-weight: 700;
+	font-size: 10.5px;
+	font-weight: 500;
 	color: var(--st-text-muted);
-	width: 20px;
+	width: 18px;
 	text-align: right;
 	flex-shrink: 0;
 }
 
 .st-card-text {
 	display: flex;
-	flex-direction: column;
-	gap: 2px;
+	align-items: center;
+	gap: 8px;
 	min-width: 0;
+	overflow: hidden;
 }
 
 .st-card-title {
-	font-size: 13px;
-	font-weight: 600;
+	font-size: 12.5px;
+	font-weight: 500;
 	color: var(--st-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	letter-spacing: -0.01em;
 }
 
-.st-card-file {
-	font-size: 11px;
-	font-family: var(--st-mono);
-	color: var(--st-text-muted);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+.st-lesson-card.active .st-card-title {
+	color: #ffffff;
+	font-weight: 600;
 }
 
 .st-card-tag {
-	font-size: 9px;
+	font-size: 8.5px;
 	font-weight: 700;
 	text-transform: uppercase;
-	padding: 1px 6px;
-	border-radius: 4px;
-	margin-left: 6px;
+	padding: 1.5px 5px;
+	border-radius: 3px;
+	letter-spacing: 0.04em;
 	flex-shrink: 0;
+	line-height: 1;
 }
 
 .st-card-tag.sim {
-	background: rgba(59, 130, 246, 0.16);
-	color: #60a5fa;
+	background: rgba(59, 130, 246, 0.14);
+	color: #93c5fd;
+	border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .st-card-tag.quiz {
-	background: rgba(168, 85, 247, 0.16);
-	color: #c084fc;
+	background: rgba(168, 85, 247, 0.14);
+	color: #d8b4fe;
+	border: 1px solid rgba(168, 85, 247, 0.25);
 }
 
 .st-card-actions {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: 2px;
 	opacity: 0;
 	transition: opacity 0.12s ease;
+	flex-shrink: 0;
 }
 
 .st-lesson-card:hover .st-card-actions {
@@ -614,7 +563,8 @@ html, body {
 	border: none;
 	color: var(--st-text-muted);
 	cursor: pointer;
-	padding: 5px;
+	width: 24px;
+	height: 24px;
 	border-radius: 4px;
 	display: flex;
 	align-items: center;
@@ -692,7 +642,7 @@ html, body {
 	width: min(1360px, calc(100vw - 120px));
 	min-width: 1040px;
 	scroll-snap-align: center;
-	scroll-snap-stop: normal;
+	scroll-snap-stop: always;
 	background: #000000;
 }
 
@@ -742,7 +692,7 @@ html, body {
 .st-slab-design {
 	width: 440px;
 	scroll-snap-align: end;
-	scroll-snap-stop: normal;
+	scroll-snap-stop: always;
 	overflow-y: auto;
 }
 

@@ -72,7 +72,7 @@ export async function runDev(args: string[]) {
 	let singleFileSlug = "";
 	let previousFileSlug = "";
 
-	const rebuild = async () => {
+	const rebuild = async (publishReload = true) => {
 		logger.startSpinner("Rebuilding...");
 		try {
 			const {
@@ -132,17 +132,21 @@ export async function runDev(args: string[]) {
 			logger.succeedSpinner(
 				`Build successful for ${path.relative(process.cwd(), targetPath) || path.basename(targetPath)}.`,
 			);
-			if (previousFileSlug && previousFileSlug !== singleFileSlug) {
-				server?.publish("livereload", `redirect:/${singleFileSlug}.html`);
-			} else {
-				server?.publish("livereload", "reload");
+			if (publishReload) {
+				if (previousFileSlug && previousFileSlug !== singleFileSlug) {
+					server?.publish("livereload", `redirect:/${singleFileSlug}.html`);
+				} else {
+					server?.publish("livereload", "reload");
+				}
 			}
 			previousFileSlug = singleFileSlug;
 		} catch (err: unknown) {
 			logger.failSpinner(`Build failed`);
 			const msg = err instanceof Error ? err.message : String(err);
 			logger.error(msg);
-			server?.publish("livereload", `error:${msg}`);
+			if (publishReload) {
+				server?.publish("livereload", `error:${msg}`);
+			}
 		}
 	};
 
@@ -275,7 +279,7 @@ export async function runDev(args: string[]) {
 					const oldLessons = JSON.stringify(existing?.lessons ?? []);
 					const newLessons = JSON.stringify(result.data.lessons ?? []);
 					if (oldLessons !== newLessons) {
-						await rebuild();
+						await rebuild(false);
 					}
 					return Response.json({ success: true });
 				} catch (err: unknown) {
