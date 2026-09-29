@@ -41,35 +41,33 @@ test("E2E Workflow: From blank canvas to full project", async () => {
   // 1. Generate a Chapter
   const generateChapterResult = await $`bun run ${CLI_PATH} generate "first-chapter"`.cwd(tempDir).quiet();
   expect(generateChapterResult.exitCode).toBe(0);
-  expect(existsSync(join(tempDir, "01-first-chapter.md"))).toBe(true);
+  expect(existsSync(join(tempDir, "first-chapter.md"))).toBe(true);
 
   // 2. Generate a Lesson inside a lessons directory
   const lessonsDir = join(tempDir, "lessons");
   await mkdir(lessonsDir, { recursive: true });
   const generateLessonResult = await $`bun run ${CLI_PATH} generate "first-lesson"`.cwd(lessonsDir).quiet();
   expect(generateLessonResult.exitCode).toBe(0);
-  expect(existsSync(join(lessonsDir, "01-first-lesson.md"))).toBe(true);
+  expect(existsSync(join(lessonsDir, "first-lesson.md"))).toBe(true);
 
   // 3. Update the chapter to link to the lesson
   await writeFile(
-    join(tempDir, "01-first-chapter.md"),
+    join(tempDir, "first-chapter.md"),
     `---
-index: 1
 title: "First Chapter"
 type: "chapter"
 ---
 
 # Welcome to the Chapter
 Check out the first lesson:
-- [First Lesson](./lessons/01-first-lesson.md)
+- [First Lesson](./lessons/first-lesson.md)
 `
   );
 
   // 4. Update the lesson with some rich markdown content
   await writeFile(
-    join(lessonsDir, "01-first-lesson.md"),
+    join(lessonsDir, "first-lesson.md"),
     `---
-index: 1
 title: "First Lesson"
 ---
 
@@ -88,16 +86,16 @@ This tests custom v3 markdown parsing capabilities.
   );
 
   // 5. Build the project
-  const buildResult = await $`bun run ${CLI_PATH} build 01-first-chapter.md`.cwd(tempDir).quiet();
+  const buildResult = await $`bun run ${CLI_PATH} build first-chapter.md`.cwd(tempDir).quiet();
   expect(buildResult.exitCode).toBe(0);
   
   // Verify out directory and HTML files exist
   const outDir = join(tempDir, "out");
   expect(existsSync(outDir)).toBe(true);
-  expect(existsSync(join(outDir, "01-first-lesson.html"))).toBe(true);
+  expect(existsSync(join(outDir, "first-lesson.html"))).toBe(true);
 
   // 6. Start Dev Server
-  devProc = Bun.spawn(["bun", "run", CLI_PATH, "dev", "01-first-chapter.md"], {
+  devProc = Bun.spawn(["bun", "run", CLI_PATH, "dev", "first-chapter.md"], {
     cwd: tempDir,
     env: { ...process.env, PORT },
   });
@@ -122,7 +120,7 @@ This tests custom v3 markdown parsing capabilities.
   const page = await browser.newPage();
   
   // Navigate to the built lesson page (the server serves it statically from /out/ or directly via JIT)
-  await page.goto(`http://localhost:${PORT}/01-first-lesson.html`, { waitUntil: 'networkidle0' });
+  await page.goto(`http://localhost:${PORT}/first-lesson.html`, { waitUntil: 'networkidle0' });
 
   const pageContent = await page.content();
   expect(pageContent).toContain("Welcome to your first lesson!");
