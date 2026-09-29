@@ -7,15 +7,15 @@
 	--st-surface-active: rgba(255, 255, 255, 0.1);
 	--st-border: rgba(255, 255, 255, 0.08);
 	--st-border-hover: rgba(255, 255, 255, 0.16);
-	--st-border-focus: #3b82f6;
+	--st-border-focus: rgba(96, 165, 250, 0.45);
 	--st-text: #f3f4f6;
 	--st-text-secondary: #9ca3af;
 	--st-text-muted: #6b7280;
 	--st-text-faint: #4b5563;
 	--st-accent: #3b82f6;
 	--st-accent-hover: #2563eb;
-	--st-accent-soft: rgba(59, 130, 246, 0.12);
-	--st-accent-glow: rgba(59, 130, 246, 0.35);
+	--st-accent-soft: rgba(59, 130, 246, 0.1);
+	--st-accent-glow: rgba(59, 130, 246, 0.2);
 	--st-success: #10b981;
 	--st-danger: #f43f5e;
 	--st-danger-soft: rgba(244, 63, 94, 0.12);
@@ -363,7 +363,7 @@ html, body {
 }
 
 .st-slab-title svg {
-	color: var(--st-accent);
+	color: var(--st-text-secondary);
 }
 
 .st-badge-count {
@@ -410,25 +410,31 @@ html, body {
 
 .st-search-input {
 	width: 100%;
-	background: var(--st-surface);
-	border: 1px solid var(--st-border);
-	border-radius: var(--st-radius-sm);
+	background: rgba(255, 255, 255, 0.035);
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 8px;
 	padding: 6px 28px 6px 28px;
 	font-size: 12px;
 	color: var(--st-text);
 	outline: none;
 	transition: all 0.15s ease;
 	font-family: inherit;
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .st-search-input::placeholder {
-	color: var(--st-text-muted);
+	color: var(--st-text-faint);
+}
+
+.st-search-input:hover {
+	background: rgba(255, 255, 255, 0.055);
+	border-color: rgba(255, 255, 255, 0.16);
 }
 
 .st-search-input:focus {
 	border-color: var(--st-border-focus);
-	background: var(--st-chrome);
-	box-shadow: 0 0 0 2px var(--st-accent-soft);
+	background: rgba(255, 255, 255, 0.07);
+	box-shadow: 0 0 0 3px var(--st-accent-soft), inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .st-search-kbd {
@@ -466,8 +472,20 @@ html, body {
 
 .st-course-home-card.active {
 	border-style: solid;
-	background: rgba(59, 130, 246, 0.08);
-	border-color: rgba(59, 130, 246, 0.4);
+	background: rgba(255, 255, 255, 0.07);
+	border-color: rgba(255, 255, 255, 0.18);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.st-course-home-card.active::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 8px;
+	bottom: 8px;
+	width: 3px;
+	background: #60a5fa;
+	border-radius: 0 3px 3px 0;
 }
 
 .st-home-icon-wrap {
@@ -478,7 +496,7 @@ html, body {
 	height: 22px;
 	border-radius: 5px;
 	background: rgba(255, 255, 255, 0.05);
-	color: var(--st-accent);
+	color: #60a5fa;
 	flex-shrink: 0;
 }
 
@@ -544,21 +562,20 @@ html, body {
 }
 
 .st-lesson-card.active {
-	background: rgba(59, 130, 246, 0.08);
-	border-color: rgba(59, 130, 246, 0.4);
-	box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2), 0 4px 16px rgba(59, 130, 246, 0.12);
+	background: rgba(255, 255, 255, 0.07);
+	border-color: rgba(255, 255, 255, 0.18);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .st-lesson-card.active::before {
 	content: "";
 	position: absolute;
 	left: 0;
-	top: 9px;
-	bottom: 9px;
+	top: 8px;
+	bottom: 8px;
 	width: 3px;
-	background: var(--st-accent);
+	background: #60a5fa;
 	border-radius: 0 3px 3px 0;
-	box-shadow: 0 0 6px var(--st-accent-glow);
 }
 
 .st-lesson-card.dragging {
@@ -953,14 +970,32 @@ html, body {
 }
 
 .st-section-title {
-	font-size: 12.5px;
+	font-size: 11px;
 	font-weight: 700;
-	letter-spacing: -0.015em;
-	color: var(--st-text);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--st-text-muted);
 	margin-bottom: 12px;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+}
+
+#st-btn-new-theme {
+	padding: 3px 8px;
+	font-size: 10.5px;
+	font-weight: 600;
+	border-radius: 5px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	color: var(--st-text-secondary);
+	transition: all 0.15s ease;
+}
+
+#st-btn-new-theme:hover {
+	background: rgba(255, 255, 255, 0.1);
+	border-color: rgba(255, 255, 255, 0.2);
+	color: #ffffff;
 }
 
 .st-field-group {
@@ -974,7 +1009,9 @@ html, body {
 .st-field-label {
 	font-size: 11px;
 	font-weight: 600;
-	color: var(--st-text-secondary);
+	color: var(--st-text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
 	margin-bottom: 6px;
 	display: flex;
 	align-items: center;
@@ -983,27 +1020,37 @@ html, body {
 
 .st-field-input, .st-field-textarea {
 	width: 100%;
-	background: var(--st-surface);
-	border: 1px solid var(--st-border);
-	border-radius: var(--st-radius-sm);
-	padding: 7px 11px;
-	font-size: 12px;
+	background: rgba(255, 255, 255, 0.035);
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 8px;
+	padding: 8px 12px;
+	font-size: 12.5px;
 	color: var(--st-text);
 	font-family: inherit;
-	transition: all 0.15s ease;
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+	transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.st-field-input::placeholder, .st-field-textarea::placeholder {
+	color: var(--st-text-faint);
+}
+
+.st-field-input:hover, .st-field-textarea:hover {
+	background: rgba(255, 255, 255, 0.055);
+	border-color: rgba(255, 255, 255, 0.16);
 }
 
 .st-field-input:focus, .st-field-textarea:focus {
 	outline: none;
+	background: rgba(255, 255, 255, 0.07);
 	border-color: var(--st-border-focus);
-	background: var(--st-chrome);
-	box-shadow: 0 0 0 2px var(--st-accent-soft);
+	box-shadow: 0 0 0 3px var(--st-accent-soft), inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .st-field-textarea {
-	min-height: 60px;
+	min-height: 72px;
 	resize: vertical;
-	line-height: 1.45;
+	line-height: 1.5;
 }
 
 /* Inspector Segmented Controls */
@@ -1011,11 +1058,12 @@ html, body {
 .st-pill-selector {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 3px;
-	background: var(--st-surface);
+	gap: 2px;
+	background: rgba(0, 0, 0, 0.35);
 	padding: 3px;
-	border-radius: var(--st-radius-sm);
-	border: 1px solid var(--st-border);
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .st-pill-btn {
@@ -1024,24 +1072,27 @@ html, body {
 	justify-content: center;
 	gap: 6px;
 	padding: 6px 10px;
-	font-size: 11px;
-	font-weight: 600;
+	font-size: 11.5px;
+	font-weight: 500;
 	background: transparent;
 	border: none;
-	border-radius: 5px;
-	color: var(--st-text-secondary);
+	border-radius: 6px;
+	color: var(--st-text-muted);
 	cursor: pointer;
-	transition: all 0.12s ease;
+	transition: all 0.14s ease;
+	user-select: none;
 }
 
 .st-pill-btn:hover {
 	color: var(--st-text);
+	background: rgba(255, 255, 255, 0.04);
 }
 
 .st-pill-btn.active {
-	background: var(--st-chrome);
+	background: rgba(255, 255, 255, 0.12);
 	color: #ffffff;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+	font-weight: 600;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* Palette Swatch Matrix - Refined Modern Swatch Cards */
@@ -1064,6 +1115,7 @@ html, body {
 	cursor: pointer;
 	transition: all 0.15s ease;
 	user-select: none;
+	overflow: hidden;
 }
 
 .st-swatch-card:hover {
@@ -1074,27 +1126,34 @@ html, body {
 }
 
 .st-swatch-card.active {
-	border-color: var(--st-accent);
-	background: var(--st-accent-soft);
-	box-shadow: 0 0 0 1px var(--st-accent), 0 4px 14px rgba(59, 130, 246, 0.15);
+	background: rgba(255, 255, 255, 0.07);
+	border-color: rgba(255, 255, 255, 0.2);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.st-swatch-card.active::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 8px;
+	bottom: 8px;
+	width: 3px;
+	background: var(--swatch-color, var(--st-accent));
+	border-radius: 0 3px 3px 0;
 }
 
 .st-swatch-disc {
-	width: 22px;
-	height: 22px;
+	width: 18px;
+	height: 18px;
 	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border: 2px solid rgba(255, 255, 255, 0.15);
+	background: var(--swatch-color);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 	flex-shrink: 0;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .st-swatch-inner {
-	width: 14px;
-	height: 14px;
-	border-radius: 50%;
+	display: none;
 }
 
 .st-swatch-info {
@@ -1118,14 +1177,18 @@ html, body {
 }
 
 .st-swatch-check {
-	color: var(--st-accent);
+	color: var(--swatch-color, var(--st-accent));
 	opacity: 0;
 	transform: scale(0.6);
 	transition: all 0.15s ease;
 	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
-.st-swatch-card.active .st-swatch-check {
+.st-swatch-card.active .st-swatch-check,
+.st-custom-card.active .st-swatch-check {
 	opacity: 1;
 	transform: scale(1);
 }
@@ -1139,6 +1202,7 @@ html, body {
 }
 
 .st-custom-card {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -1147,30 +1211,46 @@ html, body {
 	background: var(--st-surface);
 	border: 1px solid var(--st-border);
 	cursor: pointer;
-	transition: all 0.12s ease;
+	transition: all 0.15s ease;
+	user-select: none;
+	overflow: hidden;
 }
 
 .st-custom-card:hover {
 	background: var(--st-surface-hover);
 	border-color: var(--st-border-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .st-custom-card.active {
-	border-color: var(--st-accent);
-	background: var(--st-accent-soft);
-	box-shadow: 0 0 0 1px var(--st-accent);
+	background: rgba(255, 255, 255, 0.07);
+	border-color: rgba(255, 255, 255, 0.2);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.st-custom-card.active::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 8px;
+	bottom: 8px;
+	width: 3px;
+	background: var(--swatch-color, var(--card-accent, var(--st-accent)));
+	border-radius: 0 3px 3px 0;
 }
 
 .st-custom-card-left {
 	display: flex;
 	align-items: center;
 	gap: 10px;
+	min-width: 0;
 }
 
 .st-custom-actions {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: 6px;
 }
 
 /* ── Generic Buttons ─────────────────────────────── */
@@ -1337,15 +1417,23 @@ html, body {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	border: 1px solid var(--st-border);
-	border-radius: var(--st-radius-sm);
-	padding: 4px 8px;
-	background: var(--st-surface);
-	transition: border-color 0.15s ease;
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 8px;
+	padding: 5px 10px;
+	background: rgba(255, 255, 255, 0.035);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+	transition: all 0.15s ease;
+}
+
+.st-color-input-wrap:hover {
+	background: rgba(255, 255, 255, 0.055);
+	border-color: rgba(255, 255, 255, 0.16);
 }
 
 .st-color-input-wrap:focus-within {
 	border-color: var(--st-border-focus);
+	background: rgba(255, 255, 255, 0.07);
+	box-shadow: 0 0 0 3px var(--st-accent-soft), inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .st-color-input-wrap input[type="color"] {

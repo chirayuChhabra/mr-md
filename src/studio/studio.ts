@@ -647,18 +647,21 @@ function renderCustomPalettes() {
 		const p = palettes[key];
 		const card = document.createElement("div");
 		card.className = `st-custom-card ${activePalette === key ? "active" : ""}`;
+		card.style.setProperty("--swatch-color", p.accent);
+		card.style.setProperty("--card-accent", p.accent);
 
 		card.innerHTML = `
       <div class="st-custom-card-left">
-        <div class="st-swatch-disc" style="--swatch-color: ${escapeHtml(p.accent)};">
-          <span class="st-swatch-inner" style="background: ${escapeHtml(p.accent)};"></span>
-        </div>
+        <div class="st-swatch-disc" style="--swatch-color: ${escapeHtml(p.accent)};"></div>
         <div class="st-swatch-info">
           <span class="st-swatch-name">${escapeHtml(p.name || key)}</span>
           <span class="st-swatch-hex">${escapeHtml(p.accent)}</span>
         </div>
       </div>
       <div class="st-custom-actions">
+        <div class="st-swatch-check">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
         <button class="st-card-btn st-edit-palette-btn" title="Edit theme">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         </button>
