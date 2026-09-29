@@ -1,6 +1,65 @@
-import type { BuildOptions } from "../../types.js";
+import type { BuildOptions, CustomPalette } from "../../types.js";
 import { escHtml } from "../blocks.js";
 import { clientScript, pageCSS } from "./assets.js";
+
+/**
+ * Generate CSS rules for custom palettes defined in mrmd.config.json.
+ * Emits light, dark, and prefers-color-scheme rules for each custom palette.
+ */
+function generateCustomPaletteCSS(
+	customPalettes?: Record<string, CustomPalette>,
+): string {
+	if (!customPalettes || Object.keys(customPalettes).length === 0) return "";
+
+	let css = "/* mr-md Studio: Custom Palettes */\n";
+	for (const [key, palette] of Object.entries(customPalettes)) {
+		const light = palette.light ?? {};
+		const dark = palette.dark ?? {};
+		const accentSoft = palette.accentSoft ?? `${palette.accent}1a`;
+
+		// ── Light mode ──
+		css += `html[data-palette="${key}"], .bk-shell[data-palette="${key}"] {\n`;
+		css += `  --accent: ${light.accent ?? palette.accent};\n`;
+		css += `  --accent-soft: ${light.accentSoft ?? accentSoft};\n`;
+		if (light.bg) css += `  --bg: ${light.bg};\n`;
+		if (light.paper) css += `  --paper: ${light.paper};\n`;
+		if (light.panel) css += `  --panel: ${light.panel};\n`;
+		if (light.panelStrong) css += `  --panel-strong: ${light.panelStrong};\n`;
+		if (light.ink) css += `  --ink: ${light.ink};\n`;
+		if (light.muted) css += `  --muted: ${light.muted};\n`;
+		if (light.faint) css += `  --faint: ${light.faint};\n`;
+		if (light.line) css += `  --line: ${light.line};\n`;
+		if (light.lineStrong) css += `  --line-strong: ${light.lineStrong};\n`;
+		css += "}\n";
+
+		// ── Explicit dark mode ──
+		css += `html[data-palette="${key}"][data-theme="dark"], .bk-shell[data-palette="${key}"][data-theme="dark"] {\n`;
+		css += `  --accent: ${dark.accent ?? palette.accent};\n`;
+		css += `  --accent-soft: ${dark.accentSoft ?? accentSoft};\n`;
+		if (dark.bg) css += `  --bg: ${dark.bg};\n`;
+		if (dark.paper) css += `  --paper: ${dark.paper};\n`;
+		if (dark.panel) css += `  --panel: ${dark.panel};\n`;
+		if (dark.panelStrong) css += `  --panel-strong: ${dark.panelStrong};\n`;
+		if (dark.ink) css += `  --ink: ${dark.ink};\n`;
+		if (dark.muted) css += `  --muted: ${dark.muted};\n`;
+		if (dark.faint) css += `  --faint: ${dark.faint};\n`;
+		if (dark.line) css += `  --line: ${dark.line};\n`;
+		if (dark.lineStrong) css += `  --line-strong: ${dark.lineStrong};\n`;
+		css += "}\n";
+
+		// ── prefers-color-scheme: dark fallback ──
+		css += "@media (prefers-color-scheme: dark) {\n";
+		css += `  html[data-palette="${key}"]:not([data-theme="light"]), .bk-shell[data-palette="${key}"]:not([data-theme="light"]) {\n`;
+		css += `    --accent: ${dark.accent ?? palette.accent};\n`;
+		css += `    --accent-soft: ${dark.accentSoft ?? accentSoft};\n`;
+		if (dark.bg) css += `    --bg: ${dark.bg};\n`;
+		if (dark.paper) css += `    --paper: ${dark.paper};\n`;
+		if (dark.line) css += `    --line: ${dark.line};\n`;
+		if (dark.lineStrong) css += `    --line-strong: ${dark.lineStrong};\n`;
+		css += "  }\n}\n";
+	}
+	return css;
+}
 
 export function renderLayout(
 	title: string,
@@ -49,6 +108,7 @@ ${description ? `<meta name="description" content="${escHtml(description)}">` : 
 
 ${opts.head ?? ""}
 ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=${Date.now()}">` : `<style>\n${safeFont ? `:root { --font-sans: ${safeFont}, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }` : ""}\n${pageCSS()}\n</style>`}
+${generateCustomPaletteCSS(opts.customPalettes) ? `<style>\n${generateCustomPaletteCSS(opts.customPalettes)}\n</style>` : ""}
 </head>
 <body class="bk-layout-${layout} bk-density-${density} bk-tone-${tone}">
 <div class="bk-shell" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}>
