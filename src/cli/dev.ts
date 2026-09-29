@@ -363,6 +363,23 @@ export async function runDev(args: string[]) {
 									const newHeader = doc.querySelector(".bk-sidebar-header");
 
 									if (newMain && newNav && newHeader) {
+										// Synchronize root and shell attributes (theme, palette, ui)
+										const newTheme = doc.documentElement.getAttribute("data-theme");
+										const newPalette = doc.documentElement.getAttribute("data-palette");
+										const newUi = doc.documentElement.getAttribute("data-ui");
+
+										if (newTheme) document.documentElement.setAttribute("data-theme", newTheme);
+										if (newPalette) document.documentElement.setAttribute("data-palette", newPalette);
+										if (newUi) document.documentElement.setAttribute("data-ui", newUi);
+
+										const shell = document.querySelector(".bk-shell");
+										const newShell = doc.querySelector(".bk-shell");
+										if (shell && newShell) {
+											if (newTheme) shell.setAttribute("data-theme", newTheme);
+											if (newPalette) shell.setAttribute("data-palette", newPalette);
+											if (newUi) shell.setAttribute("data-ui", newUi);
+										}
+
 										const mainEl = document.querySelector(".bk-main");
 										const navEl = document.querySelector(".bk-nav");
 										
@@ -405,6 +422,7 @@ export async function runDev(args: string[]) {
 										if (overlay) overlay.remove();
 
 										window.dispatchEvent(new Event("bk-page-loaded"));
+										if (window.bkBroadcastTheme) window.bkBroadcastTheme();
 									} else {
 										location.reload();
 									}

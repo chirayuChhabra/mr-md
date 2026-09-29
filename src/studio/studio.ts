@@ -7,6 +7,23 @@ let unassignedFiles: string[] = [];
 let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let editingCustomPaletteKey: string | null = null;
 
+const studioBroadcast =
+	typeof BroadcastChannel !== "undefined"
+		? new BroadcastChannel("mrmd-studio-sync")
+		: null;
+
+function broadcastAppearanceChange() {
+	if (studioBroadcast) {
+		studioBroadcast.postMessage({
+			type: "appearance-update",
+			theme: currentConfig.theme || "auto",
+			palette: currentConfig.palette || "ink",
+			ui: currentConfig.ui || "standard",
+			customPalettes: currentConfig.customPalettes || {},
+		});
+	}
+}
+
 // ── DOM Helpers ────────────────────────────────────────────────────────────
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -336,7 +353,7 @@ function renderCurriculum() {
 				list.splice(toIdx, 0, moved);
 				currentConfig.lessons = list;
 				renderCurriculum();
-				queueSave();
+				saveConfig();
 			}
 		});
 
@@ -354,7 +371,7 @@ function renderCurriculum() {
 
 			renderCurriculum();
 			renderUnassigned();
-			queueSave();
+			saveConfig();
 		});
 
 		container.appendChild(el);
@@ -387,7 +404,7 @@ function renderUnassigned() {
 			unassignedFiles = unassignedFiles.filter((f) => f !== file);
 			renderCurriculum();
 			renderUnassigned();
-			queueSave();
+			saveConfig();
 		});
 
 		container.appendChild(pill);
@@ -485,7 +502,8 @@ function renderCustomPalettes() {
 			renderPalettes();
 			renderCustomPalettes();
 			renderLiveAppearancePreview();
-			queueSave();
+			broadcastAppearanceChange();
+			saveConfig();
 		});
 
 		// Edit button
@@ -509,7 +527,8 @@ function renderCustomPalettes() {
 				renderPalettes();
 				renderCustomPalettes();
 				renderLiveAppearancePreview();
-				queueSave();
+				broadcastAppearanceChange();
+				saveConfig();
 			});
 
 		container.appendChild(item);
@@ -543,7 +562,8 @@ function wireEvents() {
 				localStorage.setItem("bk-theme", val);
 				renderThemeMode();
 				renderLiveAppearancePreview();
-				queueSave();
+				broadcastAppearanceChange();
+				saveConfig();
 			});
 		});
 
@@ -557,7 +577,8 @@ function wireEvents() {
 				localStorage.setItem("bk-ui", val);
 				renderUiMode();
 				renderLiveAppearancePreview();
-				queueSave();
+				broadcastAppearanceChange();
+				saveConfig();
 			});
 		});
 
@@ -572,7 +593,8 @@ function wireEvents() {
 				renderPalettes();
 				renderCustomPalettes();
 				renderLiveAppearancePreview();
-				queueSave();
+				broadcastAppearanceChange();
+				saveConfig();
 			});
 		});
 
@@ -739,7 +761,8 @@ function wireCustomThemeInputs() {
 		renderPalettes();
 		renderCustomPalettes();
 		renderLiveAppearancePreview();
-		queueSave();
+		broadcastAppearanceChange();
+		saveConfig();
 	});
 }
 

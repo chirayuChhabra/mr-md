@@ -110,6 +110,71 @@ export function bkWireThemeControls() {
 	root.setAttribute("data-ui", activeUi);
 	if (shell) shell.setAttribute("data-ui", activeUi);
 
+	if (typeof window !== "undefined") {
+		window.bkBroadcastTheme = bkBroadcastTheme;
+	}
+
+	if (typeof BroadcastChannel !== "undefined") {
+		const studioChannel = new BroadcastChannel("mrmd-studio-sync");
+		studioChannel.onmessage = (event) => {
+			const data = event.data;
+			if (data?.type !== "appearance-update") return;
+
+			const curShell = document.querySelector(".bk-shell");
+
+			if (data.theme) {
+				let resolvedTheme = data.theme;
+				if (resolvedTheme === "auto") {
+					resolvedTheme = window.matchMedia?.("(prefers-color-scheme: dark)")
+						?.matches
+						? "dark"
+						: "light";
+				}
+				root.setAttribute("data-theme", resolvedTheme);
+				if (curShell) curShell.setAttribute("data-theme", resolvedTheme);
+				localStorage.setItem("bk-theme", data.theme);
+				updateThemeBtn(data.theme);
+			}
+
+			if (data.palette) {
+				const p = data.palette === "green" ? "field" : data.palette;
+				root.setAttribute("data-palette", p);
+				if (curShell) curShell.setAttribute("data-palette", p);
+				localStorage.setItem("bk-palette", p);
+				updatePaletteBtn(p);
+			}
+
+			if (data.ui) {
+				root.setAttribute("data-ui", data.ui);
+				if (curShell) curShell.setAttribute("data-ui", data.ui);
+				localStorage.setItem("bk-ui", data.ui);
+				updateUiBtn(data.ui);
+			}
+
+			if (data.customPalettes && Object.keys(data.customPalettes).length > 0) {
+				let customStyleEl = document.getElementById(
+					"mrmd-custom-palettes-live",
+				);
+				if (!customStyleEl) {
+					customStyleEl = document.createElement("style");
+					customStyleEl.id = "mrmd-custom-palettes-live";
+					document.head.appendChild(customStyleEl);
+				}
+				let css = "";
+				for (const [key, palette] of Object.entries(data.customPalettes)) {
+					const light = palette.light ?? {};
+					const dark = palette.dark ?? {};
+					const accentSoft = palette.accentSoft ?? `${palette.accent}1a`;
+					css += `html[data-palette="${key}"], .bk-shell[data-palette="${key}"] { --accent: ${light.accent ?? palette.accent}; --accent-soft: ${light.accentSoft ?? accentSoft}; ${light.bg ? `--bg: ${light.bg};` : ""} ${light.paper ? `--paper: ${light.paper};` : ""} }\n`;
+					css += `html[data-palette="${key}"][data-theme="dark"], .bk-shell[data-palette="${key}"][data-theme="dark"] { --accent: ${dark.accent ?? palette.accent}; --accent-soft: ${dark.accentSoft ?? accentSoft}; ${dark.bg ? `--bg: ${dark.bg};` : ""} ${dark.paper ? `--paper: ${dark.paper};` : ""} }\n`;
+				}
+				customStyleEl.textContent = css;
+			}
+
+			bkBroadcastTheme();
+		};
+	}
+
 	button &&
 		panel &&
 		button.addEventListener("click", (event) => {
