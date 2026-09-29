@@ -71,6 +71,7 @@ function smoothScrollTo(
 	}
 
 	isNavigatingAnimation = true;
+	element.classList.add("is-gliding");
 	// Temporarily bypass scroll-snap during programmatic glide so button clicks are silky-smooth
 	element.style.scrollSnapType = "none";
 
@@ -91,6 +92,7 @@ function smoothScrollTo(
 			element.scrollLeft = targetLeft;
 			// Re-enable native magnetic hardware snap detents once glide lands
 			element.style.scrollSnapType = "x mandatory";
+			element.classList.remove("is-gliding");
 			isNavigatingAnimation = false;
 			syncNavButtons();
 		}
@@ -726,9 +728,16 @@ function wireEvents() {
 	const canvas = $("st-infinite-canvas");
 	if (canvas) {
 		let scrollRaf: number | null = null;
+		let scrollSettleTimer: ReturnType<typeof setTimeout> | null = null;
 		canvas.addEventListener(
 			"scroll",
 			() => {
+				canvas.classList.add("is-scrolling");
+				if (scrollSettleTimer) clearTimeout(scrollSettleTimer);
+				scrollSettleTimer = setTimeout(() => {
+					canvas.classList.remove("is-scrolling");
+				}, 120);
+
 				if (scrollRaf) cancelAnimationFrame(scrollRaf);
 				scrollRaf = requestAnimationFrame(() => {
 					syncNavButtons();
@@ -741,6 +750,7 @@ function wireEvents() {
 		canvas.addEventListener(
 			"scrollend",
 			() => {
+				canvas.classList.remove("is-scrolling");
 				syncNavButtons();
 			},
 			{ passive: true },
@@ -916,10 +926,16 @@ function wireEvents() {
 		}
 	});
 
-	// Lesson search input
+	// Lesson search input (debounced with rAF)
+	let searchTimer: ReturnType<typeof setTimeout> | null = null;
 	$("st-lesson-search")?.addEventListener("input", (e) => {
 		lessonSearchQuery = (e.target as HTMLInputElement).value;
-		renderCurriculum();
+		if (searchTimer) clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			requestAnimationFrame(() => {
+				renderCurriculum();
+			});
+		}, 60);
 	});
 
 	// Metadata inputs

@@ -309,6 +309,7 @@ html, body {
 	background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 	background-size: 24px 24px;
 	z-index: 10;
+	will-change: scroll-position;
 }
 
 /* ── Workstation Slabs ───────────────────────────── */
@@ -322,6 +323,7 @@ html, body {
 	flex-direction: column;
 	overflow: hidden;
 	flex-shrink: 0;
+	contain: layout paint style;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -953,6 +955,12 @@ html, body {
 	height: 100%;
 	border: none;
 	background: #ffffff;
+}
+
+/* Prevent iframe pointer capture & mouseover storms during spatial gliding/scrolling */
+.st-canvas.is-gliding #st-course-iframe,
+.st-canvas.is-scrolling #st-course-iframe {
+	pointer-events: none;
 }
 
 /* ── Slab 3: Theme & Appearance ──────────────────── */

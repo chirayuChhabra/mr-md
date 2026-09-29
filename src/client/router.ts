@@ -80,27 +80,32 @@ export function bkInitRouter() {
 		return true;
 	}
 
-	const prefetched = new Set();
-	const prefetchLink = (e) => {
-		const a = e.target.closest("a");
-		if (!a?.href) return;
-		const targetUrl = new URL(a.href);
-		const pathname = targetUrl.pathname;
-		const isHtmlOrNoExt =
-			pathname.endsWith(".html") || !pathname.split("/").pop()?.includes(".");
+	// In Studio preview iframe (window.self !== window.top), skip background prefetching
+	// to eliminate dev-server socket contention and gliding stutter.
+	// In production builds and popped-out tabs (window.self === window.top), prefetch runs normally.
+	if (window.self === window.top) {
+		const prefetched = new Set();
+		const prefetchLink = (e) => {
+			const a = e.target.closest("a");
+			if (!a?.href) return;
+			const targetUrl = new URL(a.href);
+			const pathname = targetUrl.pathname;
+			const isHtmlOrNoExt =
+				pathname.endsWith(".html") || !pathname.split("/").pop()?.includes(".");
 
-		if (targetUrl.origin === window.location.origin && isHtmlOrNoExt) {
-			if (!prefetched.has(targetUrl.href)) {
-				prefetched.add(targetUrl.href);
-				const link = document.createElement("link");
-				link.rel = "prefetch";
-				link.href = targetUrl.href;
-				document.head.appendChild(link);
+			if (targetUrl.origin === window.location.origin && isHtmlOrNoExt) {
+				if (!prefetched.has(targetUrl.href)) {
+					prefetched.add(targetUrl.href);
+					const link = document.createElement("link");
+					link.rel = "prefetch";
+					link.href = targetUrl.href;
+					document.head.appendChild(link);
+				}
 			}
-		}
-	};
-	document.addEventListener("mouseover", prefetchLink, { passive: true });
-	document.addEventListener("touchstart", prefetchLink, { passive: true });
+		};
+		document.addEventListener("mouseover", prefetchLink, { passive: true });
+		document.addEventListener("touchstart", prefetchLink, { passive: true });
+	}
 
 	document.addEventListener("click", (e) => {
 		const a = e.target.closest("a");
