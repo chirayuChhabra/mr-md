@@ -109,7 +109,30 @@
           <div class="st-search-input-wrap">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="search" class="st-search-input" id="st-lesson-search" placeholder="Search lessons..." autocomplete="off">
-            <kbd class="st-search-kbd">/</kbd>
+            <kbd class="st-search-kbd" id="st-search-kbd">/</kbd>
+          </div>
+        </div>
+
+        <!-- Pinned Course Home / Landing Page Entry -->
+        <div class="st-course-home-strip">
+          <div class="st-lesson-card st-course-home-card active" id="st-course-home-card" data-file="" title="View Course Home (Landing Page & Timeline)">
+            <div class="st-card-left">
+              <span class="st-home-icon-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+              </span>
+              <div class="st-card-text">
+                <span class="st-card-title" id="st-course-home-title">Course Home</span>
+                <span class="st-card-tag home">OVERVIEW</span>
+              </div>
+            </div>
+            <div class="st-card-actions">
+              <a class="st-card-btn" href="/" target="_blank" title="Open home in new tab">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -143,9 +166,10 @@
             <span class="st-dot st-dot-green"></span>
           </div>
 
-          <div class="st-url-capsule">
+          <div class="st-url-capsule" id="st-url-capsule" title="Click to copy URL">
             <svg class="st-lock-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             <span class="st-url-badge" id="st-viewport-url">http://localhost:3000/</span>
+            <span class="st-copy-toast" id="st-copy-toast">Copied</span>
           </div>
 
           <div class="st-course-actions">
@@ -405,6 +429,25 @@
       <div class="st-modal-footer">
         <button class="st-btn" id="st-modal-cancel-theme">Cancel</button>
         <button class="st-btn st-btn-primary" id="st-modal-save-theme">Save Theme</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Delete Custom Theme Confirmation -->
+  <div class="st-modal-backdrop" id="st-modal-confirm-delete" style="display: none;">
+    <div class="st-modal" style="max-width: 380px;">
+      <div class="st-modal-header">
+        <h3 class="st-modal-title">Delete Custom Theme</h3>
+        <button class="st-modal-close-btn" id="st-modal-close-delete" title="Close">✕</button>
+      </div>
+      <div class="st-modal-body">
+        <p style="font-size: 13px; color: var(--st-text-secondary); line-height: 1.5;" id="st-delete-confirm-msg">
+          Are you sure you want to delete this custom theme? This action cannot be undone.
+        </p>
+      </div>
+      <div class="st-modal-footer">
+        <button class="st-btn" id="st-modal-cancel-delete">Cancel</button>
+        <button class="st-btn st-btn-danger" id="st-modal-confirm-delete-btn">Delete Theme</button>
       </div>
     </div>
   </div>

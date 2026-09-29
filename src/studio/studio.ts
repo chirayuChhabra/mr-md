@@ -12,6 +12,9 @@ let isInitialBoot = true;
 let isDraggingLesson = false;
 let draggedLessonIndex: number | null = null;
 let isNavigatingAnimation = false;
+let pendingDeleteThemeKey: string | null = null;
+
+const BUILTIN_PALETTES = ["ink", "field", "ember", "elixir", "trunk", "lava"];
 
 const studioBroadcast =
 	typeof BroadcastChannel !== "undefined"
@@ -234,7 +237,7 @@ function queueSave() {
 // ── Viewport Control ───────────────────────────────────────────────────────
 
 function updateLiveViewport(targetFile?: string) {
-	if (targetFile) {
+	if (targetFile !== undefined) {
 		activeLessonFile = targetFile;
 	}
 
@@ -262,13 +265,24 @@ function updateLiveViewport(targetFile?: string) {
 		openTabBtn.href = htmlPath;
 	}
 
-	document.querySelectorAll(".st-lesson-card").forEach((card) => {
-		if ((card as HTMLElement).dataset.file === activeLessonFile) {
-			card.classList.add("active");
+	const homeCard = $("st-course-home-card");
+	if (homeCard) {
+		if (!activeLessonFile) {
+			homeCard.classList.add("active");
 		} else {
-			card.classList.remove("active");
+			homeCard.classList.remove("active");
 		}
-	});
+	}
+
+	document
+		.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
+		.forEach((card) => {
+			if ((card as HTMLElement).dataset.file === activeLessonFile) {
+				card.classList.add("active");
+			} else {
+				card.classList.remove("active");
+			}
+		});
 }
 
 // ── Rendering ──────────────────────────────────────────────────────────────
@@ -348,13 +362,14 @@ function renderCurriculum() {
 
 		const card = document.createElement("div");
 		card.className = `st-lesson-card ${isActive ? "active" : ""}`;
-		card.draggable = true;
+		const canDrag = !query;
+		card.draggable = canDrag;
 		card.dataset.index = String(idx);
 		card.dataset.file = file;
 
 		card.innerHTML = `
       <div class="st-card-left">
-        <span class="st-card-drag" title="Drag to reorder">
+        <span class="st-card-drag" title="${canDrag ? "Drag to reorder" : "Reordering disabled while searching"}">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="8" cy="5" r="2.2"/><circle cx="16" cy="5" r="2.2"/>
             <circle cx="8" cy="12" r="2.2"/><circle cx="16" cy="12" r="2.2"/>
@@ -394,6 +409,7 @@ function renderCurriculum() {
 
 		// Drag & drop handlers with tactile indicators
 		card.addEventListener("dragstart", (e) => {
+			if (!card.draggable) return;
 			isDraggingLesson = true;
 			draggedLessonIndex = idx;
 			card.classList.add("dragging");
@@ -552,6 +568,7 @@ function renderMetadata() {
 	const headerTitle = $("st-header-title");
 
 	const courseTitle = currentConfig.title || "Interactive Course";
+	const homeTitle = $("st-course-home-title");
 
 	if (titleInput && document.activeElement !== titleInput) {
 		titleInput.value = currentConfig.title || "";
@@ -563,6 +580,7 @@ function renderMetadata() {
 		authorInput.value = currentConfig.author || "";
 	}
 	if (headerTitle) headerTitle.textContent = courseTitle;
+	if (homeTitle) homeTitle.textContent = currentConfig.title || "Course Home";
 }
 
 function renderThemeMode() {
@@ -668,15 +686,14 @@ function renderCustomPalettes() {
 			.querySelector(".st-delete-palette-btn")
 			?.addEventListener("click", (e) => {
 				e.stopPropagation();
-				delete currentConfig.customPalettes?.[key];
-				if (currentConfig.palette === key) {
-					currentConfig.palette = "ink";
-					localStorage.setItem("bk-palette", "ink");
+				pendingDeleteThemeKey = key;
+				const deleteModal = $("st-modal-confirm-delete");
+				const deleteMsg = $("st-delete-confirm-msg");
+				if (deleteMsg) {
+					const themeName = p.name || key;
+					deleteMsg.textContent = `Are you sure you want to delete "${themeName}"? This action cannot be undone.`;
 				}
-				renderPalettes();
-				renderCustomPalettes();
-				broadcastAppearanceChange();
-				saveConfig();
+				if (deleteModal) deleteModal.style.display = "flex";
 			});
 
 		container.appendChild(card);
@@ -775,6 +792,20 @@ function wireEvents() {
 		});
 	}
 
+	// Course Home / Landing Page Card
+	const homeCard = $("st-course-home-card");
+	if (homeCard) {
+		homeCard.addEventListener("click", (e) => {
+			if ((e.target as HTMLElement).closest(".st-card-actions")) return;
+			updateLiveViewport("");
+		});
+		homeCard.addEventListener("dblclick", (e) => {
+			if ((e.target as HTMLElement).closest(".st-card-actions")) return;
+			updateLiveViewport("");
+			scrollToSlab("course");
+		});
+	}
+
 	// Live preview iframe navigation listener (sync URL & active card without moving canvas)
 	const iframe = $<HTMLIFrameElement>("st-course-iframe");
 	if (iframe) {
@@ -794,13 +825,26 @@ function wireEvents() {
 					if (slug) {
 						const matchingFile = `${slug}.md`;
 						activeLessonFile = matchingFile;
-						document.querySelectorAll(".st-lesson-card").forEach((c) => {
-							if ((c as HTMLElement).dataset.file === matchingFile) {
-								c.classList.add("active");
-							} else {
+						const homeCardEl = $("st-course-home-card");
+						if (homeCardEl) homeCardEl.classList.remove("active");
+						document
+							.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
+							.forEach((c) => {
+								if ((c as HTMLElement).dataset.file === matchingFile) {
+									c.classList.add("active");
+								} else {
+									c.classList.remove("active");
+								}
+							});
+					} else {
+						activeLessonFile = "";
+						const homeCardEl = $("st-course-home-card");
+						if (homeCardEl) homeCardEl.classList.add("active");
+						document
+							.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
+							.forEach((c) => {
 								c.classList.remove("active");
-							}
-						});
+							});
 					}
 				}
 			} catch {}
@@ -841,6 +885,28 @@ function wireEvents() {
 		const iframe = $<HTMLIFrameElement>("st-course-iframe");
 		if (iframe?.contentWindow) {
 			iframe.contentWindow.location.reload();
+		}
+	});
+
+	// URL Capsule click-to-copy
+	const capsule = $("st-url-capsule");
+	const toast = $("st-copy-toast");
+	let copyTimer: ReturnType<typeof setTimeout> | null = null;
+	capsule?.addEventListener("click", async () => {
+		const urlText = $("st-viewport-url")?.textContent;
+		if (urlText && navigator.clipboard) {
+			try {
+				await navigator.clipboard.writeText(urlText);
+				if (toast) {
+					toast.classList.add("show");
+					if (copyTimer) clearTimeout(copyTimer);
+					copyTimer = setTimeout(() => {
+						toast.classList.remove("show");
+					}, 1800);
+				}
+			} catch (err) {
+				console.error("Failed to copy URL:", err);
+			}
 		}
 	});
 
@@ -932,6 +998,13 @@ function wireEvents() {
 		}
 	});
 
+	newLessonInput?.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			$("st-modal-confirm-lesson")?.click();
+		}
+	});
+
 	$("st-modal-close-lesson")?.addEventListener("click", () => {
 		if (newLessonModal) newLessonModal.style.display = "none";
 	});
@@ -951,8 +1024,12 @@ function wireEvents() {
 				body: JSON.stringify({ name: rawName }),
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const data = await res.json();
 			if (newLessonModal) newLessonModal.style.display = "none";
 			await fetchConfig();
+			if (data.file) {
+				updateLiveViewport(data.file);
+			}
 			setStatus("saved");
 		} catch (err) {
 			console.error("Failed to create lesson:", err);
@@ -973,14 +1050,43 @@ function wireEvents() {
 		if (m) m.style.display = "none";
 	});
 
-	// Click outside modal backdrop
-	[newLessonModal, $("st-modal-custom-theme")].forEach((modal) => {
-		modal?.addEventListener("click", (e) => {
-			if (e.target === modal) {
-				modal.style.display = "none";
-			}
-		});
+	// Delete Theme Confirmation Modal
+	const confirmDeleteModal = $("st-modal-confirm-delete");
+	$("st-modal-close-delete")?.addEventListener("click", () => {
+		if (confirmDeleteModal) confirmDeleteModal.style.display = "none";
+		pendingDeleteThemeKey = null;
 	});
+	$("st-modal-cancel-delete")?.addEventListener("click", () => {
+		if (confirmDeleteModal) confirmDeleteModal.style.display = "none";
+		pendingDeleteThemeKey = null;
+	});
+	$("st-modal-confirm-delete-btn")?.addEventListener("click", () => {
+		if (pendingDeleteThemeKey) {
+			delete currentConfig.customPalettes?.[pendingDeleteThemeKey];
+			if (currentConfig.palette === pendingDeleteThemeKey) {
+				currentConfig.palette = "ink";
+				localStorage.setItem("bk-palette", "ink");
+			}
+			pendingDeleteThemeKey = null;
+			if (confirmDeleteModal) confirmDeleteModal.style.display = "none";
+			renderPalettes();
+			renderCustomPalettes();
+			broadcastAppearanceChange();
+			saveConfig();
+		}
+	});
+
+	// Click outside modal backdrop
+	[newLessonModal, $("st-modal-custom-theme"), confirmDeleteModal].forEach(
+		(modal) => {
+			modal?.addEventListener("click", (e) => {
+				if (e.target === modal) {
+					modal.style.display = "none";
+					if (modal === confirmDeleteModal) pendingDeleteThemeKey = null;
+				}
+			});
+		},
+	);
 
 	// Escape key to dismiss modals
 	window.addEventListener("keydown", (e) => {
@@ -988,6 +1094,26 @@ function wireEvents() {
 			if (newLessonModal) newLessonModal.style.display = "none";
 			const customModal = $("st-modal-custom-theme");
 			if (customModal) customModal.style.display = "none";
+			if (confirmDeleteModal) {
+				confirmDeleteModal.style.display = "none";
+				pendingDeleteThemeKey = null;
+			}
+		}
+	});
+
+	// Flush debounced saves on window unload
+	window.addEventListener("beforeunload", () => {
+		if (saveDebounceTimer) {
+			clearTimeout(saveDebounceTimer);
+			saveDebounceTimer = null;
+			try {
+				navigator.sendBeacon(
+					"/__api/config",
+					new Blob([JSON.stringify(currentConfig)], {
+						type: "application/json",
+					}),
+				);
+			} catch {}
 		}
 	});
 
@@ -1051,15 +1177,27 @@ function wireCustomThemeInputs() {
 		});
 	});
 
+	$("st-theme-name")?.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			$("st-modal-save-theme")?.click();
+		}
+	});
+
 	$("st-modal-save-theme")?.addEventListener("click", () => {
 		const nameInput = $<HTMLInputElement>("st-theme-name");
 		const rawName = nameInput?.value.trim() || "Custom Theme";
-		const key =
-			editingCustomPaletteKey ||
-			rawName
-				.toLowerCase()
-				.replace(/[^a-z0-9]+/g, "-")
-				.replace(/(^-|-$)/g, "");
+		let key = editingCustomPaletteKey;
+		if (!key) {
+			const baseSlug =
+				rawName
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, "-")
+					.replace(/(^-|-$)/g, "") || "custom";
+			key = BUILTIN_PALETTES.includes(baseSlug)
+				? `custom-${baseSlug}`
+				: baseSlug;
+		}
 
 		const accent = getPickerColor("st-theme-accent");
 		const lightBg = getPickerColor("st-theme-light-bg");

@@ -156,14 +156,28 @@ export async function runDev(args: string[]) {
 	await rebuild();
 
 	let timeout: NodeJS.Timeout;
+	let isInternalConfigSave = false;
 	const watcher = fs.watch(
 		contentBase,
 		{ recursive: true },
 		(_eventType, filename) => {
-			if (
-				!filename ||
+			if (!filename) return;
+
+			const isConfig =
 				filename === "mrmd.config.json" ||
-				filename.endsWith("mrmd.config.json") ||
+				filename.endsWith("mrmd.config.json");
+
+			if (isConfig) {
+				if (isInternalConfigSave) return;
+				clearTimeout(timeout);
+				timeout = setTimeout(() => {
+					logger.watch(`External config change detected: ${filename}`);
+					rebuild(true);
+				}, 200);
+				return;
+			}
+
+			if (
 				!/\.(md|mdx|js|ts|jsx|tsx|json|css|png|jpg|jpeg|gif|svg|webp|ico)$/i.test(
 					filename,
 				)
@@ -276,7 +290,11 @@ export async function runDev(args: string[]) {
 						);
 					}
 					const existing = loadConfig(contentBase);
+					isInternalConfigSave = true;
 					saveConfig(contentBase, result.data);
+					setTimeout(() => {
+						isInternalConfigSave = false;
+					}, 500);
 
 					// Trigger rebuild if lessons or course metadata (title, description, author) changed
 					const oldSnapshot = JSON.stringify({
@@ -326,12 +344,16 @@ export async function runDev(args: string[]) {
 						);
 					}
 					const currentDate = new Date().toISOString().split("T")[0];
-					const content = `---\ntitle: ${name}\ndate: ${currentDate}\nauthor: ""\ntags: []\n---\n\n# ${name}\n\nStart writing your lesson here.\n\n`;
+					const content = `---\ntitle: ${JSON.stringify(name)}\ndate: ${currentDate}\nauthor: ""\ntags: []\n---\n\n# ${name}\n\nStart writing your lesson here.\n\n`;
 					fs.writeFileSync(targetFilePath, content, "utf-8");
 
 					const config = ensureConfig(contentBase);
 					config.lessons = [...(config.lessons ?? []), fileName];
+					isInternalConfigSave = true;
 					saveConfig(contentBase, config);
+					setTimeout(() => {
+						isInternalConfigSave = false;
+					}, 500);
 					await rebuild();
 					return Response.json({ success: true, file: fileName });
 				} catch (err: unknown) {

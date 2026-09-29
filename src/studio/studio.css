@@ -27,27 +27,6 @@
 	--st-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: light) {
-	:root {
-		--st-bg: #f5f6f8;
-		--st-chrome: #ffffff;
-		--st-chrome-subtle: #f8f9fb;
-		--st-surface: #f1f3f6;
-		--st-surface-hover: #e5e8ed;
-		--st-surface-active: #d9dde4;
-		--st-border: rgba(0, 0, 0, 0.08);
-		--st-border-hover: rgba(0, 0, 0, 0.16);
-		--st-border-focus: #2563eb;
-		--st-text: #0f172a;
-		--st-text-secondary: #475569;
-		--st-text-muted: #64748b;
-		--st-text-faint: #94a3b8;
-		--st-accent: #2563eb;
-		--st-accent-hover: #1d4ed8;
-		--st-accent-soft: rgba(37, 99, 235, 0.08);
-		--st-accent-glow: rgba(37, 99, 235, 0.2);
-	}
-}
 
 * {
 	box-sizing: border-box;
@@ -438,6 +417,42 @@ html, body {
 	line-height: 1.2;
 }
 
+/* Pinned Course Home Strip */
+
+.st-course-home-strip {
+	padding: 10px 12px 0;
+	background: var(--st-chrome);
+	flex-shrink: 0;
+}
+
+.st-course-home-card {
+	background: var(--st-surface);
+	border: 1px dashed var(--st-border);
+}
+
+.st-course-home-card:hover {
+	border-style: solid;
+	border-color: var(--st-border-hover);
+}
+
+.st-course-home-card.active {
+	border-style: solid;
+	background: rgba(59, 130, 246, 0.08);
+	border-color: rgba(59, 130, 246, 0.4);
+}
+
+.st-home-icon-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 5px;
+	background: rgba(255, 255, 255, 0.05);
+	color: var(--st-accent);
+	flex-shrink: 0;
+}
+
 .st-curriculum-scroll {
 	flex: 1;
 	overflow-y: auto;
@@ -577,6 +592,12 @@ html, body {
 	color: var(--st-text-secondary);
 }
 
+.st-lesson-card[draggable="false"] .st-card-drag {
+	opacity: 0.18;
+	cursor: default;
+	pointer-events: none;
+}
+
 .st-card-num {
 	font-family: var(--st-mono);
 	font-size: 10.5px;
@@ -636,6 +657,12 @@ html, body {
 	background: rgba(168, 85, 247, 0.12);
 	color: #d8b4fe;
 	border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.st-card-tag.home {
+	background: rgba(59, 130, 246, 0.12);
+	color: #60a5fa;
+	border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .st-card-tag-dot {
@@ -817,6 +844,15 @@ html, body {
 	border-radius: 9999px;
 	padding: 3px 12px;
 	max-width: 520px;
+	position: relative;
+	cursor: pointer;
+	user-select: none;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.st-url-capsule:hover {
+	background: rgba(0, 0, 0, 0.55);
+	border-color: var(--st-border-hover);
 }
 
 .st-lock-icon {
@@ -831,6 +867,32 @@ html, body {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	transition: color 0.15s ease;
+}
+
+.st-url-capsule:hover .st-url-badge {
+	color: var(--st-text-secondary);
+}
+
+.st-copy-toast {
+	position: absolute;
+	right: 4px;
+	background: var(--st-success);
+	color: #ffffff;
+	font-size: 10px;
+	font-weight: 600;
+	padding: 2px 7px;
+	border-radius: 9999px;
+	opacity: 0;
+	pointer-events: none;
+	transform: scale(0.85);
+	transition: opacity 0.15s ease, transform 0.15s ease;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.st-copy-toast.show {
+	opacity: 1;
+	transform: scale(1);
 }
 
 .st-course-actions {
@@ -1135,6 +1197,18 @@ html, body {
 .st-btn-ghost:hover {
 	background: var(--st-surface);
 	color: var(--st-text);
+}
+
+.st-btn-danger {
+	background: var(--st-danger);
+	border-color: rgba(244, 63, 94, 0.4);
+	color: #ffffff;
+	font-weight: 600;
+}
+
+.st-btn-danger:hover {
+	background: #e11d48;
+	border-color: rgba(244, 63, 94, 0.7);
 }
 
 /* ── Modals ──────────────────────────────────────── */

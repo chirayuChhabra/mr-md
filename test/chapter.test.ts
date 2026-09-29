@@ -77,8 +77,8 @@ describe("Chapter Renderer", () => {
 			});
 
 			const content = generateChapterContent(tempDir);
-			expect(content).toContain("title: My Configured Course");
-			expect(content).toContain("description: A great course");
+			expect(content).toContain('title: "My Configured Course"');
+			expect(content).toContain('description: "A great course"');
 			// Second should come before First according to config order!
 			const idxSecond = content.indexOf("02-second.md");
 			const idxFirst = content.indexOf("01-first.md");
