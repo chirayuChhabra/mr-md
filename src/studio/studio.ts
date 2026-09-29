@@ -48,6 +48,38 @@ function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 	}
 }
 
+// ── Niri Ribbon Spatial Navigation ─────────────────────────────────────────
+
+function scrollToSlab(target: "curriculum" | "course" | "design") {
+	const canvas = $("st-infinite-canvas");
+	if (!canvas) return;
+
+	document.querySelectorAll(".st-nav-slab-btn").forEach((btn) => {
+		if ((btn as HTMLElement).dataset.target === target) {
+			btn.classList.add("active");
+		} else {
+			btn.classList.remove("active");
+		}
+	});
+
+	if (target === "curriculum") {
+		canvas.scrollTo({ left: 0, behavior: "smooth" });
+	} else if (target === "design") {
+		canvas.scrollTo({ left: canvas.scrollWidth, behavior: "smooth" });
+	} else {
+		// Center the course slab
+		const courseSlab = $("st-slab-course");
+		if (courseSlab) {
+			const slabLeft = courseSlab.offsetLeft;
+			const slabWidth = courseSlab.offsetWidth;
+			const canvasWidth = canvas.clientWidth;
+			const targetScroll =
+				slabLeft - Math.max(0, (canvasWidth - slabWidth) / 2);
+			canvas.scrollTo({ left: targetScroll, behavior: "smooth" });
+		}
+	}
+}
+
 // ── API Operations ─────────────────────────────────────────────────────────
 
 async function fetchConfig() {
@@ -58,7 +90,6 @@ async function fetchConfig() {
 		currentConfig = data.config || {};
 		unassignedFiles = data.unassignedFiles || [];
 
-		// Default active lesson to first lesson in curriculum if not set
 		if (
 			!activeLessonFile &&
 			currentConfig.lessons &&
@@ -70,6 +101,11 @@ async function fetchConfig() {
 
 		renderAll();
 		updateLiveViewport();
+
+		// Center the desktop course slab initially on load
+		setTimeout(() => {
+			scrollToSlab("course");
+		}, 150);
 	} catch (err) {
 		console.error("Failed to load studio config:", err);
 		setStatus("unsaved", "Error loading");
@@ -131,7 +167,6 @@ function updateLiveViewport(targetFile?: string) {
 		openTabBtn.href = htmlPath;
 	}
 
-	// Update active card highlight in sidebar
 	document.querySelectorAll(".st-lesson-card").forEach((card) => {
 		if ((card as HTMLElement).dataset.file === activeLessonFile) {
 			card.classList.add("active");
@@ -182,8 +217,8 @@ function renderCurriculum() {
 
 	if (allLessons.length === 0) {
 		container.innerHTML = `
-      <div style="padding: 24px 14px; text-align: center; color: var(--st-text-muted); font-size: 12px;">
-        No lessons in course yet.<br>Click "+ New Lesson" above.
+      <div style="padding: 32px 14px; text-align: center; color: var(--st-text-muted); font-size: 12px;">
+        No lessons in course yet.<br>Click "+ New Lesson" to get started.
       </div>`;
 		return;
 	}
@@ -222,7 +257,7 @@ function renderCurriculum() {
 		card.innerHTML = `
       <div class="st-card-left">
         <span class="st-card-drag" title="Drag to reorder">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="8" cy="5" r="2.2"/><circle cx="16" cy="5" r="2.2"/>
             <circle cx="8" cy="12" r="2.2"/><circle cx="16" cy="12" r="2.2"/>
             <circle cx="8" cy="19" r="2.2"/><circle cx="16" cy="19" r="2.2"/>
@@ -232,25 +267,26 @@ function renderCurriculum() {
         <div class="st-card-text">
           <div style="display: flex; align-items: center;">
             <span class="st-card-title">${escapeHtml(title)}</span>
-            ${badge ? `<span class="st-card-badge ${badge.cls}">${badge.text}</span>` : ""}
+            ${badge ? `<span class="st-card-tag ${badge.cls}">${badge.text}</span>` : ""}
           </div>
           <span class="st-card-file">${escapeHtml(file)}</span>
         </div>
       </div>
       <div class="st-card-actions">
-        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open in new window">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open directly in tab">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
-        <button class="st-card-btn danger st-remove-btn" title="Remove from course">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <button class="st-card-btn danger st-remove-btn" title="Remove from curriculum">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     `;
 
-		// Select lesson on click
+		// Select lesson and slide into viewport
 		card.addEventListener("click", (e) => {
 			if ((e.target as HTMLElement).closest(".st-card-actions")) return;
 			updateLiveViewport(file);
+			scrollToSlab("course");
 		});
 
 		// Drag & drop handlers
@@ -447,10 +483,10 @@ function renderCustomPalettes() {
       </div>
       <div style="display: flex; gap: 2px;">
         <button class="st-card-btn st-edit-palette-btn" title="Edit theme">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         </button>
         <button class="st-card-btn danger st-delete-palette-btn" title="Delete theme">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     `;
@@ -494,51 +530,18 @@ function renderCustomPalettes() {
 // ── Event Wiring ───────────────────────────────────────────────────────────
 
 function wireEvents() {
-	// Mode switcher (Curriculum / Split / Preview)
-	document.querySelectorAll("#st-mode-tabs .st-mode-tab").forEach((tab) => {
-		tab.addEventListener("click", () => {
-			document.querySelectorAll("#st-mode-tabs .st-mode-tab").forEach((t) => {
-				t.classList.remove("active");
-			});
-			tab.classList.add("active");
-
-			const mode = (tab as HTMLElement).dataset.mode;
-			const leftRail = $("st-sidebar-left");
-			const rightRail = $("st-sidebar-right");
-
-			if (mode === "curriculum") {
-				if (leftRail) leftRail.style.display = "flex";
-				if (rightRail) rightRail.style.display = "none";
-			} else if (mode === "preview") {
-				if (leftRail) leftRail.style.display = "none";
-				if (rightRail) rightRail.style.display = "none";
-			} else {
-				// split
-				if (leftRail) leftRail.style.display = "flex";
-				if (rightRail) rightRail.style.display = "flex";
+	// Niri Ribbon Slab Navigation Buttons
+	document.querySelectorAll(".st-nav-slab-btn").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const target = (btn as HTMLElement).dataset.target as
+				| "curriculum"
+				| "course"
+				| "design";
+			if (target) {
+				scrollToSlab(target);
 			}
 		});
 	});
-
-	// Device toggles (Desktop / Tablet / Mobile)
-	document
-		.querySelectorAll("#st-device-toggles .st-device-btn")
-		.forEach((btn) => {
-			btn.addEventListener("click", () => {
-				document
-					.querySelectorAll("#st-device-toggles .st-device-btn")
-					.forEach((b) => {
-						b.classList.remove("active");
-					});
-				btn.classList.add("active");
-
-				const device = (btn as HTMLElement).dataset.device || "desktop";
-				const wrapper = $("st-frame-wrapper");
-				if (wrapper) {
-					wrapper.className = `st-frame-wrapper ${device}`;
-				}
-			});
-		});
 
 	// Viewport reload button
 	$("st-btn-reload-frame")?.addEventListener("click", () => {
