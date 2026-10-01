@@ -6,7 +6,7 @@ import {
 import { bkWireQuizzes } from "./quiz.js";
 import { bkInitRouter } from "./router.js";
 import { bkInitSimControls, bkWireSimControls } from "./simulation.js";
-import { bkWireThemeControls } from "./theme.js";
+import { bkBroadcastTheme, bkWireThemeControls } from "./theme.js";
 import {
 	bkInitCodeCopy,
 	bkWireCodeCopy,
@@ -36,6 +36,7 @@ function initOnPageLoad() {
 	bkInitInteractiveFrames();
 	bkWireScrollSpy();
 	bkWireLastLessonTracking();
+	bkBroadcastTheme();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

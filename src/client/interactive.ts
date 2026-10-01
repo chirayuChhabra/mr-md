@@ -67,7 +67,7 @@ export function bkWireInteractiveFrames() {
 	document.addEventListener("focusin", interactiveHandler, { passive: true });
 
 	let scrollTimeout: ReturnType<typeof setTimeout> | undefined;
-	document.addEventListener(
+	window.addEventListener(
 		"scroll",
 		() => {
 			if (!document.body.classList.contains("bk-is-scrolling")) {
@@ -78,7 +78,7 @@ export function bkWireInteractiveFrames() {
 				document.body.classList.remove("bk-is-scrolling");
 			}, 150);
 		},
-		{ passive: true },
+		{ capture: true, passive: true },
 	);
 
 	bkInitInteractiveFrames();

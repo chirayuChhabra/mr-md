@@ -9,6 +9,7 @@ export function renderLayout(
 	contentHtml: string,
 	opts: BuildOptions,
 	extraSidebar: string = "",
+	topBarHtml: string = "",
 ): string {
 	const theme = opts.theme ?? "light";
 	const schemeAttr = `data-theme="${theme}"`;
@@ -56,18 +57,26 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
   (function() {
     var shell = document.querySelector(".bk-shell");
     var root = document.documentElement;
-    if(shell && root) {
-      if(root.hasAttribute("data-theme")) shell.setAttribute("data-theme", root.getAttribute("data-theme"));
-      if(root.hasAttribute("data-palette")) shell.setAttribute("data-palette", root.getAttribute("data-palette"));
-      if(root.hasAttribute("data-ui")) shell.setAttribute("data-ui", root.getAttribute("data-ui"));
+    if(shell) {
+      if(root) {
+        if(root.hasAttribute("data-theme")) shell.setAttribute("data-theme", root.getAttribute("data-theme"));
+        if(root.hasAttribute("data-palette")) shell.setAttribute("data-palette", root.getAttribute("data-palette"));
+        if(root.hasAttribute("data-ui")) shell.setAttribute("data-ui", root.getAttribute("data-ui"));
+      }
+      try {
+        if(localStorage.getItem("bk-sidebar-collapsed") === "true") {
+          shell.setAttribute("data-collapsed", "true");
+        }
+      } catch (e) {}
     }
   })();
 </script>
   <aside class="bk-sidebar">
     <div class="bk-sidebar-inner">
       <div class="bk-sidebar-header">
-        ${extraSidebar}
+        ${topBarHtml ? `<div class="bk-sidebar-top-bar">${topBarHtml}</div>` : ""}
         <div class="bk-sidebar-title">${escHtml(title)}</div>
+        ${extraSidebar}
       </div>
       <nav class="bk-nav">${navHtml}</nav>
       <div class="bk-sidebar-footer">
@@ -122,11 +131,11 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
       </div>
     </div>
   </aside>
-  <button class="bk-sidebar-collapse-floating" id="bk-sidebar-collapse" aria-label="Collapse sidebar">
+  <button class="bk-sidebar-collapse" id="bk-sidebar-collapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
   <main class="bk-main">
-    <button class="bk-sidebar-expand" id="bk-sidebar-expand" type="button" aria-label="Expand sidebar">
+    <button class="bk-icon-btn bk-sidebar-expand" id="bk-sidebar-expand" type="button" aria-label="Expand sidebar" title="Expand sidebar">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
     </button>
     ${contentHtml}
