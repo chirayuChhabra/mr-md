@@ -6,11 +6,16 @@ import matter from "@11ty/gray-matter";
 import * as fs from "fs";
 import * as path from "path";
 import { logger } from "./logger.js";
-import { getOriginalCwd } from "./utils.js";
+import { getOriginalCwd, parseCliArgs } from "./utils.js";
 
-async function buildFile(filePath: string) {
+async function buildFile(
+	filePath: string,
+	customOptions: Record<string, unknown> = {},
+) {
 	logger.startSpinner(`Building file: ${filePath}`);
-	const outDir = path.resolve(getOriginalCwd(), path.dirname(filePath), "out");
+	const outDir = customOptions.outDir
+		? path.resolve(getOriginalCwd(), String(customOptions.outDir))
+		: path.resolve(getOriginalCwd(), path.dirname(filePath), "out");
 	const contentBase = path.dirname(filePath);
 
 	try {
@@ -33,19 +38,19 @@ async function buildFile(filePath: string) {
 		if (isChapter) {
 			const chapter = parseChapter(
 				content,
-				{ outDir, contentBase },
+				{ outDir, contentBase, ...customOptions },
 				contentBase,
 			);
-			buildChapter(chapter, { outDir, contentBase });
+			buildChapter(chapter, { outDir, contentBase, ...customOptions });
 		} else {
 			const lesson = parseLesson(
 				content,
-				{ outDir, contentBase },
+				{ outDir, contentBase, ...customOptions },
 				contentBase,
 				undefined,
 				path.basename(filePath),
 			);
-			buildLesson(lesson, { outDir, contentBase });
+			buildLesson(lesson, { outDir, contentBase, ...customOptions });
 		}
 		logger.succeedSpinner(
 			`Build successful for ${path.relative(process.cwd(), filePath) || path.basename(filePath)}.`,
@@ -66,10 +71,11 @@ export async function runBuild(args: string[]) {
 	} = require("../renderer/markdown/index.js");
 	await initHighlighter();
 	process.env.NODE_ENV = "production";
-	const target = args[0];
+	const cliOpts = parseCliArgs(args);
+	const target = cliOpts.target;
 
 	if (!target) {
-		logger.error("Usage: mr-md build <file-or-directory>");
+		logger.error("Usage: mr-md build <file-or-directory> [options]");
 		process.exit(1);
 	}
 
@@ -85,11 +91,17 @@ export async function runBuild(args: string[]) {
 			const { generateChapterContent } = require("./chapter.js");
 			const { ensureConfig, configToBuildOptions } = require("../config.js");
 			const config = ensureConfig(targetPath);
-			const configOpts = configToBuildOptions(config);
+			const configOpts = {
+				...configToBuildOptions(config),
+				...(cliOpts.theme ? { theme: cliOpts.theme } : {}),
+				...(cliOpts.palette ? { palette: cliOpts.palette } : {}),
+			};
 			const chapterContent = generateChapterContent(targetPath);
 			await preloadLanguagesFromMarkdown(chapterContent);
 
-			const outDir = path.resolve(getOriginalCwd(), targetPath, "out");
+			const outDir = cliOpts.outDir
+				? path.resolve(getOriginalCwd(), cliOpts.outDir)
+				: path.resolve(getOriginalCwd(), targetPath, "out");
 			const contentBase = targetPath;
 
 			logger.startSpinner(`Building chapter from directory: ${targetPath}`);
@@ -114,6 +126,10 @@ export async function runBuild(args: string[]) {
 			logger.error("Unsupported file type. Must be a .md file.");
 			process.exit(1);
 		}
-		await buildFile(targetPath);
+		await buildFile(targetPath, {
+			...(cliOpts.outDir ? { outDir: cliOpts.outDir } : {}),
+			...(cliOpts.theme ? { theme: cliOpts.theme } : {}),
+			...(cliOpts.palette ? { palette: cliOpts.palette } : {}),
+		});
 	}
 }

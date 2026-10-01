@@ -1,6 +1,6 @@
 import DOMPurify from "isomorphic-dompurify";
 import { logger } from "../../cli/logger.js";
-import { escHtml } from "../blocks.js";
+import { escAttr, escHtml } from "../blocks.js";
 import { resolveAssetSrc } from "../utils.js";
 import { normalizeLanguage, shiki } from "./highlighter.js";
 import { marked } from "./math.js";
@@ -98,6 +98,16 @@ export function mdToHtml(
 			}
 		}
 		return `<img src="${resolvedHref}" alt="${text || ""}" title="${title || ""}" loading="lazy" decoding="async">`;
+	};
+
+	renderer.link = function (token) {
+		let resolvedHref = token.href;
+		if (resolvedHref && !/^(https?:|\/\/|mailto:|tel:)/i.test(resolvedHref)) {
+			resolvedHref = resolvedHref.replace(/\.md(?=([?#]|$))/i, ".html");
+		}
+		const text = sanitizeHtml(this.parser.parseInline(token.tokens));
+		const titleAttr = token.title ? ` title="${escHtml(token.title)}"` : "";
+		return `<a href="${escAttr(resolvedHref)}"${titleAttr}>${text}</a>`;
 	};
 
 	const processedMd = md.replace(

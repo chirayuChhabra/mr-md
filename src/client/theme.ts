@@ -45,8 +45,7 @@ export function bkWireThemeControls() {
 	const themeBtns = document.querySelectorAll("#bk-theme-icons button");
 	const paletteBtns = document.querySelectorAll("#bk-palette-icons button");
 	const uiBtns = document.querySelectorAll("#bk-ui-icons button");
-	let savedTheme = localStorage.getItem("bk-theme");
-	if (!savedTheme) savedTheme = "auto";
+	const savedTheme = localStorage.getItem("bk-theme");
 	const savedPalette = localStorage.getItem("bk-palette");
 	const savedUi = localStorage.getItem("bk-ui");
 

@@ -7,7 +7,7 @@ import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
-import { getOriginalCwd } from "./utils.js";
+import { getOriginalCwd, parseCliArgs } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,20 +26,38 @@ declare const Bun: {
 	build: (options: unknown) => Promise<{ outputs: Blob[] }>;
 };
 
-export async function runDev(args: string[]) {
+export interface DevApp {
+	port: number;
+	basePort: number;
+	maxPort: number;
+	fetchHandler: (
+		req: Request,
+		srv?: BunServer,
+	) => Promise<Response | undefined>;
+	rebuild: (publishReload?: boolean) => Promise<void>;
+	close: () => void;
+	readonly isDirectory: boolean;
+	readonly singleFileSlug: string;
+	contentBase: string;
+	outDir: string;
+	cliOpts: ReturnType<typeof parseCliArgs>;
+}
+
+export async function createDevApp(args: string[]): Promise<DevApp> {
 	const { initHighlighter } = require("../renderer/markdown/math.js");
 	await initHighlighter();
 	process.env.NODE_ENV = "development";
-	const target = args[0];
+	const cliOpts = parseCliArgs(args);
+	const target = cliOpts.target;
 
 	if (!target) {
-		logger.error("Usage: mr-md dev <file-or-directory>");
+		logger.error("Usage: mr-md dev <file-or-directory> [options]");
 		process.exit(1);
 	}
 
 	let isDirectory = false;
 	let filePath = "";
-	const targetPath = path.resolve(getOriginalCwd(), target);
+	let targetPath = path.resolve(getOriginalCwd(), target);
 	if (!fs.existsSync(targetPath)) {
 		logger.error(`File or directory not found: ${target}`);
 		process.exit(1);
@@ -63,7 +81,9 @@ export async function runDev(args: string[]) {
 	}
 
 	const contentBase = isDirectory ? targetPath : path.dirname(filePath);
-	const outDir = path.resolve(contentBase, "out");
+	const outDir = cliOpts.outDir
+		? path.resolve(getOriginalCwd(), cliOpts.outDir)
+		: path.resolve(contentBase, "out");
 
 	const displayPath =
 		path.relative(process.cwd(), targetPath) || path.basename(targetPath);
@@ -72,6 +92,13 @@ export async function runDev(args: string[]) {
 	let server: BunServer | undefined;
 	let singleFileSlug = "";
 	let previousFileSlug = "";
+	let currentLessonFrontmatter: Record<string, unknown> = {};
+	let currentLessonOutline: Array<{
+		id: string;
+		label: string;
+		kind: string;
+		level?: number;
+	}> = [];
 
 	const rebuild = async (publishReload = true) => {
 		logger.startSpinner("Rebuilding...");
@@ -90,7 +117,11 @@ export async function runDev(args: string[]) {
 				const { generateChapterContent } = require("./chapter.js");
 				const { ensureConfig, configToBuildOptions } = require("../config.js");
 				const config = ensureConfig(targetPath);
-				const configOpts = configToBuildOptions(config);
+				const configOpts = {
+					...configToBuildOptions(config),
+					...(cliOpts.theme ? { theme: cliOpts.theme } : {}),
+					...(cliOpts.palette ? { palette: cliOpts.palette } : {}),
+				};
 				const chapterContent = generateChapterContent(targetPath);
 				await preloadLanguagesFromMarkdown(chapterContent);
 				const chapter = parseChapter(
@@ -102,10 +133,18 @@ export async function runDev(args: string[]) {
 			} else {
 				const content = fs.readFileSync(filePath, "utf-8");
 				await preloadLanguagesFromMarkdown(content);
-				const { ensureConfig, configToBuildOptions } = require("../config.js");
-				const config = ensureConfig(contentBase);
-				const configOpts = configToBuildOptions(config);
+				const {
+					getEffectiveConfig,
+					configToBuildOptions,
+				} = require("../config.js");
+				const config = getEffectiveConfig(contentBase, path.basename(filePath));
+				const configOpts = {
+					...configToBuildOptions(config),
+					...(cliOpts.theme ? { theme: cliOpts.theme } : {}),
+					...(cliOpts.palette ? { palette: cliOpts.palette } : {}),
+				};
 				const parsed = require("@11ty/gray-matter")(content);
+				currentLessonFrontmatter = parsed.data || {};
 				const isChapter =
 					parsed.data.chapter === true || parsed.data.type === "chapter";
 
@@ -131,6 +170,50 @@ export async function runDev(args: string[]) {
 					}
 					singleFileSlug = newSlug;
 					buildLesson(lesson, { outDir, contentBase, ...configOpts });
+
+					const outline: Array<{
+						id: string;
+						label: string;
+						kind: string;
+						level?: number;
+					}> = [];
+					lesson.blocks.forEach(
+						(
+							block: {
+								type: string;
+								src?: string;
+								label?: string;
+								caption?: string;
+							},
+							idx: number,
+						) => {
+							if (block.type === "markdown" && block.src) {
+								const { mdToHtml } = require("../renderer/markdown/index.js");
+								const { headings } = mdToHtml(block.src, configOpts);
+								for (const h of headings) {
+									outline.push({
+										id: h.id,
+										label: h.text,
+										kind: "heading",
+										level: h.level,
+									});
+								}
+							} else if (block.type === "simulation") {
+								outline.push({
+									id: `sim-${idx}`,
+									label: block.label || "Interactive Lab",
+									kind: "simulation",
+								});
+							} else if (block.type === "quiz") {
+								outline.push({
+									id: `quiz-${idx}`,
+									label: block.caption || "Quiz",
+									kind: "quiz",
+								});
+							}
+						},
+					);
+					currentLessonOutline = outline;
 				}
 			}
 			logger.succeedSpinner(
@@ -158,18 +241,42 @@ export async function runDev(args: string[]) {
 
 	let timeout: NodeJS.Timeout;
 	let isInternalConfigSave = false;
+	let isInternalFileSave = false;
+	const normalizedOutDir = path.resolve(outDir);
 	const watcher = fs.watch(
 		contentBase,
 		{ recursive: true },
 		(_eventType, filename) => {
 			if (!filename) return;
+			if (isInternalConfigSave || isInternalFileSave) return;
+			if (filename.includes(".git") || filename.includes("node_modules"))
+				return;
+
+			const fullPath = path.resolve(contentBase, filename);
+			if (
+				fullPath === normalizedOutDir ||
+				fullPath.startsWith(normalizedOutDir + path.sep)
+			) {
+				return;
+			}
+
+			if (!isDirectory) {
+				const isTarget =
+					filename === path.basename(filePath) ||
+					filename.endsWith(path.basename(filePath));
+				const isConfig =
+					filename === "mrmd.config.json" ||
+					filename.endsWith("mrmd.config.json");
+				const isAsset =
+					/\.(js|ts|json|png|jpg|jpeg|gif|svg|webp|ico|css)$/i.test(filename);
+				if (!isTarget && !isConfig && !isAsset) return;
+			}
 
 			const isConfig =
 				filename === "mrmd.config.json" ||
 				filename.endsWith("mrmd.config.json");
 
 			if (isConfig) {
-				if (isInternalConfigSave) return;
 				clearTimeout(timeout);
 				timeout = setTimeout(() => {
 					logger.watch(`External config change detected: ${filename}`);
@@ -197,23 +304,34 @@ export async function runDev(args: string[]) {
 		`Watching ${path.relative(process.cwd(), contentBase) || path.basename(contentBase)} for changes...`,
 	);
 
-	const basePort = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-	let port = basePort;
+	const basePort =
+		cliOpts.port || (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
+	const port = basePort;
 	const maxPort = basePort + 10;
 
-	const fetchHandler = async (req: Request, srv: BunServer) => {
+	const fetchHandler = async (req: Request, srv?: BunServer) => {
 		const start = Date.now();
-		const clientIp = srv.requestIP(req)?.address || "::1";
+		const clientIp = srv?.requestIP
+			? srv.requestIP(req)?.address || "::1"
+			: "::1";
 		const url = new URL(req.url);
 		const method = req.method;
 		const decodedPath = decodeURIComponent(url.pathname);
 
-		const isUpgrade = srv.upgrade(req);
+		const isUpgrade = srv?.upgrade ? srv.upgrade(req) : false;
 
 		const handle = async () => {
 			if (isUpgrade) return null;
 
 			// ── Studio GUI Routes ──
+			if (
+				cliOpts.noStudio &&
+				(decodedPath.startsWith("/__studio") ||
+					decodedPath === "/___mrmd-studio")
+			) {
+				return new Response("Studio disabled", { status: 404 });
+			}
+
 			if (
 				decodedPath === "/__studio" ||
 				decodedPath === "/__studio/" ||
@@ -285,24 +403,118 @@ export async function runDev(args: string[]) {
 			}
 
 			// ── Studio REST API ──
-			if (decodedPath === "/__api/config" && method === "GET") {
+			if (decodedPath === "/__api/context" && method === "GET") {
 				const {
-					ensureConfig,
+					loadConfig,
+					getEffectiveConfig,
 					discoverMarkdownFiles,
 					getLessonFile,
 				} = require("../config.js");
-				const config = ensureConfig(contentBase);
+				const existing = loadConfig(contentBase);
+				const config =
+					existing ||
+					getEffectiveConfig(
+						contentBase,
+						isDirectory ? undefined : path.basename(filePath),
+					);
 				const all = discoverMarkdownFiles(contentBase);
 				const configuredFiles = new Set(
 					(config.lessons ?? []).map((e: string | { file: string }) =>
 						getLessonFile(e),
 					),
 				);
-				const unassigned = all.filter((f: string) => !configuredFiles.has(f));
+				const unassigned = isDirectory
+					? all.filter((f: string) => !configuredFiles.has(f))
+					: [];
+
+				return Response.json({
+					mode: isDirectory ? "course" : "single",
+					targetFile: isDirectory ? null : path.basename(filePath),
+					targetPath,
+					slug: singleFileSlug,
+					title: isDirectory
+						? config.title || path.basename(targetPath)
+						: (currentLessonFrontmatter.title as string) || singleFileSlug,
+					frontmatter: currentLessonFrontmatter,
+					outline: currentLessonOutline,
+					config,
+					hasDiskConfig: Boolean(existing),
+					allFiles: isDirectory ? all : [path.basename(filePath)],
+					unassignedFiles: unassigned,
+				});
+			}
+
+			if (decodedPath === "/__api/lesson/frontmatter" && method === "POST") {
+				if (isDirectory || !filePath || !fs.existsSync(filePath)) {
+					return Response.json(
+						{ error: "No single lesson file to update" },
+						{ status: 400 },
+					);
+				}
+				try {
+					const body = await req.json();
+					const matter = require("@11ty/gray-matter");
+					const rawContent = fs.readFileSync(filePath, "utf-8");
+					const parsed = matter(rawContent);
+
+					if (body.title !== undefined) parsed.data.title = body.title;
+					if (body.description !== undefined)
+						parsed.data.description = body.description;
+					if (body.author !== undefined) parsed.data.author = body.author;
+					if (body.tags !== undefined) {
+						parsed.data.tags = Array.isArray(body.tags)
+							? body.tags
+							: String(body.tags)
+									.split(",")
+									.map((t: string) => t.trim())
+									.filter(Boolean);
+					}
+
+					const newContent = matter.stringify(parsed.content, parsed.data);
+					isInternalFileSave = true;
+					fs.writeFileSync(filePath, newContent, "utf-8");
+					setTimeout(() => {
+						isInternalFileSave = false;
+					}, 500);
+
+					await rebuild();
+					return Response.json({ success: true, frontmatter: parsed.data });
+				} catch (err: unknown) {
+					return Response.json(
+						{ error: err instanceof Error ? err.message : String(err) },
+						{ status: 500 },
+					);
+				}
+			}
+
+			if (decodedPath === "/__api/config" && method === "GET") {
+				const {
+					loadConfig,
+					getEffectiveConfig,
+					discoverMarkdownFiles,
+					getLessonFile,
+				} = require("../config.js");
+				const existing = loadConfig(contentBase);
+				const config =
+					existing ||
+					getEffectiveConfig(
+						contentBase,
+						isDirectory ? undefined : path.basename(filePath),
+					);
+				const all = discoverMarkdownFiles(contentBase);
+				const configuredFiles = new Set(
+					(config.lessons ?? []).map((e: string | { file: string }) =>
+						getLessonFile(e),
+					),
+				);
+				const unassigned = isDirectory
+					? all.filter((f: string) => !configuredFiles.has(f))
+					: [];
 				return Response.json({
 					config,
-					allFiles: all,
+					allFiles: isDirectory ? all : [path.basename(filePath)],
 					unassignedFiles: unassigned,
+					mode: isDirectory ? "course" : "single",
 				});
 			}
 
@@ -328,21 +540,47 @@ export async function runDev(args: string[]) {
 						isInternalConfigSave = false;
 					}, 500);
 
-					// Trigger rebuild if lessons or course metadata (title, description, author) changed
-					const oldSnapshot = JSON.stringify({
-						lessons: existing?.lessons ?? [],
-						title: existing?.title ?? "",
-						description: existing?.description ?? "",
-						author: existing?.author ?? "",
-					});
-					const newSnapshot = JSON.stringify({
-						lessons: result.data.lessons ?? [],
-						title: result.data.title ?? "",
-						description: result.data.description ?? "",
-						author: result.data.author ?? "",
-					});
-					if (oldSnapshot !== newSnapshot) {
+					const appearanceChanged =
+						existing?.theme !== result.data.theme ||
+						existing?.palette !== result.data.palette ||
+						existing?.ui !== result.data.ui ||
+						JSON.stringify(existing?.customPalettes) !==
+							JSON.stringify(result.data.customPalettes);
+
+					const structureOrMetaChanged =
+						JSON.stringify(existing?.lessons) !==
+							JSON.stringify(result.data.lessons) ||
+						existing?.title !== result.data.title ||
+						existing?.description !== result.data.description ||
+						existing?.author !== result.data.author;
+
+					if (appearanceChanged && server) {
+						try {
+							const {
+								generateCustomPaletteCSS,
+							} = require("../renderer/templates/layout.js");
+							const customCss = generateCustomPaletteCSS(
+								result.data.customPalettes,
+							);
+							server.publish(
+								"livereload",
+								JSON.stringify({
+									type: "appearance-update",
+									theme: result.data.theme || "auto",
+									palette: result.data.palette || "ink",
+									ui: result.data.ui || "standard",
+									customCss: customCss || "",
+								}),
+							);
+						} catch (e) {
+							logger.warn(`Failed to broadcast appearance update: ${e}`);
+						}
+					}
+
+					if (structureOrMetaChanged) {
 						await rebuild(true);
+					} else if (appearanceChanged) {
+						await rebuild(false);
 					}
 					return Response.json({ success: true });
 				} catch (err: unknown) {
@@ -354,7 +592,11 @@ export async function runDev(args: string[]) {
 			}
 
 			if (decodedPath === "/__api/lessons/new" && method === "POST") {
-				const { ensureConfig, saveConfig } = require("../config.js");
+				const {
+					ensureConfig,
+					saveConfig,
+					loadConfig,
+				} = require("../config.js");
 				try {
 					const { name } = await req.json();
 					if (!name || typeof name !== "string") {
@@ -379,15 +621,61 @@ export async function runDev(args: string[]) {
 					const content = `---\ntitle: ${JSON.stringify(name)}\ndate: ${currentDate}\nauthor: ""\ntags: []\n---\n\n# ${name}\n\nStart writing your lesson here.\n\n`;
 					fs.writeFileSync(targetFilePath, content, "utf-8");
 
-					const config = ensureConfig(contentBase);
-					config.lessons = [...(config.lessons ?? []), fileName];
-					isInternalConfigSave = true;
-					saveConfig(contentBase, config);
-					setTimeout(() => {
-						isInternalConfigSave = false;
-					}, 500);
-					await rebuild();
-					return Response.json({ success: true, file: fileName });
+					if (!isDirectory) {
+						// Single file mode -> Promote to course!
+						const firstLessonFile = path.basename(filePath);
+						const folderName = path.basename(contentBase);
+						const rawName = folderName.replace(/^\d+[-_]/, "");
+						const formattedTitle =
+							(currentLessonFrontmatter.title as string) ||
+							rawName
+								.replace(/[-_]/g, " ")
+								.replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+						const existingConfig = loadConfig(contentBase) || {};
+						const config = {
+							title: existingConfig.title || formattedTitle,
+							lessons: [firstLessonFile, fileName],
+							...existingConfig,
+						};
+						config.lessons = Array.from(
+							new Set([
+								firstLessonFile,
+								...(existingConfig.lessons || []),
+								fileName,
+							]),
+						);
+
+						isInternalConfigSave = true;
+						saveConfig(contentBase, config);
+						setTimeout(() => {
+							isInternalConfigSave = false;
+						}, 500);
+
+						isDirectory = true;
+						targetPath = contentBase;
+
+						await rebuild(true);
+						return Response.json({
+							success: true,
+							file: fileName,
+							mode: "course",
+						});
+					} else {
+						const config = ensureConfig(contentBase);
+						config.lessons = [...(config.lessons ?? []), fileName];
+						isInternalConfigSave = true;
+						saveConfig(contentBase, config);
+						setTimeout(() => {
+							isInternalConfigSave = false;
+						}, 500);
+						await rebuild();
+						return Response.json({
+							success: true,
+							file: fileName,
+							mode: "course",
+						});
+					}
 				} catch (err: unknown) {
 					return Response.json(
 						{ error: err instanceof Error ? err.message : String(err) },
@@ -433,6 +721,51 @@ export async function runDev(args: string[]) {
 					const script = `<script>
 						const ws = new WebSocket(\`ws://\${location.host}/\`);
 						ws.onmessage = async (e) => { 
+							if (typeof e.data === "string" && e.data.startsWith("{")) {
+								try {
+									const data = JSON.parse(e.data);
+									if (data.type === "appearance-update") {
+										const root = document.documentElement;
+										const shell = document.querySelector(".bk-shell");
+
+										if (data.theme) {
+											let resolved = data.theme;
+											if (resolved === "auto") {
+												resolved = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+											}
+											root.setAttribute("data-theme", resolved);
+											if (shell) shell.setAttribute("data-theme", resolved);
+											localStorage.setItem("bk-theme", data.theme);
+										}
+
+										if (data.palette) {
+											const p = data.palette === "green" ? "field" : data.palette;
+											root.setAttribute("data-palette", p);
+											if (shell) shell.setAttribute("data-palette", p);
+											localStorage.setItem("bk-palette", p);
+										}
+
+										if (data.ui) {
+											root.setAttribute("data-ui", data.ui);
+											if (shell) shell.setAttribute("data-ui", data.ui);
+											localStorage.setItem("bk-ui", data.ui);
+										}
+
+										if (data.customCss !== undefined) {
+											let customStyle = document.getElementById("mrmd-custom-palettes-live");
+											if (!customStyle) {
+												customStyle = document.createElement("style");
+												customStyle.id = "mrmd-custom-palettes-live";
+												document.head.appendChild(customStyle);
+											}
+											customStyle.textContent = data.customCss;
+										}
+
+										if (window.bkBroadcastTheme) window.bkBroadcastTheme();
+										return;
+									}
+								} catch (err) {}
+							}
 							if (typeof e.data === "string" && e.data.startsWith("redirect:")) {
 								window.location.href = e.data.slice(9);
 							} else if (e.data === "reload") {
@@ -559,6 +892,36 @@ export async function runDev(args: string[]) {
 		}
 	};
 
+	return {
+		port,
+		basePort,
+		maxPort,
+		fetchHandler,
+		rebuild,
+		close: () => {
+			watcher.close();
+			clearTimeout(timeout);
+		},
+		get isDirectory() {
+			return isDirectory;
+		},
+		get singleFileSlug() {
+			return singleFileSlug;
+		},
+		contentBase,
+		outDir,
+		cliOpts,
+	};
+}
+
+export async function runDev(args: string[]) {
+	const app = await createDevApp(args);
+	let server: BunServer | undefined;
+	let port = app.port;
+	const basePort = app.basePort;
+	const maxPort = app.maxPort;
+	const cliOpts = app.cliOpts;
+
 	const wsHandler = {
 		message() {},
 		open(ws: { subscribe: (topic: string) => void }) {
@@ -587,8 +950,7 @@ export async function runDev(args: string[]) {
 		if (server) {
 			server.stop();
 		}
-		watcher.close();
-		clearTimeout(timeout);
+		app.close();
 		setTimeout(() => process.exit(0), 3000).unref();
 	});
 
@@ -596,11 +958,13 @@ export async function runDev(args: string[]) {
 		try {
 			server = Bun.serve({
 				port,
-				fetch: fetchHandler,
+				fetch: app.fetchHandler,
 				websocket: wsHandler,
 			});
 			const urlSuffix =
-				!isDirectory && singleFileSlug ? `/${singleFileSlug}.html` : "";
+				!app.isDirectory && app.singleFileSlug
+					? `/${app.singleFileSlug}.html`
+					: "/";
 			const localUrl = `http://localhost:${server.port}${urlSuffix}`;
 
 			const interfaces = os.networkInterfaces();
@@ -616,7 +980,18 @@ export async function runDev(args: string[]) {
 			}
 
 			const studioUrl = `http://localhost:${server.port}/__studio`;
-			logger.serveBox(localUrl, networkUrl, basePort, port, studioUrl);
+			const webpageUrl = networkUrl || localUrl;
+			if (!cliOpts.noStudio) {
+				logger.serveBox(
+					studioUrl,
+					webpageUrl,
+					Boolean(networkUrl),
+					basePort,
+					port,
+				);
+			} else {
+				logger.info(`Dev server running at: ${webpageUrl}`);
+			}
 			break;
 		} catch (err: unknown) {
 			if (

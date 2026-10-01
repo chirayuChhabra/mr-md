@@ -105,6 +105,31 @@ export function discoverMarkdownFiles(contentDir: string): string[] {
 }
 
 /**
+ * Load existing mrmd.config.json or return a transient default config in memory.
+ * Does NOT write mrmd.config.json to disk.
+ */
+export function getEffectiveConfig(
+	contentDir: string,
+	fallbackFileOrTitle?: string,
+): MrmdConfig {
+	const existing = loadConfig(contentDir);
+	if (existing) return existing;
+
+	const folderName = path.basename(contentDir);
+	const rawName = folderName.replace(/^\d+[-_]/, "");
+	const formattedTitle = rawName
+		.replace(/[-_]/g, " ")
+		.replace(/\b\w/g, (c) => c.toUpperCase());
+
+	return {
+		title: formattedTitle,
+		lessons: fallbackFileOrTitle
+			? [fallbackFileOrTitle]
+			: discoverMarkdownFiles(contentDir),
+	};
+}
+
+/**
  * Load or auto-create mrmd.config.json.
  * If no config exists, discovers .md files and generates one.
  */

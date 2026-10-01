@@ -7,7 +7,7 @@ if (existsSync("dist")) {
   rmSync("dist", { recursive: true, force: true });
 }
 mkdirSync("dist");
-await $`bunx tsc`;
+await $`./node_modules/.bin/tsc`;
 cpSync("src/styles", "dist/styles", { recursive: true });
 cpSync("src/client", "dist/client", { recursive: true });
 cpSync("src/studio", "dist/studio", { recursive: true });

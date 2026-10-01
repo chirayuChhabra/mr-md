@@ -25,6 +25,7 @@
 
         <span class="st-crumb-slash">/</span>
         <span class="st-course-crumb" id="st-header-title">Loading course...</span>
+        <span class="st-mode-pill" id="st-mode-pill" style="display: none;">Lesson</span>
       </div>
 
       <!-- Center Slab Ribbon Switcher -->
@@ -39,7 +40,7 @@
               <circle cx="4" cy="12" r="1.5" fill="currentColor"></circle>
               <circle cx="4" cy="18" r="1.5" fill="currentColor"></circle>
             </svg>
-            <span>Lessons</span>
+            <span id="st-nav-curriculum-label">Lessons</span>
             <span class="st-nav-kbd">1</span>
           </button>
           <button class="st-nav-slab-btn active" id="st-nav-course" data-target="course" title="Switch to Preview (2)">
@@ -72,87 +73,130 @@
           <span id="st-status-text">Synced</span>
         </div>
 
-        <button class="st-btn st-btn-sm" id="st-btn-new-lesson" title="Create a new lesson">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          <span>New Lesson</span>
-        </button>
-
-        <a class="st-btn st-btn-sm st-btn-primary" href="/" target="_blank" id="st-btn-view-site" title="Open course in new tab">
+        <a class="st-btn st-btn-primary" href="/" target="_blank" id="st-btn-view-site" title="Open course in new tab">
           <span>Open Site</span>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
       </div>
     </header>
 
     <!-- Infinite Spatial Canvas Ribbon -->
     <main class="st-infinite-canvas" id="st-infinite-canvas">
-      <!-- Slab 1: Lessons -->
+      <!-- Slab 1: Lessons / Document Outline -->
       <section class="st-slab st-slab-curriculum" id="st-slab-curriculum">
-        <div class="st-slab-header">
-          <div class="st-slab-title-wrap">
-            <span class="st-slab-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <circle cx="4" cy="6" r="1.5" fill="currentColor"></circle>
-                <circle cx="4" cy="12" r="1.5" fill="currentColor"></circle>
-                <circle cx="4" cy="18" r="1.5" fill="currentColor"></circle>
-              </svg>
-              Lessons
-            </span>
-            <span class="st-badge-count" id="st-lesson-count-pill">0</span>
-          </div>
-          <span class="st-curriculum-course-name" id="st-curriculum-course-title"></span>
-        </div>
-
-        <div class="st-search-bar">
-          <div class="st-search-input-wrap">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="search" class="st-search-input" id="st-lesson-search" placeholder="Search lessons..." autocomplete="off">
-            <kbd class="st-search-kbd" id="st-search-kbd">/</kbd>
-          </div>
-        </div>
-
-        <!-- Pinned Course Home / Landing Page Entry -->
-        <div class="st-course-home-strip">
-          <div class="st-lesson-card st-course-home-card active" id="st-course-home-card" data-file="" title="View Course Home (Landing Page & Timeline)">
-            <div class="st-card-left">
-              <span class="st-home-icon-wrap">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        <!-- Single-File Document Outline View -->
+        <div class="st-single-file-view" id="st-single-file-view" style="display: none;">
+          <div class="st-slab-header">
+            <div class="st-slab-title-wrap">
+              <span class="st-slab-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
+                Outline
               </span>
-              <div class="st-card-text">
-                <span class="st-card-title" id="st-course-home-title">Course Home</span>
-                <span class="st-card-tag home">OVERVIEW</span>
-              </div>
+              <span class="st-badge-count" id="st-outline-count">0</span>
             </div>
-            <div class="st-card-actions">
-              <a class="st-card-btn" href="/" target="_blank" title="Open home in new tab">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              </a>
+            <button class="st-btn st-btn-sm" id="st-btn-single-new-lesson" title="Create a new lesson">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>New Lesson</span>
+            </button>
+          </div>
+
+          <div class="st-curriculum-scroll" id="st-outline-list" style="padding: 12px 14px;">
+            <!-- Injected outline items: headings, sims, quizzes -->
+          </div>
+
+          <div class="st-curriculum-footer" style="padding: 12px 14px;">
+            <div class="st-promote-callout">
+              <div class="st-promote-info">
+                <strong>Expanding into a series?</strong>
+                <p>Add another lesson to automatically organize your work into a full course.</p>
+              </div>
+              <button class="st-btn st-btn-primary st-btn-sm" id="st-btn-promote-lesson" style="margin-top: 8px; width: 100%;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Add Second Lesson</span>
+              </button>
             </div>
           </div>
         </div>
 
-        <div class="st-curriculum-scroll" id="st-lesson-list">
-          <!-- Injected lesson items -->
-        </div>
-
-        <!-- Unassigned Drafts Drawer -->
-        <div class="st-curriculum-footer">
-          <div class="st-unassigned-box" id="st-unassigned-panel" style="display: none;">
-            <div class="st-unassigned-head">
-              <div class="st-unassigned-head-left">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                <span>Drafts</span>
-              </div>
-              <span id="st-unassigned-count-pill" class="st-unassigned-badge">0</span>
+        <!-- Full Course Curriculum View -->
+        <div id="st-course-curriculum-wrap">
+          <div class="st-slab-header">
+            <div class="st-slab-title-wrap">
+              <span class="st-slab-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <circle cx="4" cy="6" r="1.5" fill="currentColor"></circle>
+                  <circle cx="4" cy="12" r="1.5" fill="currentColor"></circle>
+                  <circle cx="4" cy="18" r="1.5" fill="currentColor"></circle>
+                </svg>
+                Lessons
+              </span>
+              <span class="st-badge-count" id="st-lesson-count-pill">0</span>
+              <span class="st-curriculum-course-name" id="st-curriculum-course-title" style="display: none;"></span>
             </div>
-            <div class="st-unassigned-list" id="st-unassigned-list">
-              <!-- Injected unassigned draft pills -->
+
+            <button class="st-btn st-btn-sm" id="st-btn-new-lesson" title="Create a new lesson">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>New Lesson</span>
+            </button>
+          </div>
+
+          <div class="st-search-bar">
+            <div class="st-search-input-wrap">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="search" class="st-search-input" id="st-lesson-search" placeholder="Search lessons..." autocomplete="off">
+              <kbd class="st-search-kbd" id="st-search-kbd">/</kbd>
+            </div>
+          </div>
+
+          <!-- Pinned Course Home / Landing Page Entry -->
+          <div class="st-course-home-strip">
+            <div class="st-lesson-card st-course-home-card active" id="st-course-home-card" data-file="" title="View Course Home (Landing Page & Timeline)">
+              <div class="st-card-left">
+                <span class="st-home-icon-wrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                </span>
+                <div class="st-card-text">
+                  <span class="st-card-title" id="st-course-home-title">Course Home</span>
+                  <span class="st-card-tag home">OVERVIEW</span>
+                </div>
+              </div>
+              <div class="st-card-actions">
+                <a class="st-card-btn" href="/" target="_blank" title="Open home in new tab">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="st-curriculum-scroll" id="st-lesson-list">
+            <!-- Injected lesson items -->
+          </div>
+
+          <!-- Unassigned Drafts Drawer -->
+          <div class="st-curriculum-footer">
+            <div class="st-unassigned-box" id="st-unassigned-panel" style="display: none;">
+              <div class="st-unassigned-head">
+                <div class="st-unassigned-head-left">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span>Drafts</span>
+                </div>
+                <span id="st-unassigned-count-pill" class="st-unassigned-badge">0</span>
+              </div>
+              <div class="st-unassigned-list" id="st-unassigned-list">
+                <!-- Injected unassigned draft pills -->
+              </div>
             </div>
           </div>
         </div>
@@ -170,7 +214,10 @@
           <div class="st-url-capsule" id="st-url-capsule" title="Click to copy URL">
             <svg class="st-lock-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             <span class="st-url-badge" id="st-viewport-url">http://localhost:3000/</span>
-            <span class="st-copy-toast" id="st-copy-toast">Copied</span>
+            <span class="st-copy-toast" id="st-copy-toast">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Copied</span>
+            </span>
           </div>
 
           <div class="st-course-actions">
@@ -316,8 +363,31 @@
           </div>
         </div>
 
-        <!-- Course Info -->
-        <div class="st-inspector-section">
+        <!-- Lesson Info (Single-File Mode) -->
+        <div class="st-inspector-section" id="st-lesson-info-section" style="display: none;">
+          <div class="st-section-title">
+            <span>Lesson Metadata</span>
+          </div>
+          <div class="st-field-group">
+            <label class="st-field-label" for="st-lesson-title">Title</label>
+            <input type="text" class="st-field-input" id="st-lesson-title" placeholder="Lesson Title">
+          </div>
+          <div class="st-field-group">
+            <label class="st-field-label" for="st-lesson-desc">Description</label>
+            <textarea class="st-field-textarea" id="st-lesson-desc" placeholder="Lesson description..."></textarea>
+          </div>
+          <div class="st-field-group">
+            <label class="st-field-label" for="st-lesson-author">Author</label>
+            <input type="text" class="st-field-input" id="st-lesson-author" placeholder="Author name">
+          </div>
+          <div class="st-field-group">
+            <label class="st-field-label" for="st-lesson-tags">Tags</label>
+            <input type="text" class="st-field-input" id="st-lesson-tags" placeholder="e.g. math, intro, waves">
+          </div>
+        </div>
+
+        <!-- Course Info (Course Mode) -->
+        <div class="st-inspector-section" id="st-course-info-section">
           <div class="st-section-title">
             <span>Course Info</span>
           </div>

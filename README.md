@@ -32,7 +32,7 @@ bunx mr-md build lesson.md
 | Command | Description |
 |---------|-------------|
 | `mr-md build <path>` | Build all chapters or a specific file |
-| `mr-md dev <path>` | Start local dev server with hot reloading |
+| `mr-md dev <path>` | Start local dev server and Studio GUI |
 | `mr-md generate <name>` | Generate a new markdown file (alias: `g`) |
 | `mr-md skill install` | Install the simulation agent skill globally |
 | `mr-md skill update` | Update the installed skill |

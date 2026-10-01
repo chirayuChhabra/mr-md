@@ -3,6 +3,26 @@ export function bkInitRouter() {
 	if (window.__bk_router_initialized) return;
 	window.__bk_router_initialized = true;
 
+	function notifyParentRoute(targetUrl) {
+		if (window.self !== window.top) {
+			try {
+				const urlObj =
+					typeof targetUrl === "string"
+						? new URL(targetUrl, window.location.origin)
+						: targetUrl;
+				window.parent.postMessage(
+					{
+						type: "mrmd-route-change",
+						url: urlObj.href,
+						path: urlObj.pathname + urlObj.search + urlObj.hash,
+						pathname: urlObj.pathname,
+					},
+					"*",
+				);
+			} catch {}
+		}
+	}
+
 	function handleNavigation(url, addToHistory = true) {
 		const targetUrl = new URL(url, window.location.origin);
 		if (targetUrl.origin !== window.location.origin) return false;
@@ -35,6 +55,8 @@ export function bkInitRouter() {
 						if (addToHistory) {
 							window.history.pushState({}, "", targetUrl.href);
 						}
+
+						notifyParentRoute(targetUrl);
 
 						// Reset scroll to top or scroll to hash
 						const hash = targetUrl.hash;
@@ -132,6 +154,7 @@ export function bkInitRouter() {
 						if (window.history.pushState) {
 							window.history.pushState({}, "", targetUrl.href);
 						}
+						notifyParentRoute(targetUrl);
 					}
 				}
 				return;
@@ -142,6 +165,7 @@ export function bkInitRouter() {
 	});
 
 	window.addEventListener("popstate", () => {
+		notifyParentRoute(new URL(window.location.href));
 		handleNavigation(window.location.href, false);
 	});
 }

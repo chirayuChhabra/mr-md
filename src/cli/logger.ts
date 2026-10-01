@@ -90,28 +90,23 @@ export const logger = {
 		);
 	},
 	serveBox: (
-		localUrl: string,
-		networkUrl: string | null,
+		studioUrl: string,
+		webpageUrl: string,
+		isNetworkWebpage: boolean,
 		basePort?: number,
 		currentPort?: number,
-		studioUrl?: string,
 	) => {
 		let text = `${pc.greenBright("Serving!")}\n\n`;
-		text += `- ${pc.bold("Local:")}    ${localUrl}\n`;
-		if (networkUrl) {
-			text += `- ${pc.bold("Network:")}  ${networkUrl}\n`;
-		}
-		if (studioUrl) {
-			text += `- ${pc.bold("Studio:")}   ${pc.cyan(studioUrl)}\n`;
-		}
+		text += `- ${pc.bold("Studio:")}   ${pc.cyan(studioUrl)}\n`;
+		text += `- ${pc.bold("Webpage:")}  ${webpageUrl}${isNetworkWebpage ? ` ${pc.gray("(network)")}` : ""}\n`;
 
 		if (basePort && currentPort && basePort !== currentPort) {
 			text += `\n${pc.red(`This port was picked because ${pc.underline(basePort.toString())} is in use.`)}\n`;
 		}
 
-		text += `\nCopied local address to clipboard!`;
+		text += `\nCopied Studio address to clipboard!`;
 
-		writeText(studioUrl || localUrl).catch((err: unknown) => {
+		writeText(studioUrl).catch((err: unknown) => {
 			logger.warn(
 				`Failed to copy address to clipboard (may be headless environment): ${err instanceof Error ? err.message : String(err)}`,
 			);

@@ -249,9 +249,28 @@ html, body {
 .st-topbar-right {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
 	margin-left: auto;
 	z-index: 1;
+}
+
+#st-btn-view-site {
+	padding: 6px 14px;
+	font-size: 12px;
+	font-weight: 600;
+	gap: 6px;
+	border-radius: var(--st-radius-sm);
+	letter-spacing: -0.01em;
+}
+
+#st-btn-view-site svg {
+	width: 12px;
+	height: 12px;
+	transition: transform 0.15s ease;
+}
+
+#st-btn-view-site:hover svg {
+	transform: translate(1px, -1px);
 }
 
 .st-status-pill {
@@ -388,6 +407,28 @@ html, body {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	letter-spacing: -0.01em;
+}
+
+#st-btn-new-lesson {
+	padding: 4px 10px;
+	font-size: 11.5px;
+	font-weight: 500;
+	gap: 5px;
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--st-border);
+	color: var(--st-text);
+	transition: all 0.15s ease;
+}
+
+#st-btn-new-lesson:hover {
+	background: rgba(255, 255, 255, 0.09);
+	border-color: var(--st-border-hover);
+	color: #ffffff;
+}
+
+#st-btn-new-lesson svg {
+	color: var(--st-accent);
 }
 
 .st-search-bar {
@@ -850,6 +891,7 @@ html, body {
 }
 
 .st-course-viewport-bar {
+	position: relative;
 	height: 38px;
 	background: var(--st-chrome);
 	border-bottom: 1px solid var(--st-border);
@@ -868,6 +910,7 @@ html, body {
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	z-index: 1;
 }
 
 .st-dot {
@@ -881,21 +924,26 @@ html, body {
 .st-dot-yellow { background: #ffbd2e; }
 .st-dot-green { background: #27c93f; }
 
-/* URL Capsule */
+/* URL Capsule - Locked Dead-Center in Viewport Bar */
 
 .st-url-capsule {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	gap: 6px;
 	background: rgba(0, 0, 0, 0.35);
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	border-radius: 9999px;
-	padding: 3px 12px;
-	max-width: 520px;
-	position: relative;
+	padding: 3px 14px;
+	max-width: min(520px, calc(100% - 360px));
 	cursor: pointer;
 	user-select: none;
 	transition: background 0.15s ease, border-color 0.15s ease;
+	z-index: 2;
 }
 
 .st-url-capsule:hover {
@@ -906,6 +954,7 @@ html, body {
 .st-lock-icon {
 	color: var(--st-text-muted);
 	flex-shrink: 0;
+	transition: opacity 0.15s ease;
 }
 
 .st-url-badge {
@@ -915,38 +964,57 @@ html, body {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	transition: color 0.15s ease;
+	transition: color 0.15s ease, opacity 0.15s ease;
 }
 
 .st-url-capsule:hover .st-url-badge {
 	color: var(--st-text-secondary);
 }
 
+.st-url-capsule.copied .st-url-badge,
+.st-url-capsule.copied .st-lock-icon {
+	opacity: 0.12;
+}
+
+/* Centered Copy Toast Badge */
+
 .st-copy-toast {
 	position: absolute;
-	right: 4px;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%) scale(0.9);
 	background: var(--st-success);
 	color: #ffffff;
 	font-size: 10px;
 	font-weight: 600;
-	padding: 2px 7px;
+	padding: 2px 9px;
 	border-radius: 9999px;
 	opacity: 0;
 	pointer-events: none;
-	transform: scale(0.85);
-	transition: opacity 0.15s ease, transform 0.15s ease;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+	transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	z-index: 5;
+	white-space: nowrap;
+}
+
+.st-copy-toast svg {
+	flex-shrink: 0;
 }
 
 .st-copy-toast.show {
 	opacity: 1;
-	transform: scale(1);
+	transform: translate(-50%, -50%) scale(1);
 }
 
 .st-course-actions {
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	margin-left: auto;
+	z-index: 1;
 }
 
 .st-live-iframe {
@@ -1462,4 +1530,131 @@ html, body {
 	font-size: 11px;
 	width: 100%;
 	outline: none;
+}
+
+/* ── Single-File Mode Styles ─────────────────────── */
+
+.st-mode-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 9999px;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	background: rgba(59, 130, 246, 0.15);
+	color: #60a5fa;
+	border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.st-single-file-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.st-outline-section {
+	margin-top: 4px;
+	flex: 1;
+	overflow-y: auto;
+}
+
+.st-outline-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-top: 8px;
+}
+
+.st-outline-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: var(--st-radius-sm);
+	background: var(--st-surface);
+	border: 1px solid var(--st-border);
+	color: var(--st-text);
+	text-decoration: none;
+	font-size: 12px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.st-outline-item:hover {
+	background: var(--st-surface-hover);
+	border-color: var(--st-border-hover);
+	transform: translateX(2px);
+}
+
+.st-outline-item.depth-3 {
+	margin-left: 12px;
+	opacity: 0.85;
+}
+
+.st-outline-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	border-radius: 4px;
+	font-size: 9px;
+	font-weight: 700;
+	flex-shrink: 0;
+}
+
+.st-outline-icon.heading {
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--st-text-muted);
+}
+
+.st-outline-icon.sim {
+	background: rgba(59, 130, 246, 0.2);
+	color: #60a5fa;
+}
+
+.st-outline-icon.quiz {
+	background: rgba(16, 185, 129, 0.2);
+	color: #34d399;
+}
+
+.st-outline-label {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 500;
+}
+
+.st-outline-badge {
+	font-size: 9px;
+	font-weight: 700;
+	padding: 1px 5px;
+	border-radius: 4px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	background: rgba(255, 255, 255, 0.06);
+	color: var(--st-text-muted);
+}
+
+.st-promote-callout {
+	background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 18, 26, 0.7));
+	border: 1px solid rgba(59, 130, 246, 0.25);
+	border-radius: var(--st-radius);
+	padding: 12px;
+}
+
+.st-promote-info strong {
+	display: block;
+	font-size: 12px;
+	color: #93c5fd;
+	margin-bottom: 2px;
+}
+
+.st-promote-info p {
+	font-size: 11px;
+	color: var(--st-text-muted);
+	line-height: 1.4;
 }

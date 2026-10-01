@@ -6,7 +6,7 @@ import { clientScript, pageCSS } from "./assets.js";
  * Generate CSS rules for custom palettes defined in mrmd.config.json.
  * Emits light, dark, and prefers-color-scheme rules for each custom palette.
  */
-function generateCustomPaletteCSS(
+export function generateCustomPaletteCSS(
 	customPalettes?: Record<string, CustomPalette>,
 ): string {
 	if (!customPalettes || Object.keys(customPalettes).length === 0) return "";

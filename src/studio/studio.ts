@@ -20,6 +20,17 @@ let cachedDetents: {
 	design: number;
 } | null = null;
 
+let studioMode: "single" | "course" = "course";
+let currentLessonOutline: Array<{
+	id: string;
+	label: string;
+	kind: string;
+	level?: number;
+}> = [];
+let currentLessonFrontmatter: Record<string, unknown> = {};
+let currentTargetFile: string | null = null;
+let frontmatterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 const BUILTIN_PALETTES = ["ink", "field", "ember", "elixir", "trunk", "lava"];
 
 const studioBroadcast =
@@ -199,15 +210,46 @@ function scrollToSlab(target: "curriculum" | "course" | "design") {
 
 async function fetchConfig() {
 	try {
-		const res = await fetch("/__api/config");
+		const res = await fetch("/__api/context");
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		const data = await res.json();
+		studioMode = data.mode || "course";
 		currentConfig = data.config || {};
 		unassignedFiles = data.unassignedFiles || [];
+		currentLessonOutline = data.outline || [];
+		currentLessonFrontmatter = data.frontmatter || {};
+		currentTargetFile = data.targetFile || null;
 
-		// Default to Course Home on initial load
-		if (isInitialBoot) {
-			activeLessonFile = "";
+		const modePill = $("st-mode-pill");
+		if (modePill) {
+			modePill.style.display = studioMode === "single" ? "inline-flex" : "none";
+			modePill.textContent = "Lesson";
+		}
+		const navCurriculumLabel = $("st-nav-curriculum-label");
+		if (navCurriculumLabel) {
+			navCurriculumLabel.textContent =
+				studioMode === "single" ? "Outline" : "Lessons";
+		}
+
+		if (studioMode === "single") {
+			activeLessonFile = data.targetFile || "";
+			const headerTitle = $("st-header-title");
+			if (headerTitle) {
+				headerTitle.textContent =
+					(currentLessonFrontmatter.title as string) ||
+					data.title ||
+					data.targetFile ||
+					"Lesson";
+			}
+		} else {
+			const headerTitle = $("st-header-title");
+			if (headerTitle) {
+				headerTitle.textContent = currentConfig.title || "Untitled Course";
+			}
+			// Default to Course Home on initial load if course mode
+			if (isInitialBoot) {
+				activeLessonFile = "";
+			}
 		}
 
 		renderAll();
@@ -222,7 +264,7 @@ async function fetchConfig() {
 			}, 120);
 		}
 	} catch (err) {
-		console.error("Failed to load studio config:", err);
+		console.error("Failed to load studio context:", err);
 		setStatus("unsaved", "Error loading");
 	}
 }
@@ -253,9 +295,83 @@ function queueSave() {
 
 // ── Viewport Control ───────────────────────────────────────────────────────
 
+let lastSyncedUrl = "";
+
+function syncIframeUrl(forcedPathOrUrl?: string) {
+	const iframe = $<HTMLIFrameElement>("st-course-iframe");
+	let rawUrl = forcedPathOrUrl;
+
+	if (!rawUrl && iframe?.contentWindow) {
+		try {
+			const loc = iframe.contentWindow.location;
+			if (loc.href && loc.href !== "about:blank") {
+				rawUrl = loc.href;
+			}
+		} catch {}
+	}
+
+	if (!rawUrl) return;
+
+	let urlObj: URL;
+	try {
+		urlObj = new URL(rawUrl, window.location.origin);
+	} catch {
+		return;
+	}
+
+	const fullUrl = urlObj.href;
+	const pathWithQueryAndHash = urlObj.pathname + urlObj.search + urlObj.hash;
+
+	if (fullUrl === lastSyncedUrl) return;
+	lastSyncedUrl = fullUrl;
+
+	const urlDisplay = $("st-viewport-url");
+	if (urlDisplay && urlDisplay.textContent !== fullUrl) {
+		urlDisplay.textContent = fullUrl;
+	}
+
+	const openTabBtn = $<HTMLAnchorElement>("st-btn-open-active-tab");
+	if (openTabBtn) {
+		openTabBtn.href = pathWithQueryAndHash;
+	}
+
+	// Update lesson card active highlights
+	const slug = urlObj.pathname.replace(/^\//, "").replace(/\.html$/, "");
+	if (slug && slug !== "index") {
+		const matchingFile = `${slug}.md`;
+		activeLessonFile = matchingFile;
+		const homeCardEl = $("st-course-home-card");
+		if (homeCardEl) homeCardEl.classList.remove("active");
+		document
+			.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
+			.forEach((c) => {
+				if ((c as HTMLElement).dataset.file === matchingFile) {
+					c.classList.add("active");
+				} else {
+					c.classList.remove("active");
+				}
+			});
+	} else {
+		activeLessonFile = "";
+		const homeCardEl = $("st-course-home-card");
+		if (homeCardEl) homeCardEl.classList.add("active");
+		document
+			.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
+			.forEach((c) => {
+				c.classList.remove("active");
+			});
+	}
+}
+
 function updateLiveViewport(targetFile?: string) {
 	if (targetFile !== undefined) {
 		activeLessonFile = targetFile;
+	} else if (
+		!activeLessonFile &&
+		studioMode === "single" &&
+		currentTargetFile
+	) {
+		activeLessonFile = currentTargetFile;
 	}
 
 	const iframe = $<HTMLIFrameElement>("st-course-iframe");
@@ -274,8 +390,11 @@ function updateLiveViewport(targetFile?: string) {
 		}
 	}
 
+	const fullUrl = `${window.location.origin}${htmlPath}`;
+	lastSyncedUrl = fullUrl;
+
 	if (urlDisplay) {
-		urlDisplay.textContent = `${window.location.origin}${htmlPath}`;
+		urlDisplay.textContent = fullUrl;
 	}
 
 	if (openTabBtn) {
@@ -284,7 +403,7 @@ function updateLiveViewport(targetFile?: string) {
 
 	const homeCard = $("st-course-home-card");
 	if (homeCard) {
-		if (!activeLessonFile) {
+		if (!activeLessonFile && studioMode !== "single") {
 			homeCard.classList.add("active");
 		} else {
 			homeCard.classList.remove("active");
@@ -305,13 +424,154 @@ function updateLiveViewport(targetFile?: string) {
 // ── Rendering ──────────────────────────────────────────────────────────────
 
 function renderAll() {
-	renderCurriculum();
-	renderUnassigned();
-	renderMetadata();
+	if (studioMode === "single") {
+		renderSingleFileView();
+		renderLessonFrontmatter();
+	} else {
+		const singleView = $("st-single-file-view");
+		const courseWrap = $("st-course-curriculum-wrap");
+		const lessonInfoSec = $("st-lesson-info-section");
+		const courseInfoSec = $("st-course-info-section");
+		if (singleView) singleView.style.display = "none";
+		if (courseWrap) courseWrap.style.display = "block";
+		if (lessonInfoSec) lessonInfoSec.style.display = "none";
+		if (courseInfoSec) courseInfoSec.style.display = "block";
+
+		renderCurriculum();
+		renderUnassigned();
+		renderMetadata();
+	}
 	renderThemeMode();
 	renderUiMode();
 	renderPalettes();
 	renderCustomPalettes();
+}
+
+function renderSingleFileView() {
+	const singleView = $("st-single-file-view");
+	const courseWrap = $("st-course-curriculum-wrap");
+	const outlineList = $("st-outline-list");
+	const outlineCount = $("st-outline-count");
+	const lessonInfoSec = $("st-lesson-info-section");
+	const courseInfoSec = $("st-course-info-section");
+
+	if (singleView) singleView.style.display = "flex";
+	if (courseWrap) courseWrap.style.display = "none";
+	if (lessonInfoSec) lessonInfoSec.style.display = "block";
+	if (courseInfoSec) courseInfoSec.style.display = "none";
+
+	if (outlineCount) {
+		outlineCount.textContent = String(currentLessonOutline.length);
+	}
+
+	if (!outlineList) return;
+	outlineList.innerHTML = "";
+
+	if (currentLessonOutline.length === 0) {
+		outlineList.innerHTML = `
+			<div class="st-empty-state" style="padding: 24px 12px;">
+				<span>No headings or interactive blocks</span>
+				<p>Add headings (##) or simulations to see the outline.</p>
+			</div>
+		`;
+		return;
+	}
+
+	currentLessonOutline.forEach((item) => {
+		const el = document.createElement("div");
+		el.className = `st-outline-item ${item.level === 3 ? "depth-3" : ""}`;
+
+		let iconHtml = `<span class="st-outline-icon heading">#</span>`;
+		let badgeHtml = "";
+		if (item.kind === "simulation") {
+			iconHtml = `<span class="st-outline-icon sim">⚡</span>`;
+			badgeHtml = `<span class="st-outline-badge">SIM</span>`;
+		} else if (item.kind === "quiz") {
+			iconHtml = `<span class="st-outline-icon quiz">?</span>`;
+			badgeHtml = `<span class="st-outline-badge">QUIZ</span>`;
+		}
+
+		el.innerHTML = `
+			${iconHtml}
+			<span class="st-outline-label" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
+			${badgeHtml}
+		`;
+
+		el.addEventListener("click", () => {
+			const iframe = $<HTMLIFrameElement>("st-course-iframe");
+			if (iframe?.contentWindow) {
+				const targetEl = iframe.contentWindow.document.getElementById(item.id);
+				if (targetEl) {
+					targetEl.scrollIntoView({ behavior: "smooth" });
+				} else if (activeLessonFile) {
+					const slug = activeLessonFile.replace(/\.md$/, "");
+					iframe.src = `/${slug}.html#${item.id}`;
+				}
+			}
+		});
+
+		outlineList.appendChild(el);
+	});
+}
+
+function renderLessonFrontmatter() {
+	const titleInput = $<HTMLInputElement>("st-lesson-title");
+	const descInput = $<HTMLTextAreaElement>("st-lesson-desc");
+	const authorInput = $<HTMLInputElement>("st-lesson-author");
+	const tagsInput = $<HTMLInputElement>("st-lesson-tags");
+
+	if (titleInput && document.activeElement !== titleInput) {
+		titleInput.value = (currentLessonFrontmatter.title as string) || "";
+	}
+	if (descInput && document.activeElement !== descInput) {
+		descInput.value = (currentLessonFrontmatter.description as string) || "";
+	}
+	if (authorInput && document.activeElement !== authorInput) {
+		authorInput.value = (currentLessonFrontmatter.author as string) || "";
+	}
+	if (tagsInput && document.activeElement !== tagsInput) {
+		const tags = currentLessonFrontmatter.tags;
+		tagsInput.value = Array.isArray(tags)
+			? tags.join(", ")
+			: (tags as string) || "";
+	}
+}
+
+function queueFrontmatterSave() {
+	setStatus("unsaved");
+	if (frontmatterDebounceTimer) clearTimeout(frontmatterDebounceTimer);
+	frontmatterDebounceTimer = setTimeout(async () => {
+		setStatus("saving");
+		try {
+			const title = $<HTMLInputElement>("st-lesson-title")?.value;
+			const description = $<HTMLTextAreaElement>("st-lesson-desc")?.value;
+			const author = $<HTMLInputElement>("st-lesson-author")?.value;
+			const tagsRaw = $<HTMLInputElement>("st-lesson-tags")?.value;
+			const tags = tagsRaw
+				? tagsRaw
+						.split(",")
+						.map((t) => t.trim())
+						.filter(Boolean)
+				: [];
+
+			const res = await fetch("/__api/lesson/frontmatter", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ title, description, author, tags }),
+			});
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const data = await res.json();
+			currentLessonFrontmatter = data.frontmatter || {};
+			const headerTitle = $("st-header-title");
+			if (headerTitle && currentLessonFrontmatter.title) {
+				headerTitle.textContent = currentLessonFrontmatter.title as string;
+			}
+			setStatus("saved");
+		} catch (err) {
+			console.error("Failed to save frontmatter:", err);
+			setStatus("unsaved", "Save failed");
+		}
+	}, 600);
 }
 
 function inferBadge(
@@ -948,65 +1208,74 @@ function wireEvents() {
 
 	// Live preview iframe navigation listener (sync URL & active card without moving canvas)
 	const iframe = $<HTMLIFrameElement>("st-course-iframe");
-	const wireIframeShortcuts = () => {
+	const wireIframeWindow = () => {
 		try {
-			if (iframe?.contentWindow) {
-				iframe.contentWindow.removeEventListener(
-					"keydown",
-					handleGlobalKeydown,
-				);
-				iframe.contentWindow.addEventListener("keydown", handleGlobalKeydown);
-			}
+			if (!iframe?.contentWindow) return;
+			const win = iframe.contentWindow;
+
+			// Forward keyboard shortcuts
+			win.removeEventListener("keydown", handleGlobalKeydown);
+			win.addEventListener("keydown", handleGlobalKeydown);
+
+			// Listen for PJAX and navigation events from iframe
+			const onNav = () => syncIframeUrl();
+			win.removeEventListener("bk-page-loaded", onNav);
+			win.addEventListener("bk-page-loaded", onNav);
+			win.removeEventListener("popstate", onNav);
+			win.addEventListener("popstate", onNav);
+			win.removeEventListener("hashchange", onNav);
+			win.addEventListener("hashchange", onNav);
+
+			// Intercept pushState and replaceState in iframe history
+			try {
+				const winWithMarker = win as unknown as {
+					__mrmd_history_wired?: boolean;
+				};
+				if (!winWithMarker.__mrmd_history_wired) {
+					const origPush = win.history.pushState.bind(win.history);
+					win.history.pushState = (
+						...args: Parameters<History["pushState"]>
+					) => {
+						const res = origPush(...args);
+						syncIframeUrl();
+						return res;
+					};
+					const origReplace = win.history.replaceState.bind(win.history);
+					win.history.replaceState = (
+						...args: Parameters<History["replaceState"]>
+					) => {
+						const res = origReplace(...args);
+						syncIframeUrl();
+						return res;
+					};
+					winWithMarker.__mrmd_history_wired = true;
+				}
+			} catch {}
 		} catch {}
 	};
 
 	if (iframe) {
 		iframe.addEventListener("load", () => {
-			wireIframeShortcuts();
-			try {
-				const path = iframe.contentWindow?.location.pathname;
-				if (path) {
-					const urlDisplay = $("st-viewport-url");
-					if (urlDisplay) {
-						urlDisplay.textContent = `${window.location.origin}${path}`;
-					}
-					const openTabBtn = $<HTMLAnchorElement>("st-btn-open-active-tab");
-					if (openTabBtn) {
-						openTabBtn.href = path;
-					}
-					const slug = path.replace(/^\//, "").replace(/\.html$/, "");
-					if (slug) {
-						const matchingFile = `${slug}.md`;
-						activeLessonFile = matchingFile;
-						const homeCardEl = $("st-course-home-card");
-						if (homeCardEl) homeCardEl.classList.remove("active");
-						document
-							.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
-							.forEach((c) => {
-								if ((c as HTMLElement).dataset.file === matchingFile) {
-									c.classList.add("active");
-								} else {
-									c.classList.remove("active");
-								}
-							});
-					} else {
-						activeLessonFile = "";
-						const homeCardEl = $("st-course-home-card");
-						if (homeCardEl) homeCardEl.classList.add("active");
-						document
-							.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
-							.forEach((c) => {
-								c.classList.remove("active");
-							});
-					}
-				}
-			} catch {}
+			wireIframeWindow();
+			syncIframeUrl();
 		});
 	}
 
+	// Listen for postMessage from client router
+	window.addEventListener("message", (e) => {
+		if (e.data?.type === "mrmd-route-change") {
+			syncIframeUrl(e.data.url || e.data.path);
+		}
+	});
+
+	// Polling fallback to guarantee URL is always fresh across PJAX/history navigations
+	setInterval(() => {
+		syncIframeUrl();
+	}, 400);
+
 	// Keyboard navigation shortcuts (1: Curriculum, 2: Course, 3: Design)
 	window.addEventListener("keydown", handleGlobalKeydown);
-	wireIframeShortcuts();
+	wireIframeWindow();
 
 	// Window resize: recompute detents and active nav button
 	window.addEventListener("resize", () => {
@@ -1033,10 +1302,12 @@ function wireEvents() {
 				await navigator.clipboard.writeText(urlText);
 				if (toast) {
 					toast.classList.add("show");
+					capsule.classList.add("copied");
 					if (copyTimer) clearTimeout(copyTimer);
 					copyTimer = setTimeout(() => {
 						toast.classList.remove("show");
-					}, 1800);
+						capsule.classList.remove("copied");
+					}, 1500);
 				}
 			} catch (err) {
 				console.error("Failed to copy URL:", err);
@@ -1129,12 +1400,28 @@ function wireEvents() {
 	const newLessonModal = $("st-modal-new-lesson");
 	const newLessonInput = $<HTMLInputElement>("st-new-lesson-name");
 
-	$("st-btn-new-lesson")?.addEventListener("click", () => {
+	const openNewLessonModal = () => {
 		if (newLessonModal && newLessonInput) {
 			newLessonInput.value = "";
 			newLessonModal.style.display = "flex";
 			newLessonInput.focus();
 		}
+	};
+
+	$("st-btn-new-lesson")?.addEventListener("click", openNewLessonModal);
+	$("st-btn-single-new-lesson")?.addEventListener("click", openNewLessonModal);
+	$("st-btn-promote-lesson")?.addEventListener("click", openNewLessonModal);
+
+	// Lesson frontmatter live inputs
+	[
+		"st-lesson-title",
+		"st-lesson-desc",
+		"st-lesson-author",
+		"st-lesson-tags",
+	].forEach((id) => {
+		$(id)?.addEventListener("input", () => {
+			queueFrontmatterSave();
+		});
 	});
 
 	newLessonInput?.addEventListener("keydown", (e) => {
