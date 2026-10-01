@@ -130,4 +130,61 @@ describe("Renderer", () => {
 			expect(html).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ');
 		});
 	});
+
+	describe("Sidebar & Header Polish", () => {
+		test("renders sidebar collapse button and expand button", () => {
+			const mdContent = "---\ntitle: Lesson Title\n---\n# Content";
+			const l = parseLesson(mdContent, { contentBase: testDir });
+			const html = render(l);
+
+			expect(html).toContain('id="bk-sidebar-collapse"');
+			expect(html).toContain('id="bk-sidebar-expand"');
+			expect(html.match(/<main class="bk-main">/g)?.length).toBe(1);
+		});
+
+		test("renders clean sidebar without author badge, and separated tags & author byline in hero", () => {
+			const mdContent = `---
+title: Quantum Physics
+author: Richard Feynman
+tags: [physics, quantum, mechanics, particles, waves, field]
+parentSlug: index
+---
+# Intro
+Some text here.`;
+			const l = parseLesson(mdContent, { contentBase: testDir });
+			const html = render(l);
+
+			// Title should appear in sidebar title
+			expect(html).toContain('<div class="bk-sidebar-title">Quantum Physics</div>');
+
+			// Sidebar should NOT contain author badge or avatar
+			const sidebarContent = html.substring(html.indexOf('<aside class="bk-sidebar">'), html.indexOf('</aside>'));
+			expect(sidebarContent).not.toContain("bk-sidebar-author");
+			expect(sidebarContent).not.toContain("bk-sidebar-avatar");
+
+			// Tags should NOT be in the sidebar (.bk-sidebar)
+			expect(sidebarContent).not.toContain("bk-tag");
+
+			// Tags should be capped at 4 in the hero eyebrow row with +2 overflow
+			expect(html).toContain('class="bk-hero-eyebrow-row"');
+			expect(html).toContain('class="bk-hero-tags"');
+			expect(html).toContain('<span class="bk-tag"><span class="bk-tag-hash">#</span>physics</span>');
+			expect(html).toContain('<span class="bk-tag"><span class="bk-tag-hash">#</span>quantum</span>');
+			expect(html).toContain('<span class="bk-tag"><span class="bk-tag-hash">#</span>mechanics</span>');
+			expect(html).toContain('<span class="bk-tag"><span class="bk-tag-hash">#</span>particles</span>');
+			expect(html).not.toContain('<span class="bk-tag"><span class="bk-tag-hash">#</span>waves</span>');
+			expect(html).toContain('class="bk-tag bk-tag-overflow"');
+			expect(html).toContain('>+2</span>');
+
+			// Author byline in hero with name
+			expect(html).toContain('class="bk-hero-byline"');
+			expect(html).toContain('<strong class="bk-hero-name">Richard Feynman</strong>');
+			// Hero should NOT have an initials avatar badge
+			expect(html).not.toContain('bk-hero-avatar');
+
+			// Back to chapter in top bar
+			expect(html).toContain('class="bk-sidebar-top-bar"');
+			expect(html).toContain('class="bk-back-link"');
+		});
+	});
 });

@@ -29,6 +29,9 @@ describe("Chapter Renderer", () => {
 		expect(html).toContain("Lesson 1");
 		expect(html).toContain("lesson-2.html");
 		expect(html).toContain("Lesson 2");
+		expect(html).toContain('id="bk-sidebar-collapse"');
+		expect(html).toContain('id="bk-sidebar-expand"');
+		expect(html.match(/<main class="bk-main">/g)?.length).toBe(1);
 	});
 
 	test("should render chapter timeline", () => {

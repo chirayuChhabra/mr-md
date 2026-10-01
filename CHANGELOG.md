@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Sidebar State Persistence**: Sidebar collapsed state is now remembered across page reloads and transitions in `localStorage`, with an early initialization script to eliminate layout flickering.
+- **Keyboard Navigation**: Pressing `Escape` now cleanly closes/dismisses maximized object views.
+
+### Changed
+- **Sidebar & Header Layout**:
+  - Removed redundant tags and author initials badge from the sidebar for cleaner, focused navigation.
+  - Reorganized lesson hero header: tags are displayed neatly in an eyebrow row with a `+N` badge for overflow tags, and the author is presented with an explicit byline below.
+  - Aligned sidebar collapse and expand toggle buttons to the same vertical position.
+  - Fixed subtle hover reflow under the "Back to Chapter" button.
+- **Neo UI Theme Polish**:
+  - Eliminated the visual glitch of sharp outer corners and curved inner borders on Neo timeline cards and nodes.
+  - Refined Neo segmented controls, setting panels, and tag pill styling.
+
+### Fixed
+- **Router Popstate Navigation**: In-page hash navigation via browser back/forward no longer triggers a full PJAX re-fetch or page flash.
+- **Scroll Container Anchor Handling**: Initial URL hash scrolling correctly targets the `.bk-main` container instead of `window`.
+- **Iframe Pointer Trapping**: Window scroll capture now properly adds `.bk-is-scrolling` during `.bk-main` scrolls, preventing embedded iframes from capturing mouse events.
+- **Simulation Theme Sync**: Newly mounted simulation iframes now reliably receive the current theme on PJAX page transitions.
+- **Maximized View Lifecycle**: Maximized containers are automatically cleaned up when navigating to another page via PJAX.
+- **Quiz Parsing**: Added whitespace trimming prior to Base64 decoding in quiz parser to prevent decode crashes on untrimmed markup.
+- **Clipboard Fallback**: Added a document fallback copy mechanism for non-secure / HTTP environments where `navigator.clipboard` is unavailable.
+- **YouTube Embed Interactivity**: Removed intrusive global mousemove blur handler from YouTube embeds.
+
 ## [4.0.0-alpha.1] - 2026-09-24
 
 ### Added
