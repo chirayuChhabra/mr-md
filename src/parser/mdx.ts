@@ -289,6 +289,10 @@ export function parseLesson(
 
 	flushMarkdown();
 
+	if (blocks.length === 0) {
+		blocks.push({ type: "markdown", src: "" });
+	}
+
 	return { meta, blocks };
 }
 
@@ -408,6 +412,9 @@ export function buildLesson(
 		...options,
 		contentBase: lesson.meta.contentBase || options.contentBase,
 	};
+	if (!lesson.blocks || lesson.blocks.length === 0) {
+		lesson.blocks = [{ type: "markdown", src: "" }];
+	}
 	validateLesson(lesson.meta, lesson.blocks, lessonOptions);
 	const html = render(lesson, lessonOptions);
 	const outDir = path.resolve(lessonOptions.outDir || "./out");

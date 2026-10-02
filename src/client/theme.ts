@@ -168,6 +168,11 @@ export function bkWireThemeControls() {
 					css += `html[data-palette="${key}"][data-theme="dark"], .bk-shell[data-palette="${key}"][data-theme="dark"] { --accent: ${dark.accent ?? palette.accent}; --accent-soft: ${dark.accentSoft ?? accentSoft}; ${dark.bg ? `--bg: ${dark.bg};` : ""} ${dark.paper ? `--paper: ${dark.paper};` : ""} }\n`;
 				}
 				customStyleEl.textContent = css;
+			} else if (data.customPalettes) {
+				const customStyleEl = document.getElementById(
+					"mrmd-custom-palettes-live",
+				);
+				if (customStyleEl) customStyleEl.remove();
 			}
 
 			bkBroadcastTheme();

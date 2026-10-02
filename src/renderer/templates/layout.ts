@@ -99,6 +99,13 @@ export function renderLayout(
 		resolvedTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 	}
 	root.setAttribute("data-theme", resolvedTheme);
+	if (resolvedTheme === "dark") {
+		root.style.colorScheme = "dark";
+		root.style.backgroundColor = "#07090c";
+	} else {
+		root.style.colorScheme = "light";
+		root.style.backgroundColor = "#f5f8fc";
+	}
 	
 	var resolvedPalette = p || configPalette;
 	if (resolvedPalette) root.setAttribute("data-palette", resolvedPalette === "green" ? "field" : resolvedPalette);

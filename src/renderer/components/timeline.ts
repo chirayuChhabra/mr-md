@@ -11,7 +11,7 @@ export function renderChapterTimeline(chapter: Chapter): string {
       <a href="${escAttr(lesson.meta.slug)}.html" class="bk-timeline-card bk-status-${lesson.meta.status ?? "unread"}">
         <div class="bk-timeline-node"></div>
         <div class="bk-timeline-content">
-          <h3 class="bk-timeline-title" style="view-transition-name: title-${escAttr(lesson.meta.slug)}">${escHtml(lesson.meta.title)}</h3>
+          <h3 class="bk-timeline-title">${escHtml(lesson.meta.title)}</h3>
           ${lesson.meta.description ? `<p class="bk-timeline-desc">${escHtml(lesson.meta.description)}</p>` : ""}
           <span class="bk-timeline-action">${lesson.meta.status === "read" ? "Read again" : "Start Lesson"} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg></span>
         </div>

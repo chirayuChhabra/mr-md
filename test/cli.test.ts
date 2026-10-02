@@ -26,7 +26,7 @@ describe("CLI Deep Tests", () => {
   const CLI_PATH = join(import.meta.dir, "..", "dist", "cli.js");
 
   beforeEach(async () => {
-    tempDir = join(tmpdir(), `mr-md-cli-test-${Math.random().toString(36).substring(7)}`);
+    tempDir = join(import.meta.dir, "..", `test-tmp-cli-${Math.random().toString(36).substring(7)}`);
     await mkdir(tempDir, { recursive: true });
   });
 

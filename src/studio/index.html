@@ -66,25 +66,13 @@
         </nav>
       </div>
 
-      <!-- Topbar Right Quick Actions -->
-      <div class="st-topbar-right">
-        <div class="st-status-pill" id="st-status" title="Configuration sync status">
-          <span class="st-status-dot" id="st-status-dot"></span>
-          <span id="st-status-text">Synced</span>
-        </div>
-
-        <a class="st-btn st-btn-primary" href="/" target="_blank" id="st-btn-view-site" title="Open course in new tab">
-          <span>Open Site</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        </a>
-      </div>
     </header>
 
     <!-- Infinite Spatial Canvas Ribbon -->
     <main class="st-infinite-canvas" id="st-infinite-canvas">
-      <!-- Slab 1: Lessons / Document Outline -->
+      <!-- Slab 1: Lessons / Single Lesson View -->
       <section class="st-slab st-slab-curriculum" id="st-slab-curriculum">
-        <!-- Single-File Document Outline View -->
+        <!-- Single-File Lesson View -->
         <div class="st-single-file-view" id="st-single-file-view" style="display: none;">
           <div class="st-slab-header">
             <div class="st-slab-title-wrap">
@@ -92,34 +80,36 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
-                Outline
+                Lesson
               </span>
-              <span class="st-badge-count" id="st-outline-count">0</span>
             </div>
-            <button class="st-btn st-btn-sm" id="st-btn-single-new-lesson" title="Create a new lesson">
+            <button class="st-btn st-btn-sm st-btn-primary" id="st-btn-single-new-lesson" title="Add another lesson to convert into a course series">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               <span>New Lesson</span>
             </button>
           </div>
 
-          <div class="st-curriculum-scroll" id="st-outline-list" style="padding: 12px 14px;">
-            <!-- Injected outline items: headings, sims, quizzes -->
-          </div>
-
-          <div class="st-curriculum-footer" style="padding: 12px 14px;">
-            <div class="st-promote-callout">
-              <div class="st-promote-info">
-                <strong>Expanding into a series?</strong>
-                <p>Add another lesson to automatically organize your work into a full course.</p>
+          <div class="st-single-lesson-container" id="st-single-lesson-container">
+            <div class="st-single-lesson-card" id="st-single-lesson-card">
+              <div class="st-single-lesson-header">
+                <div class="st-single-lesson-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                  </svg>
+                </div>
+                <div class="st-single-lesson-meta">
+                  <span class="st-single-lesson-title" id="st-single-lesson-title">Lesson</span>
+                  <span class="st-single-lesson-file" id="st-single-lesson-file">file.md</span>
+                </div>
+                <span class="st-single-lesson-badge">ACTIVE</span>
               </div>
-              <button class="st-btn st-btn-primary st-btn-sm" id="st-btn-promote-lesson" style="margin-top: 8px; width: 100%;">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                <span>Add Second Lesson</span>
-              </button>
+              <div class="st-single-lesson-body">
+                <p id="st-single-lesson-desc" class="st-single-lesson-desc">Previewing live in center viewport.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -211,13 +201,20 @@
             <span class="st-dot st-dot-green"></span>
           </div>
 
-          <div class="st-url-capsule" id="st-url-capsule" title="Click to copy URL">
-            <svg class="st-lock-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            <span class="st-url-badge" id="st-viewport-url">http://localhost:3000/</span>
-            <span class="st-copy-toast" id="st-copy-toast">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>Copied</span>
-            </span>
+          <div class="st-viewport-center-group">
+            <!-- Studio Live Sync Status Dot (Left of URL) -->
+            <div class="st-status-dot-wrap" id="st-status" title="Preview synchronized with disk">
+              <span class="st-status-dot" id="st-status-dot"></span>
+            </div>
+
+            <div class="st-url-capsule" id="st-url-capsule" title="Click to copy URL">
+              <svg class="st-lock-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span class="st-url-badge" id="st-viewport-url">http://localhost:3000/</span>
+              <span class="st-copy-toast" id="st-copy-toast">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Copied</span>
+              </span>
+            </div>
           </div>
 
           <div class="st-course-actions">
@@ -275,133 +272,81 @@
           </div>
         </div>
 
-        <!-- Curated Palettes -->
+        <!-- Palettes (Vertically Scrollable Bounded Matrix) -->
         <div class="st-inspector-section">
           <div class="st-section-title">
-            <span>Palettes</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>Palettes</span>
+              <span class="st-badge-count" id="st-palette-count-pill">6</span>
+            </div>
           </div>
-          <div class="st-palette-matrix" id="st-builtin-palettes">
-            <div class="st-swatch-card" data-palette="ink" style="--swatch-color: #2563eb;">
-              <div class="st-swatch-disc"></div>
-              <div class="st-swatch-info">
-                <span class="st-swatch-name">Ink</span>
-                <span class="st-swatch-hex">#2563eb</span>
-              </div>
-              <div class="st-swatch-check">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <div class="st-palette-scroll-container" id="st-palette-scroll-container">
+            <div class="st-palette-scroll-viewport" id="st-palette-scroll-viewport">
+              <div class="st-palette-matrix" id="st-builtin-palettes">
+                <!-- Swatches and '+' block rendered dynamically -->
               </div>
             </div>
-
-            <div class="st-swatch-card" data-palette="field" style="--swatch-color: #0d9488;">
-              <div class="st-swatch-disc"></div>
-              <div class="st-swatch-info">
-                <span class="st-swatch-name">Field</span>
-                <span class="st-swatch-hex">#0d9488</span>
-              </div>
-              <div class="st-swatch-check">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
+            <div class="st-palette-scrollbar" id="st-palette-scrollbar" title="Scroll palettes">
+              <div class="st-palette-scrollbar-thumb" id="st-palette-scrollbar-thumb"></div>
             </div>
-
-            <div class="st-swatch-card" data-palette="ember" style="--swatch-color: #ea580c;">
-              <div class="st-swatch-disc"></div>
-              <div class="st-swatch-info">
-                <span class="st-swatch-name">Ember</span>
-                <span class="st-swatch-hex">#ea580c</span>
-              </div>
-              <div class="st-swatch-check">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-            </div>
-
-            <div class="st-swatch-card" data-palette="elixir" style="--swatch-color: #a855f7;">
-              <div class="st-swatch-disc"></div>
-              <div class="st-swatch-info">
-                <span class="st-swatch-name">Elixir</span>
-                <span class="st-swatch-hex">#a855f7</span>
-              </div>
-              <div class="st-swatch-check">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-            </div>
-
-            <div class="st-swatch-card" data-palette="trunk" style="--swatch-color: #d97706;">
-              <div class="st-swatch-disc"></div>
-              <div class="st-swatch-info">
-                <span class="st-swatch-name">Trunk</span>
-                <span class="st-swatch-hex">#d97706</span>
-              </div>
-              <div class="st-swatch-check">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-            </div>
-
-            <div class="st-swatch-card" data-palette="lava" style="--swatch-color: #ef4444;">
-              <div class="st-swatch-disc"></div>
-              <div class="st-swatch-info">
-                <span class="st-swatch-name">Lava</span>
-                <span class="st-swatch-hex">#ef4444</span>
-              </div>
-              <div class="st-swatch-check">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-            </div>
+            <div class="st-palette-scroll-fade top"></div>
+            <div class="st-palette-scroll-fade bottom"></div>
           </div>
         </div>
 
-        <!-- Custom Themes -->
-        <div class="st-inspector-section">
-          <div class="st-section-title">
-            <span>Custom Themes</span>
-            <button class="st-btn st-btn-sm st-btn-ghost" id="st-btn-new-theme">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>New</span>
-            </button>
-          </div>
-          <div class="st-custom-list" id="st-custom-palettes-list">
-            <!-- Custom palette cards injected here -->
-          </div>
-        </div>
-
-        <!-- Lesson Info (Single-File Mode) -->
+        <!-- Lesson Info (Shown when a lesson is active or in single-file mode) -->
         <div class="st-inspector-section" id="st-lesson-info-section" style="display: none;">
           <div class="st-section-title">
-            <span>Lesson Metadata</span>
+            <span id="st-lesson-info-section-title">Lesson Metadata</span>
           </div>
           <div class="st-field-group">
             <label class="st-field-label" for="st-lesson-title">Title</label>
-            <input type="text" class="st-field-input" id="st-lesson-title" placeholder="Lesson Title">
+            <div class="st-input-box">
+              <input type="text" class="st-field-input" id="st-lesson-title" placeholder="Lesson Title">
+            </div>
           </div>
           <div class="st-field-group">
             <label class="st-field-label" for="st-lesson-desc">Description</label>
-            <textarea class="st-field-textarea" id="st-lesson-desc" placeholder="Lesson description..."></textarea>
+            <div class="st-input-box">
+              <textarea class="st-field-textarea" id="st-lesson-desc" placeholder="Lesson description..."></textarea>
+            </div>
           </div>
           <div class="st-field-group">
             <label class="st-field-label" for="st-lesson-author">Author</label>
-            <input type="text" class="st-field-input" id="st-lesson-author" placeholder="Author name">
+            <div class="st-input-box">
+              <input type="text" class="st-field-input" id="st-lesson-author" placeholder="Author name">
+            </div>
           </div>
           <div class="st-field-group">
             <label class="st-field-label" for="st-lesson-tags">Tags</label>
-            <input type="text" class="st-field-input" id="st-lesson-tags" placeholder="e.g. math, intro, waves">
+            <div class="st-input-box">
+              <input type="text" class="st-field-input" id="st-lesson-tags" placeholder="e.g. math, intro, waves">
+            </div>
           </div>
         </div>
 
-        <!-- Course Info (Course Mode) -->
+        <!-- Course Info (Shown when Course Overview is active) -->
         <div class="st-inspector-section" id="st-course-info-section">
           <div class="st-section-title">
             <span>Course Info</span>
           </div>
           <div class="st-field-group">
             <label class="st-field-label" for="st-meta-title">Title</label>
-            <input type="text" class="st-field-input" id="st-meta-title" placeholder="Course Title">
+            <div class="st-input-box">
+              <input type="text" class="st-field-input" id="st-meta-title" placeholder="Course Title">
+            </div>
           </div>
           <div class="st-field-group">
             <label class="st-field-label" for="st-meta-desc">Description</label>
-            <textarea class="st-field-textarea" id="st-meta-desc" placeholder="Course synopsis..."></textarea>
+            <div class="st-input-box">
+              <textarea class="st-field-textarea" id="st-meta-desc" placeholder="Course synopsis..."></textarea>
+            </div>
           </div>
           <div class="st-field-group">
             <label class="st-field-label" for="st-meta-author">Author</label>
-            <input type="text" class="st-field-input" id="st-meta-author" placeholder="Author name">
+            <div class="st-input-box">
+              <input type="text" class="st-field-input" id="st-meta-author" placeholder="Author name">
+            </div>
           </div>
         </div>
       </section>
@@ -417,7 +362,7 @@
       </div>
       <div class="st-modal-body">
         <div class="st-field-group">
-          <label class="st-field-label" for="st-new-lesson-name">Lesson Title or Slug</label>
+          <label class="st-field-label" for="st-new-lesson-name">Lesson Title</label>
           <input type="text" class="st-field-input" id="st-new-lesson-name" placeholder="e.g. 02 Kirchhoff's Laws" autofocus>
         </div>
       </div>
@@ -428,16 +373,73 @@
     </div>
   </div>
 
-  <!-- Modal: Custom Theme Builder -->
+  <!-- Modal: Convert to Course Confirmation -->
+  <div class="st-modal-backdrop" id="st-modal-convert-course" style="display: none;">
+    <div class="st-modal" style="max-width: 620px;">
+      <div class="st-modal-header">
+        <div>
+          <h3 class="st-modal-title">Convert to Course?</h3>
+          <p class="st-modal-subtitle" id="st-convert-modal-subtitle">You now have multiple lessons in this folder. How would you like to organize them?</p>
+        </div>
+        <button class="st-modal-close-btn" id="st-modal-close-convert" title="Close">✕</button>
+      </div>
+      <div class="st-modal-body">
+        <div class="st-convert-options">
+          <!-- Option A: Convert to Course -->
+          <div class="st-convert-card featured">
+            <div>
+              <div class="st-convert-badge">Recommended for series</div>
+              <h4 class="st-convert-heading">Course Series</h4>
+              <p class="st-convert-desc">Group your lessons under an organized course with curriculum navigation.</p>
+              <ul class="st-convert-list">
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Dedicated course folder</li>
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Shared curriculum sidebar</li>
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Course overview home page</li>
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <code>mrmd.config.json</code> settings</li>
+              </ul>
+              <div class="st-field-group" style="margin-top: 12px; margin-bottom: 0;">
+                <label class="st-field-label" for="st-convert-course-name">Course Name <span class="st-required-mark">*</span></label>
+                <input type="text" class="st-field-input" id="st-convert-course-name" placeholder="e.g. Modern Physics" required autocomplete="off">
+                <div class="st-field-error" id="st-convert-error-msg" style="display: none;"></div>
+              </div>
+            </div>
+            <div class="st-convert-actions">
+              <button class="st-btn st-btn-primary" id="st-btn-confirm-convert" style="width: 100%;" disabled>Yes, Convert to Course</button>
+            </div>
+          </div>
+
+          <!-- Option B: Keep Independent -->
+          <div class="st-convert-card">
+            <div>
+              <div class="st-convert-badge subtle">Standalone</div>
+              <h4 class="st-convert-heading">Independent Files</h4>
+              <p class="st-convert-desc">Keep your lessons as independent markdown files side-by-side.</p>
+              <ul class="st-convert-list">
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All files in current directory</li>
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> No main course folder or overhead</li>
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Preview and edit either file</li>
+                <li><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Can convert to course anytime later</li>
+              </ul>
+            </div>
+            <div class="st-convert-actions">
+              <button class="st-btn" id="st-btn-keep-independent" style="width: 100%;">No, Keep Independent</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Custom Palette Builder -->
   <div class="st-modal-backdrop" id="st-modal-custom-theme" style="display: none;">
     <div class="st-modal">
       <div class="st-modal-header">
-        <h3 class="st-modal-title" id="st-theme-modal-title">Custom Theme</h3>
+        <h3 class="st-modal-title" id="st-theme-modal-title">Custom Palette</h3>
         <button class="st-modal-close-btn" id="st-modal-close-theme" title="Close">✕</button>
       </div>
       <div class="st-modal-body">
         <div class="st-field-group">
-          <label class="st-field-label" for="st-theme-name">Theme Name</label>
+          <label class="st-field-label" for="st-theme-name">Palette Name</label>
           <input type="text" class="st-field-input" id="st-theme-name" placeholder="e.g. Cyberpunk Neon">
         </div>
 
@@ -487,26 +489,26 @@
       </div>
       <div class="st-modal-footer">
         <button class="st-btn" id="st-modal-cancel-theme">Cancel</button>
-        <button class="st-btn st-btn-primary" id="st-modal-save-theme">Save Theme</button>
+        <button class="st-btn st-btn-primary" id="st-modal-save-theme">Save Palette</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Delete Custom Theme Confirmation -->
+  <!-- Modal: Delete Custom Palette Confirmation -->
   <div class="st-modal-backdrop" id="st-modal-confirm-delete" style="display: none;">
     <div class="st-modal" style="max-width: 380px;">
       <div class="st-modal-header">
-        <h3 class="st-modal-title">Delete Custom Theme</h3>
+        <h3 class="st-modal-title">Delete Custom Palette</h3>
         <button class="st-modal-close-btn" id="st-modal-close-delete" title="Close">✕</button>
       </div>
       <div class="st-modal-body">
         <p style="font-size: 13px; color: var(--st-text-secondary); line-height: 1.5;" id="st-delete-confirm-msg">
-          Are you sure you want to delete this custom theme? This action cannot be undone.
+          Are you sure you want to delete this custom palette? This action cannot be undone.
         </p>
       </div>
       <div class="st-modal-footer">
         <button class="st-btn" id="st-modal-cancel-delete">Cancel</button>
-        <button class="st-btn st-btn-danger" id="st-modal-confirm-delete-btn">Delete Theme</button>
+        <button class="st-btn st-btn-danger" id="st-modal-confirm-delete-btn">Delete Palette</button>
       </div>
     </div>
   </div>

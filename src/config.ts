@@ -150,10 +150,12 @@ export function ensureConfig(contentDir: string): MrmdConfig {
 		lessons: files,
 	};
 
-	saveConfig(contentDir, config);
-	logger.info(
-		`Created ${CONFIG_FILENAME} with ${files.length} lessons discovered.`,
-	);
+	if (files.length > 0) {
+		saveConfig(contentDir, config);
+		logger.info(
+			`Created ${CONFIG_FILENAME} with ${files.length} lessons discovered.`,
+		);
+	}
 	return config;
 }
 

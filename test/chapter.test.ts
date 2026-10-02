@@ -87,5 +87,42 @@ describe("Chapter Renderer", () => {
 			await rm(tempDir, { recursive: true, force: true }).catch(() => {});
 		}
 	});
+
+	test("generateChapterContent supports allowEmpty option for empty courses in dev mode", async () => {
+		const { generateChapterContent } = await import(
+			"../src/cli/chapter.js"
+		);
+		const { saveConfig } = await import("../src/config.js");
+		const { mkdir, rm } = await import("node:fs/promises");
+		const { tmpdir } = await import("node:os");
+		const { join } = await import("node:path");
+
+		const tempDir = join(
+			tmpdir(),
+			`mr-md-empty-course-${Math.random().toString(36).substring(7)}`,
+		);
+		await mkdir(tempDir, { recursive: true });
+
+		try {
+			saveConfig(tempDir, {
+				title: "Fresh Empty Course",
+				description: "Course ready for new lessons",
+				lessons: [],
+			});
+
+			// Without allowEmpty, it must throw
+			expect(() => generateChapterContent(tempDir)).toThrow(
+				/No lessons found in mrmd\.config\.json/,
+			);
+
+			// With allowEmpty: true, it returns valid chapter markdown
+			const content = generateChapterContent(tempDir, { allowEmpty: true });
+			expect(content).toContain('title: "Fresh Empty Course"');
+			expect(content).toContain('description: "Course ready for new lessons"');
+			expect(content).toContain("chapter: true");
+		} finally {
+			await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+		}
+	});
 });
 

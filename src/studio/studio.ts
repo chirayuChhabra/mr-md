@@ -10,7 +10,6 @@ let lessonSearchQuery = "";
 let activeLessonFile = "";
 let isInitialBoot = true;
 let isDraggingLesson = false;
-let draggedLessonIndex: number | null = null;
 let isNavigatingAnimation = false;
 let pendingDeleteThemeKey: string | null = null;
 let currentGlideRaf: number | null = null;
@@ -21,7 +20,7 @@ let cachedDetents: {
 } | null = null;
 
 let studioMode: "single" | "course" = "course";
-let currentLessonOutline: Array<{
+let _currentLessonOutline: Array<{
 	id: string;
 	label: string;
 	kind: string;
@@ -29,7 +28,16 @@ let currentLessonOutline: Array<{
 }> = [];
 let currentLessonFrontmatter: Record<string, unknown> = {};
 let currentTargetFile: string | null = null;
+let allFilesList: string[] = [];
 let frontmatterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+interface PendingFrontmatterSave {
+	target: string;
+	title?: string;
+	description?: string;
+	author?: string;
+	tags?: string[];
+}
+let pendingFrontmatterSave: PendingFrontmatterSave | null = null;
 
 const BUILTIN_PALETTES = ["ink", "field", "ember", "elixir", "trunk", "lava"];
 
@@ -37,6 +45,79 @@ const studioBroadcast =
 	typeof BroadcastChannel !== "undefined"
 		? new BroadcastChannel("mrmd-studio-sync")
 		: null;
+
+// ── DOM Helpers ────────────────────────────────────────────────────────────
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
+	document.getElementById(id) as T | null;
+
+function syncAppearanceToIframe() {
+	const iframe = $<HTMLIFrameElement>("st-course-iframe");
+	if (!iframe?.contentWindow || !iframe.contentDocument) return;
+	try {
+		const doc = iframe.contentDocument;
+		const win = iframe.contentWindow;
+		const theme =
+			currentConfig.theme ||
+			(localStorage.getItem("bk-theme") as "light" | "dark" | "auto") ||
+			"auto";
+		const palette =
+			currentConfig.palette || localStorage.getItem("bk-palette") || "ink";
+		const ui =
+			currentConfig.ui ||
+			(localStorage.getItem("bk-ui") as "standard" | "neo" | "playful") ||
+			"standard";
+
+		try {
+			if (theme) win.localStorage.setItem("bk-theme", theme);
+			if (palette) win.localStorage.setItem("bk-palette", palette);
+			if (ui) win.localStorage.setItem("bk-ui", ui);
+		} catch (_) {}
+
+		let resolvedTheme = theme;
+		if (resolvedTheme === "auto") {
+			resolvedTheme = win.matchMedia?.("(prefers-color-scheme: dark)").matches
+				? "dark"
+				: "light";
+		}
+
+		const pal = palette === "green" ? "field" : palette;
+		doc.documentElement.setAttribute("data-theme", resolvedTheme);
+		doc.documentElement.setAttribute("data-palette", pal);
+		doc.documentElement.setAttribute("data-ui", ui);
+
+		const shell = doc.querySelector(".bk-shell");
+		if (shell) {
+			shell.setAttribute("data-theme", resolvedTheme);
+			shell.setAttribute("data-palette", pal);
+			shell.setAttribute("data-ui", ui);
+		}
+
+		// Sync live custom palette styles into iframe
+		let customStyleEl = doc.getElementById("mrmd-custom-palettes-live");
+		if (
+			currentConfig.customPalettes &&
+			Object.keys(currentConfig.customPalettes).length > 0
+		) {
+			if (!customStyleEl) {
+				customStyleEl = doc.createElement("style");
+				customStyleEl.id = "mrmd-custom-palettes-live";
+				doc.head.appendChild(customStyleEl);
+			}
+			let css = "";
+			for (const [key, p] of Object.entries(currentConfig.customPalettes)) {
+				const light = p.light ?? {};
+				const dark = p.dark ?? {};
+				const accentSoft = p.accentSoft ?? `${p.accent}1a`;
+				css += `html[data-palette="${key}"], .bk-shell[data-palette="${key}"] { --accent: ${light.accent ?? p.accent}; --accent-soft: ${light.accentSoft ?? accentSoft}; ${light.bg ? `--bg: ${light.bg};` : ""} ${light.paper ? `--paper: ${light.paper};` : ""} }\n`;
+				css += `html[data-palette="${key}"][data-theme="dark"], .bk-shell[data-palette="${key}"][data-theme="dark"] { --accent: ${dark.accent ?? p.accent}; --accent-soft: ${dark.accentSoft ?? accentSoft}; ${dark.bg ? `--bg: ${dark.bg};` : ""} ${dark.paper ? `--paper: ${dark.paper};` : ""} }\n`;
+			}
+			customStyleEl.textContent = css;
+		} else if (customStyleEl) {
+			customStyleEl.remove();
+		}
+	} catch (_) {}
+}
 
 function broadcastAppearanceChange() {
 	if (studioBroadcast) {
@@ -48,27 +129,41 @@ function broadcastAppearanceChange() {
 			customPalettes: currentConfig.customPalettes || {},
 		});
 	}
+	syncAppearanceToIframe();
 }
 
-// ── DOM Helpers ────────────────────────────────────────────────────────────
+function slugifyFileName(fileName: string): string {
+	return fileName
+		.replace(/\.md$/, "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/(^-|-$)/g, "");
+}
 
-const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
-	document.getElementById(id) as T | null;
+function formatFileAsTitle(file: string): string {
+	return (
+		file
+			.replace(/^\d+[-_]?/, "")
+			.replace(/\.md$/, "")
+			.replace(/[-_]/g, " ")
+			.replace(/\b\w/g, (c) => c.toUpperCase()) || file
+	);
+}
 
 function setStatus(status: "saved" | "saving" | "unsaved", msg?: string) {
 	const dot = $("st-status-dot");
-	const text = $("st-status-text");
-	if (!dot || !text) return;
+	const statusWrap = $("st-status");
+	if (!dot) return;
 
 	dot.className = "st-status-dot";
 	if (status === "saving") {
 		dot.classList.add("saving");
-		text.textContent = msg || "Saving...";
+		if (statusWrap) statusWrap.title = msg || "Saving changes to disk...";
 	} else if (status === "unsaved") {
 		dot.classList.add("dirty");
-		text.textContent = msg || "Unsaved";
+		if (statusWrap) statusWrap.title = msg || "Unsaved changes";
 	} else {
-		text.textContent = msg || "Synced";
+		if (statusWrap) statusWrap.title = msg || "Preview synchronized with disk";
 	}
 }
 
@@ -94,7 +189,7 @@ function updateCachedDetents() {
 function smoothScrollTo(
 	element: HTMLElement,
 	targetLeft: number,
-	duration = 240,
+	duration = 380,
 ) {
 	// Cancel any currently running glide immediately so multiple keypresses never fight
 	if (currentGlideRaf !== null) {
@@ -119,14 +214,14 @@ function smoothScrollTo(
 
 	const startTime = performance.now();
 
-	function easeOutCubic(t: number): number {
-		return 1 - (1 - t) ** 3;
+	function easeOutQuart(t: number): number {
+		return 1 - (1 - t) ** 4;
 	}
 
 	function step(now: number) {
 		const elapsed = now - startTime;
 		const progress = Math.min(elapsed / duration, 1);
-		const eased = easeOutCubic(progress);
+		const eased = easeOutQuart(progress);
 		element.scrollLeft = Math.round(startLeft + change * eased);
 		if (progress < 1) {
 			currentGlideRaf = requestAnimationFrame(step);
@@ -215,10 +310,28 @@ async function fetchConfig() {
 		const data = await res.json();
 		studioMode = data.mode || "course";
 		currentConfig = data.config || {};
+		allFilesList = data.allFiles || [];
 		unassignedFiles = data.unassignedFiles || [];
-		currentLessonOutline = data.outline || [];
+		_currentLessonOutline = data.outline || [];
 		currentLessonFrontmatter = data.frontmatter || {};
 		currentTargetFile = data.targetFile || null;
+
+		// Hydrate theme/palette from localStorage if not explicitly configured
+		const savedTheme = localStorage.getItem("bk-theme");
+		if (!currentConfig.theme && savedTheme) {
+			currentConfig.theme = savedTheme as "light" | "dark" | "auto";
+		}
+		const savedPalette = localStorage.getItem("bk-palette");
+		if (!currentConfig.palette && savedPalette) {
+			currentConfig.palette = savedPalette;
+		}
+		const savedUi = localStorage.getItem("bk-ui");
+		if (!currentConfig.ui && savedUi) {
+			currentConfig.ui = savedUi as "standard" | "neo" | "playful";
+		}
+
+		broadcastAppearanceChange();
+		syncAppearanceToIframe();
 
 		const modePill = $("st-mode-pill");
 		if (modePill) {
@@ -228,11 +341,13 @@ async function fetchConfig() {
 		const navCurriculumLabel = $("st-nav-curriculum-label");
 		if (navCurriculumLabel) {
 			navCurriculumLabel.textContent =
-				studioMode === "single" ? "Outline" : "Lessons";
+				studioMode === "single" ? "Lesson" : "Lessons";
 		}
 
 		if (studioMode === "single") {
-			activeLessonFile = data.targetFile || "";
+			if (!activeLessonFile || !allFilesList.includes(activeLessonFile)) {
+				activeLessonFile = data.targetFile || allFilesList[0] || "";
+			}
 			const headerTitle = $("st-header-title");
 			if (headerTitle) {
 				headerTitle.textContent =
@@ -254,6 +369,7 @@ async function fetchConfig() {
 
 		renderAll();
 		updateLiveViewport();
+		updateCachedDetents();
 
 		// Only center the desktop course slab on initial cold page load
 		if (isInitialBoot) {
@@ -338,12 +454,24 @@ function syncIframeUrl(forcedPathOrUrl?: string) {
 	// Update lesson card active highlights
 	const slug = urlObj.pathname.replace(/^\//, "").replace(/\.html$/, "");
 	if (slug && slug !== "index") {
-		const matchingFile = `${slug}.md`;
-		activeLessonFile = matchingFile;
+		const matchingFile =
+			allFilesList.find((f) => slugifyFileName(f) === slug) ||
+			(currentConfig.lessons || [])
+				.map((e) => (typeof e === "string" ? e : e.file))
+				.find((f) => slugifyFileName(f) === slug) ||
+			`${slug}.md`;
+		const prev = activeLessonFile;
+		if (prev !== matchingFile) {
+			flushPendingFrontmatterSave();
+			activeLessonFile = matchingFile;
+			syncInspectorContext();
+		}
 		const homeCardEl = $("st-course-home-card");
 		if (homeCardEl) homeCardEl.classList.remove("active");
 		document
-			.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
+			.querySelectorAll(
+				".st-lesson-card:not(#st-course-home-card), .st-single-lesson-card",
+			)
 			.forEach((c) => {
 				if ((c as HTMLElement).dataset.file === matchingFile) {
 					c.classList.add("active");
@@ -352,11 +480,18 @@ function syncIframeUrl(forcedPathOrUrl?: string) {
 				}
 			});
 	} else {
-		activeLessonFile = "";
+		const prev = activeLessonFile;
+		if (prev !== "") {
+			flushPendingFrontmatterSave();
+			activeLessonFile = "";
+			syncInspectorContext();
+		}
 		const homeCardEl = $("st-course-home-card");
 		if (homeCardEl) homeCardEl.classList.add("active");
 		document
-			.querySelectorAll(".st-lesson-card:not(#st-course-home-card)")
+			.querySelectorAll(
+				".st-lesson-card:not(#st-course-home-card), .st-single-lesson-card",
+			)
 			.forEach((c) => {
 				c.classList.remove("active");
 			});
@@ -365,13 +500,19 @@ function syncIframeUrl(forcedPathOrUrl?: string) {
 
 function updateLiveViewport(targetFile?: string) {
 	if (targetFile !== undefined) {
-		activeLessonFile = targetFile;
+		const prev = activeLessonFile;
+		if (prev !== targetFile) {
+			flushPendingFrontmatterSave();
+			activeLessonFile = targetFile;
+			syncInspectorContext();
+		}
 	} else if (
 		!activeLessonFile &&
 		studioMode === "single" &&
 		currentTargetFile
 	) {
 		activeLessonFile = currentTargetFile;
+		syncInspectorContext();
 	}
 
 	const iframe = $<HTMLIFrameElement>("st-course-iframe");
@@ -380,13 +521,41 @@ function updateLiveViewport(targetFile?: string) {
 
 	let htmlPath = "/";
 	if (activeLessonFile) {
-		htmlPath = `/${activeLessonFile.replace(/\.md$/, "")}.html`;
+		htmlPath = `/${slugifyFileName(activeLessonFile)}.html`;
 	}
 
 	if (iframe) {
-		const fullUrl = new URL(htmlPath, window.location.origin).href;
-		if (iframe.src !== fullUrl) {
-			iframe.src = htmlPath;
+		let currentPath = "";
+		try {
+			if (iframe.contentWindow?.location?.pathname) {
+				currentPath = iframe.contentWindow.location.pathname;
+			}
+		} catch {}
+
+		const normalizedCurrent = currentPath === "/index.html" ? "/" : currentPath;
+		const normalizedTarget = htmlPath === "/index.html" ? "/" : htmlPath;
+
+		if (
+			normalizedCurrent !== normalizedTarget ||
+			!iframe.src ||
+			iframe.src === "about:blank"
+		) {
+			let navigatedSeamlessly = false;
+			try {
+				const iframeWin = iframe.contentWindow as unknown as {
+					location?: Location;
+					__bk_navigate?: (path: string) => boolean;
+				};
+				if (
+					iframeWin?.location?.origin === window.location.origin &&
+					typeof iframeWin.__bk_navigate === "function"
+				) {
+					navigatedSeamlessly = Boolean(iframeWin.__bk_navigate(htmlPath));
+				}
+			} catch {}
+			if (!navigatedSeamlessly) {
+				iframe.src = htmlPath;
+			}
 		}
 	}
 
@@ -421,6 +590,48 @@ function updateLiveViewport(targetFile?: string) {
 		});
 }
 
+// ── Contextual Inspector Switching ─────────────────────────────────────────
+
+async function loadLessonFrontmatter(file: string) {
+	try {
+		const res = await fetch(
+			`/__api/lesson/frontmatter?file=${encodeURIComponent(file)}`,
+		);
+		if (res.ok) {
+			const data = await res.json();
+			currentLessonFrontmatter = data.frontmatter || {};
+			renderLessonFrontmatter();
+		}
+	} catch (err) {
+		console.error("Failed to load frontmatter for", file, err);
+	}
+}
+
+async function syncInspectorContext() {
+	const lessonInfoSec = $("st-lesson-info-section");
+	const courseInfoSec = $("st-course-info-section");
+
+	if (studioMode === "single") {
+		if (lessonInfoSec) lessonInfoSec.style.display = "block";
+		if (courseInfoSec) courseInfoSec.style.display = "none";
+		renderLessonFrontmatter();
+		return;
+	}
+
+	// Course Mode
+	if (!activeLessonFile) {
+		// Course Home Overview
+		if (lessonInfoSec) lessonInfoSec.style.display = "none";
+		if (courseInfoSec) courseInfoSec.style.display = "block";
+		renderMetadata();
+	} else {
+		// Inspecting a specific lesson
+		if (lessonInfoSec) lessonInfoSec.style.display = "block";
+		if (courseInfoSec) courseInfoSec.style.display = "none";
+		await loadLessonFrontmatter(activeLessonFile);
+	}
+}
+
 // ── Rendering ──────────────────────────────────────────────────────────────
 
 function renderAll() {
@@ -430,88 +641,167 @@ function renderAll() {
 	} else {
 		const singleView = $("st-single-file-view");
 		const courseWrap = $("st-course-curriculum-wrap");
-		const lessonInfoSec = $("st-lesson-info-section");
-		const courseInfoSec = $("st-course-info-section");
 		if (singleView) singleView.style.display = "none";
 		if (courseWrap) courseWrap.style.display = "block";
-		if (lessonInfoSec) lessonInfoSec.style.display = "none";
-		if (courseInfoSec) courseInfoSec.style.display = "block";
 
 		renderCurriculum();
 		renderUnassigned();
-		renderMetadata();
+		syncInspectorContext();
 	}
 	renderThemeMode();
 	renderUiMode();
 	renderPalettes();
-	renderCustomPalettes();
+}
+
+function openConvertCourseModal() {
+	const modal = $("st-modal-convert-course");
+	const nameInput = $<HTMLInputElement>("st-convert-course-name");
+	const confirmBtn = $<HTMLButtonElement>("st-btn-confirm-convert");
+	const errorEl = $("st-convert-error-msg");
+	if (!modal) return;
+	if (nameInput) {
+		nameInput.value = "";
+		nameInput.classList.remove("st-input-error");
+	}
+	if (confirmBtn) {
+		confirmBtn.disabled = true;
+	}
+	if (errorEl) {
+		errorEl.textContent = "";
+		errorEl.style.display = "none";
+	}
+	modal.style.display = "flex";
+	nameInput?.focus();
 }
 
 function renderSingleFileView() {
 	const singleView = $("st-single-file-view");
 	const courseWrap = $("st-course-curriculum-wrap");
-	const outlineList = $("st-outline-list");
-	const outlineCount = $("st-outline-count");
-	const lessonInfoSec = $("st-lesson-info-section");
-	const courseInfoSec = $("st-course-info-section");
+	const container = $("st-single-lesson-container");
 
 	if (singleView) singleView.style.display = "flex";
 	if (courseWrap) courseWrap.style.display = "none";
-	if (lessonInfoSec) lessonInfoSec.style.display = "block";
-	if (courseInfoSec) courseInfoSec.style.display = "none";
+	if (!container) return;
 
-	if (outlineCount) {
-		outlineCount.textContent = String(currentLessonOutline.length);
-	}
+	if (allFilesList.length > 1) {
+		container.innerHTML = "";
 
-	if (!outlineList) return;
-	outlineList.innerHTML = "";
+		// Convert to Course banner
+		const banner = document.createElement("div");
+		banner.className = "st-convert-banner";
+		banner.innerHTML = `
+			<div class="st-convert-banner-info">
+				<strong>Multiple Lessons Found</strong>
+				<p>Organize into a full course series with shared navigation.</p>
+			</div>
+			<button type="button" class="st-btn st-btn-sm st-btn-primary" id="st-btn-banner-convert">Convert to Course</button>
+		`;
+		banner
+			.querySelector("#st-btn-banner-convert")
+			?.addEventListener("click", () => {
+				openConvertCourseModal();
+			});
+		container.appendChild(banner);
 
-	if (currentLessonOutline.length === 0) {
-		outlineList.innerHTML = `
-			<div class="st-empty-state" style="padding: 24px 12px;">
-				<span>No headings or interactive blocks</span>
-				<p>Add headings (##) or simulations to see the outline.</p>
+		// Render a card for each independent file
+		allFilesList.forEach((file) => {
+			const card = document.createElement("div");
+			const isActive =
+				activeLessonFile === file ||
+				(!activeLessonFile && file === currentTargetFile);
+			card.className = `st-single-lesson-card clickable ${isActive ? "active" : ""}`;
+			card.dataset.file = file;
+
+			const title =
+				isActive && currentLessonFrontmatter.title
+					? (currentLessonFrontmatter.title as string)
+					: formatFileAsTitle(file);
+			const desc = isActive
+				? (currentLessonFrontmatter.description as string) ||
+					"Previewing live in center viewport."
+				: "Click to preview and edit frontmatter.";
+
+			card.innerHTML = `
+				<div class="st-single-lesson-header">
+					<div class="st-single-lesson-icon">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+							<polyline points="14 2 14 8 20 8"></polyline>
+							<line x1="16" y1="13" x2="8" y2="13"></line>
+							<line x1="16" y1="17" x2="8" y2="17"></line>
+						</svg>
+					</div>
+					<div class="st-single-lesson-meta">
+						<span class="st-single-lesson-title">${escapeHtml(title)}</span>
+						<span class="st-single-lesson-file">${escapeHtml(file)}</span>
+					</div>
+					${isActive ? '<span class="st-single-lesson-badge">ACTIVE</span>' : ""}
+				</div>
+				<div class="st-single-lesson-body">
+					<p class="st-single-lesson-desc">${escapeHtml(desc)}</p>
+				</div>
+			`;
+
+			card.addEventListener("click", async () => {
+				await flushPendingFrontmatterSave();
+				activeLessonFile = file;
+				updateLiveViewport(file);
+				await loadLessonFrontmatter(file);
+				renderSingleFileView();
+			});
+
+			card.addEventListener("dblclick", async () => {
+				await flushPendingFrontmatterSave();
+				activeLessonFile = file;
+				updateLiveViewport(file);
+				await loadLessonFrontmatter(file);
+				renderSingleFileView();
+				scrollToSlab("course");
+			});
+
+			container.appendChild(card);
+		});
+	} else {
+		// Single file only
+		container.innerHTML = `
+			<div class="st-single-lesson-card" id="st-single-lesson-card">
+				<div class="st-single-lesson-header">
+					<div class="st-single-lesson-icon">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+							<polyline points="14 2 14 8 20 8"></polyline>
+							<line x1="16" y1="13" x2="8" y2="13"></line>
+							<line x1="16" y1="17" x2="8" y2="17"></line>
+						</svg>
+					</div>
+					<div class="st-single-lesson-meta">
+						<span class="st-single-lesson-title" id="st-single-lesson-title">Lesson</span>
+						<span class="st-single-lesson-file" id="st-single-lesson-file">file.md</span>
+					</div>
+					<span class="st-single-lesson-badge">ACTIVE</span>
+				</div>
+				<div class="st-single-lesson-body">
+					<p id="st-single-lesson-desc" class="st-single-lesson-desc">Previewing live in center viewport.</p>
+				</div>
 			</div>
 		`;
-		return;
+		const file = currentTargetFile || activeLessonFile || "lesson.md";
+		const title =
+			(currentLessonFrontmatter.title as string) || file.replace(/\.md$/, "");
+		const desc =
+			(currentLessonFrontmatter.description as string) ||
+			"Previewing live in center viewport.";
+
+		const singleTitle = $("st-single-lesson-title");
+		const singleFile = $("st-single-lesson-file");
+		const singleDesc = $("st-single-lesson-desc");
+
+		if (singleTitle) singleTitle.textContent = title;
+		if (singleFile) singleFile.textContent = file;
+		if (singleDesc) singleDesc.textContent = desc;
 	}
 
-	currentLessonOutline.forEach((item) => {
-		const el = document.createElement("div");
-		el.className = `st-outline-item ${item.level === 3 ? "depth-3" : ""}`;
-
-		let iconHtml = `<span class="st-outline-icon heading">#</span>`;
-		let badgeHtml = "";
-		if (item.kind === "simulation") {
-			iconHtml = `<span class="st-outline-icon sim">⚡</span>`;
-			badgeHtml = `<span class="st-outline-badge">SIM</span>`;
-		} else if (item.kind === "quiz") {
-			iconHtml = `<span class="st-outline-icon quiz">?</span>`;
-			badgeHtml = `<span class="st-outline-badge">QUIZ</span>`;
-		}
-
-		el.innerHTML = `
-			${iconHtml}
-			<span class="st-outline-label" title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>
-			${badgeHtml}
-		`;
-
-		el.addEventListener("click", () => {
-			const iframe = $<HTMLIFrameElement>("st-course-iframe");
-			if (iframe?.contentWindow) {
-				const targetEl = iframe.contentWindow.document.getElementById(item.id);
-				if (targetEl) {
-					targetEl.scrollIntoView({ behavior: "smooth" });
-				} else if (activeLessonFile) {
-					const slug = activeLessonFile.replace(/\.md$/, "");
-					iframe.src = `/${slug}.html#${item.id}`;
-				}
-			}
-		});
-
-		outlineList.appendChild(el);
-	});
+	syncInspectorContext();
 }
 
 function renderLessonFrontmatter() {
@@ -539,53 +829,295 @@ function renderLessonFrontmatter() {
 
 function queueFrontmatterSave() {
 	setStatus("unsaved");
+	const target = activeLessonFile || currentTargetFile || undefined;
+	if (!target) return;
+
+	const title = $<HTMLInputElement>("st-lesson-title")?.value;
+	const description = $<HTMLTextAreaElement>("st-lesson-desc")?.value;
+	const author = $<HTMLInputElement>("st-lesson-author")?.value;
+	const tagsRaw = $<HTMLInputElement>("st-lesson-tags")?.value;
+	const tags = tagsRaw
+		? tagsRaw
+				.split(",")
+				.map((t) => t.trim())
+				.filter(Boolean)
+		: [];
+
+	pendingFrontmatterSave = {
+		target,
+		title,
+		description,
+		author,
+		tags,
+	};
+
 	if (frontmatterDebounceTimer) clearTimeout(frontmatterDebounceTimer);
 	frontmatterDebounceTimer = setTimeout(async () => {
-		setStatus("saving");
-		try {
-			const title = $<HTMLInputElement>("st-lesson-title")?.value;
-			const description = $<HTMLTextAreaElement>("st-lesson-desc")?.value;
-			const author = $<HTMLInputElement>("st-lesson-author")?.value;
-			const tagsRaw = $<HTMLInputElement>("st-lesson-tags")?.value;
-			const tags = tagsRaw
-				? tagsRaw
-						.split(",")
-						.map((t) => t.trim())
-						.filter(Boolean)
-				: [];
-
-			const res = await fetch("/__api/lesson/frontmatter", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ title, description, author, tags }),
-			});
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			const data = await res.json();
-			currentLessonFrontmatter = data.frontmatter || {};
-			const headerTitle = $("st-header-title");
-			if (headerTitle && currentLessonFrontmatter.title) {
-				headerTitle.textContent = currentLessonFrontmatter.title as string;
-			}
-			setStatus("saved");
-		} catch (err) {
-			console.error("Failed to save frontmatter:", err);
-			setStatus("unsaved", "Save failed");
-		}
+		await flushPendingFrontmatterSave();
 	}, 600);
 }
 
-function inferBadge(
-	file: string,
-	title: string,
-): { text: string; cls: string } | null {
-	const t = `${file} ${title}`.toLowerCase();
-	if (t.includes("wave") || t.includes("sim") || t.includes("interactive")) {
-		return { text: "SIM", cls: "sim" };
+async function flushPendingFrontmatterSave() {
+	if (!pendingFrontmatterSave) return;
+	if (frontmatterDebounceTimer) {
+		clearTimeout(frontmatterDebounceTimer);
+		frontmatterDebounceTimer = null;
 	}
-	if (t.includes("quiz") || t.includes("exam") || t.includes("test")) {
-		return { text: "QUIZ", cls: "quiz" };
+
+	const savePayload = pendingFrontmatterSave;
+	pendingFrontmatterSave = null;
+
+	setStatus("saving");
+	try {
+		const res = await fetch("/__api/lesson/frontmatter", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				file: savePayload.target,
+				title: savePayload.title,
+				description: savePayload.description,
+				author: savePayload.author,
+				tags: savePayload.tags,
+			}),
+		});
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const data = await res.json();
+		if (
+			activeLessonFile === savePayload.target ||
+			(!activeLessonFile && currentTargetFile === savePayload.target)
+		) {
+			currentLessonFrontmatter = data.frontmatter || {};
+		}
+
+		if (studioMode === "single") {
+			const headerTitle = $("st-header-title");
+			if (headerTitle && savePayload.title) {
+				headerTitle.textContent = savePayload.title;
+			}
+			renderSingleFileView();
+		} else if (savePayload.target && savePayload.title) {
+			const matchingCard = document.querySelector(
+				`.st-lesson-card[data-file="${savePayload.target}"] .st-card-title`,
+			);
+			if (matchingCard) {
+				matchingCard.textContent = savePayload.title;
+			}
+		}
+		setStatus("saved");
+	} catch (err) {
+		console.error("Failed to save frontmatter:", err);
+		setStatus("unsaved", "Save failed");
 	}
-	return null;
+}
+
+function attachLessonSortable(card: HTMLElement, fromIndex: number) {
+	let startX = 0;
+	let startY = 0;
+	let hasStartedDrag = false;
+	let ghost: HTMLElement | null = null;
+	let placeholder: HTMLElement | null = null;
+	let grabOffsetX = 0;
+	let grabOffsetY = 0;
+	let initialCardRect: DOMRect | null = null;
+
+	const onPointerDown = (e: PointerEvent) => {
+		if (e.button !== 0) return;
+		if ((e.target as HTMLElement).closest(".st-card-actions")) return;
+
+		startX = e.clientX;
+		startY = e.clientY;
+		hasStartedDrag = false;
+
+		const isHandle = Boolean(
+			(e.target as HTMLElement).closest(".st-card-drag"),
+		);
+		const dragThreshold = isHandle ? 2 : 5;
+
+		const onPointerMove = (moveEv: PointerEvent) => {
+			if (!hasStartedDrag) {
+				const dist = Math.hypot(
+					moveEv.clientX - startX,
+					moveEv.clientY - startY,
+				);
+				if (dist < dragThreshold) return;
+
+				hasStartedDrag = true;
+				isDraggingLesson = true;
+
+				const container = $("st-lesson-list");
+				if (!container) return;
+
+				initialCardRect = card.getBoundingClientRect();
+				grabOffsetX = startX - initialCardRect.left;
+				grabOffsetY = startY - initialCardRect.top;
+
+				placeholder = document.createElement("div");
+				placeholder.className = "st-lesson-slot-placeholder";
+				placeholder.style.height = `${initialCardRect.height}px`;
+
+				ghost = card.cloneNode(true) as HTMLElement;
+				ghost.className = "st-lesson-card-floating";
+				ghost.style.width = `${initialCardRect.width}px`;
+				ghost.style.height = `${initialCardRect.height}px`;
+				ghost.style.transform = `translate3d(${initialCardRect.left}px, ${initialCardRect.top}px, 0) scale(1.02)`;
+				document.body.appendChild(ghost);
+
+				card.after(placeholder);
+				card.classList.add("is-drag-origin");
+
+				try {
+					card.setPointerCapture(moveEv.pointerId);
+				} catch {
+					// safe fallback
+				}
+			}
+
+			if (hasStartedDrag && ghost && placeholder) {
+				moveEv.preventDefault();
+
+				const currentX = moveEv.clientX - grabOffsetX;
+				const currentY = moveEv.clientY - grabOffsetY;
+				ghost.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) scale(1.02)`;
+
+				const container = $("st-lesson-list");
+				if (container) {
+					const cRect = container.getBoundingClientRect();
+					const zone = 40;
+					if (moveEv.clientY < cRect.top + zone && container.scrollTop > 0) {
+						container.scrollTop -= 6;
+					} else if (moveEv.clientY > cRect.bottom - zone) {
+						container.scrollTop += 6;
+					}
+
+					const ghostCenterY = currentY + (initialCardRect?.height || 42) / 2;
+					const siblings = (
+						Array.from(container.children) as HTMLElement[]
+					).filter(
+						(el) =>
+							el !== placeholder &&
+							el !== card &&
+							el.classList.contains("st-lesson-card"),
+					);
+
+					let targetNode: HTMLElement | null = null;
+					for (const sibling of siblings) {
+						const sRect = sibling.getBoundingClientRect();
+						const sMid = sRect.top + sRect.height / 2;
+						if (ghostCenterY < sMid) {
+							targetNode = sibling;
+							break;
+						}
+					}
+
+					const currentNext = placeholder.nextElementSibling;
+					if (targetNode !== currentNext) {
+						const firstRects = new Map<HTMLElement, DOMRect>();
+						for (const s of siblings) {
+							firstRects.set(s, s.getBoundingClientRect());
+						}
+
+						if (targetNode) {
+							container.insertBefore(placeholder, targetNode);
+						} else {
+							container.appendChild(placeholder);
+						}
+
+						for (const s of siblings) {
+							const first = firstRects.get(s);
+							if (!first) continue;
+							const last = s.getBoundingClientRect();
+							const deltaY = first.top - last.top;
+							if (Math.abs(deltaY) > 0.5) {
+								s.style.transition = "none";
+								s.style.transform = `translateY(${deltaY}px)`;
+							}
+						}
+
+						requestAnimationFrame(() => {
+							for (const s of siblings) {
+								s.style.transition =
+									"transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)";
+								s.style.transform = "";
+							}
+						});
+					}
+				}
+			}
+		};
+
+		const onPointerUp = (upEv: PointerEvent) => {
+			window.removeEventListener("pointermove", onPointerMove);
+			window.removeEventListener("pointerup", onPointerUp);
+			window.removeEventListener("pointercancel", onPointerUp);
+
+			try {
+				card.releasePointerCapture(upEv.pointerId);
+			} catch {
+				// safe fallback
+			}
+
+			if (!hasStartedDrag) {
+				return;
+			}
+
+			const container = $("st-lesson-list");
+			if (!container || !ghost || !placeholder) {
+				cleanup();
+				return;
+			}
+
+			const destRect = placeholder.getBoundingClientRect();
+			ghost.style.transition =
+				"transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease";
+			ghost.style.transform = `translate3d(${destRect.left}px, ${destRect.top}px, 0) scale(1)`;
+			ghost.style.boxShadow = "none";
+
+			const children = Array.from(container.children) as HTMLElement[];
+			const visibleSlots = children.filter(
+				(el) =>
+					el === placeholder ||
+					(el !== card && el.classList.contains("st-lesson-card")),
+			);
+			const newIndex = visibleSlots.indexOf(placeholder);
+
+			setTimeout(() => {
+				cleanup();
+
+				if (newIndex >= 0 && newIndex !== fromIndex) {
+					const list = [...(currentConfig.lessons || [])];
+					const [moved] = list.splice(fromIndex, 1);
+					list.splice(newIndex, 0, moved);
+					currentConfig.lessons = list;
+					renderCurriculum();
+					saveConfig();
+				}
+
+				setTimeout(() => {
+					isDraggingLesson = false;
+				}, 60);
+			}, 190);
+		};
+
+		const cleanup = () => {
+			if (ghost?.parentElement) ghost.remove();
+			if (placeholder?.parentElement) placeholder.remove();
+			card.classList.remove("is-drag-origin");
+			card.style.display = "";
+			const container = $("st-lesson-list");
+			if (container) {
+				Array.from(container.children).forEach((child) => {
+					(child as HTMLElement).style.transform = "";
+					(child as HTMLElement).style.transition = "";
+				});
+			}
+		};
+
+		window.addEventListener("pointermove", onPointerMove);
+		window.addEventListener("pointerup", onPointerUp);
+		window.addEventListener("pointercancel", onPointerUp);
+	};
+
+	card.addEventListener("pointerdown", onPointerDown);
 }
 
 function renderCurriculum() {
@@ -617,13 +1149,7 @@ function renderCurriculum() {
 	allLessons.forEach((entry, idx) => {
 		const file = typeof entry === "string" ? entry : entry.file;
 		const title =
-			typeof entry === "string"
-				? file
-						.replace(/^\d+[-_]?/, "")
-						.replace(/\.md$/, "")
-						.replace(/[-_]/g, " ")
-						.replace(/\b\w/g, (c) => c.toUpperCase())
-				: entry.title || file;
+			typeof entry === "string" ? formatFileAsTitle(file) : entry.title || file;
 
 		if (
 			query &&
@@ -633,14 +1159,12 @@ function renderCurriculum() {
 			return;
 		}
 
-		const badge = inferBadge(file, title);
 		const formattedNum = String(idx + 1).padStart(2, "0");
 		const isActive = file === activeLessonFile;
 
 		const card = document.createElement("div");
-		card.className = `st-lesson-card ${isActive ? "active" : ""}`;
+		card.className = `st-lesson-card ${isActive ? "active" : ""}`.trim();
 		const canDrag = !query;
-		card.draggable = canDrag;
 		card.dataset.index = String(idx);
 		card.dataset.file = file;
 
@@ -656,11 +1180,10 @@ function renderCurriculum() {
         <span class="st-card-num">${formattedNum}</span>
         <div class="st-card-text">
           <span class="st-card-title">${escapeHtml(title)}</span>
-          ${badge ? `<span class="st-card-tag ${badge.cls}"><span class="st-card-tag-dot"></span>${badge.text}</span>` : ""}
         </div>
       </div>
       <div class="st-card-actions">
-        <a class="st-card-btn" href="/${file.replace(/\.md$/, "")}.html" target="_blank" title="Open lesson in new tab">
+        <a class="st-card-btn" href="/${slugifyFileName(file)}.html" target="_blank" title="Open lesson in new tab">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
         <button class="st-card-btn danger st-remove-btn" title="Remove lesson">
@@ -684,89 +1207,10 @@ function renderCurriculum() {
 			scrollToSlab("course");
 		});
 
-		// Drag & drop handlers with tactile indicators
-		card.addEventListener("dragstart", (e) => {
-			if (!card.draggable) return;
-			isDraggingLesson = true;
-			draggedLessonIndex = idx;
-			card.classList.add("dragging");
-			e.dataTransfer?.setData("text/plain", String(idx));
-			if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-		});
-
-		card.addEventListener("dragend", () => {
-			card.classList.remove("dragging");
-			document.querySelectorAll(".st-lesson-card").forEach((i) => {
-				i.classList.remove(
-					"drop-indicator-top",
-					"drop-indicator-bottom",
-					"drag-over",
-				);
-			});
-			setTimeout(() => {
-				isDraggingLesson = false;
-				draggedLessonIndex = null;
-			}, 120);
-		});
-
-		card.addEventListener("dragover", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-
-			const rect = card.getBoundingClientRect();
-			const isBelow = e.clientY > rect.top + rect.height / 2;
-
-			document.querySelectorAll(".st-lesson-card").forEach((c) => {
-				if (c !== card) {
-					c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
-				}
-			});
-
-			if (isBelow) {
-				card.classList.remove("drop-indicator-top");
-				card.classList.add("drop-indicator-bottom");
-			} else {
-				card.classList.remove("drop-indicator-bottom");
-				card.classList.add("drop-indicator-top");
-			}
-		});
-
-		card.addEventListener("dragleave", (e) => {
-			const rel = e.relatedTarget as Node | null;
-			if (!rel || !card.contains(rel)) {
-				card.classList.remove("drop-indicator-top", "drop-indicator-bottom");
-			}
-		});
-
-		card.addEventListener("drop", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			card.classList.remove("drop-indicator-top", "drop-indicator-bottom");
-
-			const fromIdx =
-				draggedLessonIndex !== null
-					? draggedLessonIndex
-					: parseInt(e.dataTransfer?.getData("text/plain") || "-1", 10);
-
-			if (fromIdx < 0) return;
-
-			const rect = card.getBoundingClientRect();
-			const isBelow = e.clientY > rect.top + rect.height / 2;
-			const targetSlot = isBelow ? idx + 1 : idx;
-
-			if (targetSlot === fromIdx || targetSlot === fromIdx + 1) {
-				return;
-			}
-
-			const list = [...(currentConfig.lessons || [])];
-			const [moved] = list.splice(fromIdx, 1);
-			const newIndex = fromIdx < targetSlot ? targetSlot - 1 : targetSlot;
-			list.splice(newIndex, 0, moved);
-			currentConfig.lessons = list;
-			renderCurriculum();
-			saveConfig();
-		});
+		// Fluid pointer-based sortable drag with dynamic gap creation
+		if (canDrag) {
+			attachLessonSortable(card, idx);
+		}
 
 		// Remove lesson
 		card.querySelector(".st-remove-btn")?.addEventListener("click", (e) => {
@@ -780,9 +1224,13 @@ function renderCurriculum() {
 				unassignedFiles.push(fileName);
 			}
 
-			if (activeLessonFile === fileName && list.length > 0) {
-				const next = list[0];
-				activeLessonFile = typeof next === "string" ? next : next.file;
+			if (activeLessonFile === fileName) {
+				if (list.length > 0) {
+					const next = list[0];
+					activeLessonFile = typeof next === "string" ? next : next.file;
+				} else {
+					activeLessonFile = "";
+				}
 				updateLiveViewport();
 			}
 
@@ -894,70 +1342,90 @@ function renderUiMode() {
 }
 
 function renderPalettes() {
-	const active = currentConfig.palette || "ink";
-	document
-		.querySelectorAll<HTMLElement>("#st-builtin-palettes [data-palette]")
-		.forEach((card) => {
-			if (card.dataset.palette === active) {
-				card.classList.add("active");
-			} else {
-				card.classList.remove("active");
-			}
-		});
-}
-
-function renderCustomPalettes() {
-	const container = $("st-custom-palettes-list");
+	const container = $("st-builtin-palettes");
 	if (!container) return;
 
-	const palettes = currentConfig.customPalettes || {};
-	const keys = Object.keys(palettes);
-	const activePalette = currentConfig.palette;
-
 	container.innerHTML = "";
+	const active = currentConfig.palette || "ink";
 
-	if (keys.length === 0) {
-		container.innerHTML = `
-      <div style="font-size: 11px; color: var(--st-text-muted); padding: 8px 10px; background: var(--st-surface); border: 1px dashed var(--st-border); border-radius: var(--st-radius-sm); text-align: center;">
-        No custom themes. Click "+ New" above.
-      </div>`;
-		return;
-	}
+	// 1. Builtin Palettes
+	const builtinDefs = [
+		{ key: "ink", name: "Ink", hex: "#2563eb" },
+		{ key: "field", name: "Field", hex: "#0d9488" },
+		{ key: "ember", name: "Ember", hex: "#ea580c" },
+		{ key: "elixir", name: "Elixir", hex: "#a855f7" },
+		{ key: "trunk", name: "Trunk", hex: "#d97706" },
+		{ key: "lava", name: "Lava", hex: "#ef4444" },
+	];
 
-	keys.forEach((key) => {
-		const p = palettes[key];
+	let activeElement: HTMLElement | null = null;
+
+	builtinDefs.forEach((p) => {
 		const card = document.createElement("div");
-		card.className = `st-custom-card ${activePalette === key ? "active" : ""}`;
+		card.className = `st-swatch-card ${p.key === active ? "active" : ""}`;
+		card.dataset.palette = p.key;
+		card.style.setProperty("--swatch-color", p.hex);
+		card.innerHTML = `
+			<div class="st-swatch-disc"></div>
+			<div class="st-swatch-info">
+				<span class="st-swatch-name">${p.name}</span>
+				<span class="st-swatch-hex">${p.hex}</span>
+			</div>
+			<div class="st-swatch-check">
+				<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+			</div>
+		`;
+
+		card.addEventListener("click", () => {
+			currentConfig.palette = p.key;
+			localStorage.setItem("bk-palette", p.key);
+			renderPalettes();
+			broadcastAppearanceChange();
+			saveConfig();
+		});
+
+		if (p.key === active) {
+			activeElement = card;
+		}
+
+		container.appendChild(card);
+	});
+
+	// 2. Custom Palettes
+	const customPalettes = currentConfig.customPalettes || {};
+	const customKeys = Object.keys(customPalettes);
+
+	customKeys.forEach((key) => {
+		const p = customPalettes[key];
+		const card = document.createElement("div");
+		card.className = `st-swatch-card custom ${key === active ? "active" : ""}`;
+		card.dataset.palette = key;
 		card.style.setProperty("--swatch-color", p.accent);
-		card.style.setProperty("--card-accent", p.accent);
 
 		card.innerHTML = `
-      <div class="st-custom-card-left">
-        <div class="st-swatch-disc" style="--swatch-color: ${escapeHtml(p.accent)};"></div>
-        <div class="st-swatch-info">
-          <span class="st-swatch-name">${escapeHtml(p.name || key)}</span>
-          <span class="st-swatch-hex">${escapeHtml(p.accent)}</span>
-        </div>
-      </div>
-      <div class="st-custom-actions">
-        <div class="st-swatch-check">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-        <button class="st-card-btn st-edit-palette-btn" title="Edit theme">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-        </button>
-        <button class="st-card-btn danger st-delete-palette-btn" title="Delete theme">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-    `;
+			<div class="st-swatch-disc" style="--swatch-color: ${escapeHtml(p.accent)};"></div>
+			<div class="st-swatch-info">
+				<span class="st-swatch-name">${escapeHtml(p.name || key)}</span>
+				<span class="st-swatch-hex">${escapeHtml(p.accent)}</span>
+			</div>
+			<div class="st-swatch-check">
+				<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+			</div>
+			<div class="st-swatch-actions">
+				<button type="button" class="st-card-btn-mini st-edit-palette-btn" title="Edit palette" aria-label="Edit palette">
+					<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+				</button>
+				<button type="button" class="st-card-btn-mini danger st-delete-palette-btn" title="Delete palette" aria-label="Delete palette">
+					<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+				</button>
+			</div>
+		`;
 
 		card.addEventListener("click", (e) => {
 			if ((e.target as HTMLElement).closest("button")) return;
 			currentConfig.palette = key;
 			localStorage.setItem("bk-palette", key);
 			renderPalettes();
-			renderCustomPalettes();
 			broadcastAppearanceChange();
 			saveConfig();
 		});
@@ -983,8 +1451,93 @@ function renderCustomPalettes() {
 				if (deleteModal) deleteModal.style.display = "flex";
 			});
 
+		if (key === active) {
+			activeElement = card;
+		}
+
 		container.appendChild(card);
 	});
+
+	// 3. Add Custom Palette Slot ("+")
+	const addSlot = document.createElement("button");
+	addSlot.type = "button";
+	addSlot.className = "st-swatch-slot empty";
+	addSlot.title = "Add custom palette";
+	addSlot.setAttribute("aria-label", "Add custom palette");
+	addSlot.innerHTML = `
+		<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+	`;
+	addSlot.addEventListener("click", () => {
+		openCustomThemeModal();
+	});
+	container.appendChild(addSlot);
+
+	// Update palette count pill in section header
+	const countPill = $("st-palette-count-pill");
+	if (countPill) {
+		countPill.textContent = String(builtinDefs.length + customKeys.length);
+	}
+
+	// Auto-scroll active card into view inside the palette viewport only (never scroll the outer canvas)
+	const vp = $("st-palette-scroll-viewport");
+	if (activeElement && vp) {
+		const cardTop = (activeElement as HTMLElement).offsetTop;
+		const cardBottom = cardTop + (activeElement as HTMLElement).offsetHeight;
+		if (cardTop < vp.scrollTop) {
+			vp.scrollTop = cardTop;
+		} else if (cardBottom > vp.scrollTop + vp.clientHeight) {
+			vp.scrollTop = cardBottom - vp.clientHeight;
+		}
+	}
+
+	requestAnimationFrame(() => {
+		updatePaletteScrollIndicators();
+	});
+}
+
+function updatePaletteScrollIndicators() {
+	const vp = $("st-palette-scroll-viewport");
+	const container = $("st-palette-scroll-container");
+	const track = $("st-palette-scrollbar");
+	const thumb = $("st-palette-scrollbar-thumb");
+	if (!vp || !container) return;
+
+	const scrollHeight = vp.scrollHeight;
+	const clientHeight = vp.clientHeight;
+	const maxScroll = scrollHeight - clientHeight;
+	const hasOverflow = maxScroll > 2;
+
+	container.classList.toggle("has-overflow", hasOverflow);
+	container.classList.toggle(
+		"can-scroll-down",
+		hasOverflow && vp.scrollTop < maxScroll - 4,
+	);
+	container.classList.toggle("can-scroll-up", hasOverflow && vp.scrollTop > 4);
+
+	if (!track || !thumb) return;
+
+	if (!hasOverflow) {
+		thumb.style.height = "0px";
+		return;
+	}
+
+	const trackHeight = track.clientHeight;
+	if (trackHeight <= 0) return;
+
+	const visibleRatio = clientHeight / scrollHeight;
+	const thumbHeight = Math.max(
+		26,
+		Math.min(trackHeight * visibleRatio, trackHeight - 12),
+	);
+	thumb.style.height = `${thumbHeight}px`;
+
+	const maxThumbTravel = trackHeight - thumbHeight;
+	const scrollRatio = maxScroll > 0 ? vp.scrollTop / maxScroll : 0;
+	const thumbTop = Math.max(
+		0,
+		Math.min(scrollRatio * maxThumbTravel, maxThumbTravel),
+	);
+	thumb.style.transform = `translateY(${thumbTop}px)`;
 }
 
 // ── Universal Input Editing Detection & Shortcuts ──────────────────────────
@@ -1141,57 +1694,6 @@ function wireEvents() {
 		);
 	}
 
-	// Curriculum container whitespace drop handling (drop below cards places item at end)
-	const lessonContainer = $("st-lesson-list");
-	if (lessonContainer) {
-		lessonContainer.addEventListener("dragover", (e) => {
-			if (!isDraggingLesson) return;
-			e.preventDefault();
-			if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-
-			const cards = Array.from(
-				lessonContainer.querySelectorAll(".st-lesson-card"),
-			) as HTMLElement[];
-			if (cards.length > 0) {
-				const lastCard = cards[cards.length - 1];
-				const lastRect = lastCard.getBoundingClientRect();
-				if (e.clientY > lastRect.bottom) {
-					cards.forEach((c) => {
-						c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
-					});
-					lastCard.classList.add("drop-indicator-bottom");
-				}
-			}
-		});
-
-		lessonContainer.addEventListener("drop", (e) => {
-			if (!isDraggingLesson) return;
-			const targetCard = (e.target as HTMLElement).closest(".st-lesson-card");
-			if (targetCard) return; // handled by individual card drop handler
-
-			e.preventDefault();
-			e.stopPropagation();
-
-			document.querySelectorAll(".st-lesson-card").forEach((c) => {
-				c.classList.remove("drop-indicator-top", "drop-indicator-bottom");
-			});
-
-			const fromIdx =
-				draggedLessonIndex !== null
-					? draggedLessonIndex
-					: parseInt(e.dataTransfer?.getData("text/plain") || "-1", 10);
-
-			const list = [...(currentConfig.lessons || [])];
-			if (fromIdx >= 0 && fromIdx < list.length - 1) {
-				const [moved] = list.splice(fromIdx, 1);
-				list.push(moved);
-				currentConfig.lessons = list;
-				renderCurriculum();
-				saveConfig();
-			}
-		});
-	}
-
 	// Course Home / Landing Page Card
 	const homeCard = $("st-course-home-card");
 	if (homeCard) {
@@ -1258,6 +1760,7 @@ function wireEvents() {
 		iframe.addEventListener("load", () => {
 			wireIframeWindow();
 			syncIframeUrl();
+			syncAppearanceToIframe();
 		});
 	}
 
@@ -1381,36 +1884,184 @@ function wireEvents() {
 		});
 	});
 
-	// Builtin palette swatches
-	document
-		.querySelectorAll("#st-builtin-palettes [data-palette]")
-		.forEach((card) => {
-			card.addEventListener("click", () => {
-				const val = (card as HTMLElement).dataset.palette;
-				currentConfig.palette = val;
-				if (val) localStorage.setItem("bk-palette", val);
-				renderPalettes();
-				renderCustomPalettes();
-				broadcastAppearanceChange();
-				saveConfig();
-			});
+	// Fancy custom palette scrollbar wiring
+	const paletteVp = $("st-palette-scroll-viewport");
+	const paletteTrack = $("st-palette-scrollbar");
+	const paletteThumb = $("st-palette-scrollbar-thumb");
+
+	paletteVp?.addEventListener("scroll", updatePaletteScrollIndicators, {
+		passive: true,
+	});
+
+	if (paletteTrack && paletteThumb && paletteVp) {
+		let isDraggingThumb = false;
+		let dragStartY = 0;
+		let dragStartScrollTop = 0;
+
+		paletteThumb.addEventListener("pointerdown", (e) => {
+			isDraggingThumb = true;
+			paletteTrack.classList.add("is-dragging");
+			paletteThumb.setPointerCapture(e.pointerId);
+			dragStartY = e.clientY;
+			dragStartScrollTop = paletteVp.scrollTop;
+			e.preventDefault();
 		});
+
+		paletteThumb.addEventListener("pointermove", (e) => {
+			if (!isDraggingThumb) return;
+			const deltaY = e.clientY - dragStartY;
+			const trackHeight = paletteTrack.clientHeight;
+			const thumbHeight = paletteThumb.clientHeight;
+			const maxThumbTravel = trackHeight - thumbHeight;
+			const maxScroll = paletteVp.scrollHeight - paletteVp.clientHeight;
+			if (maxThumbTravel > 0 && maxScroll > 0) {
+				const scrollDelta = (deltaY / maxThumbTravel) * maxScroll;
+				paletteVp.scrollTop = dragStartScrollTop + scrollDelta;
+			}
+		});
+
+		const stopThumbDrag = (e: PointerEvent) => {
+			if (isDraggingThumb) {
+				isDraggingThumb = false;
+				paletteTrack.classList.remove("is-dragging");
+				try {
+					paletteThumb.releasePointerCapture(e.pointerId);
+				} catch {}
+			}
+		};
+
+		paletteThumb.addEventListener("pointerup", stopThumbDrag);
+		paletteThumb.addEventListener("pointercancel", stopThumbDrag);
+
+		paletteTrack.addEventListener("pointerdown", (e) => {
+			if (e.target === paletteThumb) return;
+			const trackRect = paletteTrack.getBoundingClientRect();
+			const clickY = e.clientY - trackRect.top;
+			const trackHeight = trackRect.height;
+			const thumbHeight = paletteThumb.clientHeight;
+			const targetThumbTop = clickY - thumbHeight / 2;
+			const maxThumbTravel = trackHeight - thumbHeight;
+			if (maxThumbTravel > 0) {
+				const ratio = Math.max(0, Math.min(targetThumbTop / maxThumbTravel, 1));
+				const maxScroll = paletteVp.scrollHeight - paletteVp.clientHeight;
+				paletteVp.scrollTo({ top: ratio * maxScroll, behavior: "smooth" });
+			}
+		});
+	}
+
+	window.addEventListener("resize", updatePaletteScrollIndicators, {
+		passive: true,
+	});
 
 	// New Lesson modal
 	const newLessonModal = $("st-modal-new-lesson");
 	const newLessonInput = $<HTMLInputElement>("st-new-lesson-name");
 
 	const openNewLessonModal = () => {
-		if (newLessonModal && newLessonInput) {
-			newLessonInput.value = "";
-			newLessonModal.style.display = "flex";
-			newLessonInput.focus();
-		}
+		if (!newLessonModal) return;
+		if (newLessonInput) newLessonInput.value = "";
+		newLessonModal.style.display = "flex";
+		newLessonInput?.focus();
 	};
 
 	$("st-btn-new-lesson")?.addEventListener("click", openNewLessonModal);
 	$("st-btn-single-new-lesson")?.addEventListener("click", openNewLessonModal);
-	$("st-btn-promote-lesson")?.addEventListener("click", openNewLessonModal);
+
+	// Convert to Course Modal
+	const convertCourseModal = $("st-modal-convert-course");
+	const convertCourseInput = $<HTMLInputElement>("st-convert-course-name");
+	const confirmConvertBtn = $<HTMLButtonElement>("st-btn-confirm-convert");
+	const convertErrorEl = $("st-convert-error-msg");
+
+	const closeConvertModal = () => {
+		if (convertCourseModal) convertCourseModal.style.display = "none";
+		if (convertCourseInput) {
+			convertCourseInput.value = "";
+			convertCourseInput.classList.remove("st-input-error");
+		}
+		if (convertErrorEl) {
+			convertErrorEl.textContent = "";
+			convertErrorEl.style.display = "none";
+		}
+		if (confirmConvertBtn) {
+			confirmConvertBtn.disabled = true;
+		}
+	};
+
+	$("st-modal-close-convert")?.addEventListener("click", closeConvertModal);
+
+	$("st-btn-keep-independent")?.addEventListener("click", () => {
+		closeConvertModal();
+		fetchConfig();
+	});
+
+	convertCourseInput?.addEventListener("input", () => {
+		const val = convertCourseInput.value.trim();
+		if (confirmConvertBtn) {
+			confirmConvertBtn.disabled = !val;
+		}
+		if (convertErrorEl && convertErrorEl.style.display !== "none") {
+			convertErrorEl.textContent = "";
+			convertErrorEl.style.display = "none";
+			convertCourseInput.classList.remove("st-input-error");
+		}
+	});
+
+	convertCourseInput?.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			if (!confirmConvertBtn?.disabled) {
+				confirmConvertBtn?.click();
+			}
+		}
+	});
+
+	confirmConvertBtn?.addEventListener("click", async () => {
+		const courseName = convertCourseInput?.value.trim() || "";
+		if (!courseName) {
+			if (convertErrorEl) {
+				convertErrorEl.textContent = "Course name is required.";
+				convertErrorEl.style.display = "block";
+			}
+			convertCourseInput?.classList.add("st-input-error");
+			convertCourseInput?.focus();
+			return;
+		}
+
+		setStatus("saving", "Converting to course...");
+		try {
+			const res = await fetch("/__api/course/convert", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ courseName }),
+			});
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				const errMsg = data.error || "Failed to convert to course.";
+				if (convertErrorEl) {
+					convertErrorEl.textContent = errMsg;
+					convertErrorEl.style.display = "block";
+				}
+				convertCourseInput?.classList.add("st-input-error");
+				convertCourseInput?.focus();
+				setStatus("unsaved", "Conversion blocked");
+				return;
+			}
+			closeConvertModal();
+			await fetchConfig();
+			scrollToSlab("curriculum");
+			setStatus("saved", "Converted to course");
+		} catch (err) {
+			console.error("Failed to convert to course:", err);
+			const errMsg = err instanceof Error ? err.message : String(err);
+			if (convertErrorEl) {
+				convertErrorEl.textContent = errMsg;
+				convertErrorEl.style.display = "block";
+			}
+			convertCourseInput?.classList.add("st-input-error");
+			setStatus("unsaved", "Conversion failed");
+		}
+	});
 
 	// Lesson frontmatter live inputs
 	[
@@ -1421,6 +2072,9 @@ function wireEvents() {
 	].forEach((id) => {
 		$(id)?.addEventListener("input", () => {
 			queueFrontmatterSave();
+		});
+		$(id)?.addEventListener("change", () => {
+			flushPendingFrontmatterSave();
 		});
 	});
 
@@ -1433,9 +2087,11 @@ function wireEvents() {
 
 	$("st-modal-close-lesson")?.addEventListener("click", () => {
 		if (newLessonModal) newLessonModal.style.display = "none";
+		if (newLessonInput) newLessonInput.value = "";
 	});
 	$("st-modal-cancel-lesson")?.addEventListener("click", () => {
 		if (newLessonModal) newLessonModal.style.display = "none";
+		if (newLessonInput) newLessonInput.value = "";
 	});
 
 	$("st-modal-confirm-lesson")?.addEventListener("click", async () => {
@@ -1454,9 +2110,16 @@ function wireEvents() {
 			if (newLessonModal) newLessonModal.style.display = "none";
 			await fetchConfig();
 			if (data.file) {
+				activeLessonFile = data.file;
 				updateLiveViewport(data.file);
+				await loadLessonFrontmatter(data.file);
 			}
 			setStatus("saved");
+
+			// In single mode, offer visual choice: Convert to Course vs Keep Independent
+			if (studioMode === "single") {
+				openConvertCourseModal();
+			}
 		} catch (err) {
 			console.error("Failed to create lesson:", err);
 			setStatus("unsaved", "Failed");
@@ -1481,10 +2144,12 @@ function wireEvents() {
 	$("st-modal-close-delete")?.addEventListener("click", () => {
 		if (confirmDeleteModal) confirmDeleteModal.style.display = "none";
 		pendingDeleteThemeKey = null;
+		scrollToSlab("design");
 	});
 	$("st-modal-cancel-delete")?.addEventListener("click", () => {
 		if (confirmDeleteModal) confirmDeleteModal.style.display = "none";
 		pendingDeleteThemeKey = null;
+		scrollToSlab("design");
 	});
 	$("st-modal-confirm-delete-btn")?.addEventListener("click", () => {
 		if (pendingDeleteThemeKey) {
@@ -1496,28 +2161,43 @@ function wireEvents() {
 			pendingDeleteThemeKey = null;
 			if (confirmDeleteModal) confirmDeleteModal.style.display = "none";
 			renderPalettes();
-			renderCustomPalettes();
 			broadcastAppearanceChange();
 			saveConfig();
+			// Keep camera locked on the design/palette panel
+			scrollToSlab("design");
 		}
 	});
 
 	// Click outside modal backdrop
-	[newLessonModal, $("st-modal-custom-theme"), confirmDeleteModal].forEach(
-		(modal) => {
-			modal?.addEventListener("click", (e) => {
-				if (e.target === modal) {
+	[
+		newLessonModal,
+		convertCourseModal,
+		$("st-modal-custom-theme"),
+		confirmDeleteModal,
+	].forEach((modal) => {
+		modal?.addEventListener("click", (e) => {
+			if (e.target === modal) {
+				if (modal === convertCourseModal) {
+					closeConvertModal();
+				} else {
 					modal.style.display = "none";
+					if (modal === newLessonModal && newLessonInput) {
+						newLessonInput.value = "";
+					}
 					if (modal === confirmDeleteModal) pendingDeleteThemeKey = null;
 				}
-			});
-		},
-	);
+			}
+		});
+	});
 
 	// Escape key to dismiss modals
 	window.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
-			if (newLessonModal) newLessonModal.style.display = "none";
+			if (newLessonModal) {
+				newLessonModal.style.display = "none";
+				if (newLessonInput) newLessonInput.value = "";
+			}
+			if (convertCourseModal) closeConvertModal();
 			const customModal = $("st-modal-custom-theme");
 			if (customModal) customModal.style.display = "none";
 			if (confirmDeleteModal) {
@@ -1554,7 +2234,7 @@ function openCustomThemeModal(key?: string, existing?: CustomPalette) {
 	editingCustomPaletteKey = key || null;
 
 	if (titleEl) {
-		titleEl.textContent = key ? "Edit Custom Theme" : "New Custom Theme";
+		titleEl.textContent = key ? "Edit Custom Palette" : "New Custom Palette";
 	}
 
 	if (existing) {
@@ -1612,7 +2292,7 @@ function wireCustomThemeInputs() {
 
 	$("st-modal-save-theme")?.addEventListener("click", () => {
 		const nameInput = $<HTMLInputElement>("st-theme-name");
-		const rawName = nameInput?.value.trim() || "Custom Theme";
+		const rawName = nameInput?.value.trim() || "Custom Palette";
 		let key = editingCustomPaletteKey;
 		if (!key) {
 			const baseSlug =
@@ -1657,9 +2337,9 @@ function wireCustomThemeInputs() {
 		if (modal) modal.style.display = "none";
 
 		renderPalettes();
-		renderCustomPalettes();
 		broadcastAppearanceChange();
 		saveConfig();
+		scrollToSlab("design");
 	});
 }
 
@@ -1684,9 +2364,72 @@ function escapeHtml(str: string): string {
 		.replace(/'/g, "&#039;");
 }
 
+function initStudioWebSocket() {
+	let ws: WebSocket | null = null;
+	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function connect() {
+		try {
+			if (ws) {
+				try {
+					ws.close();
+				} catch (_) {}
+			}
+			const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+			ws = new WebSocket(`${protocol}//${location.host}/`);
+
+			ws.onmessage = async (e) => {
+				if (typeof e.data === "string") {
+					if (e.data === "reload") {
+						await fetchConfig();
+					} else if (e.data.startsWith("redirect:")) {
+						const newUrl = e.data.slice(9);
+						const fileGuess = newUrl
+							.replace(/^\//, "")
+							.replace(/\.html$/, ".md");
+						updateLiveViewport(fileGuess);
+						await fetchConfig();
+					} else if (e.data.startsWith("{")) {
+						try {
+							const msg = JSON.parse(e.data);
+							if (msg.type === "appearance-update") {
+								await fetchConfig();
+							}
+						} catch (_) {}
+					}
+				}
+			};
+
+			ws.onclose = () => {
+				if (reconnectTimer) clearTimeout(reconnectTimer);
+				reconnectTimer = setTimeout(connect, 1200);
+			};
+
+			ws.onerror = () => {
+				try {
+					ws?.close();
+				} catch (_) {}
+			};
+		} catch (_) {
+			if (reconnectTimer) clearTimeout(reconnectTimer);
+			reconnectTimer = setTimeout(connect, 2000);
+		}
+	}
+
+	connect();
+
+	// Listen for postMessage from preview iframe reloads
+	window.addEventListener("message", (e) => {
+		if (e.data?.type === "bk-page-reloaded") {
+			fetchConfig();
+		}
+	});
+}
+
 // ── Startup ────────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
 	wireEvents();
 	fetchConfig();
+	initStudioWebSocket();
 });

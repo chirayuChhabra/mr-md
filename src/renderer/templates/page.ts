@@ -67,7 +67,7 @@ export function renderPage(
     <article class="bk-content">
       <header class="bk-hero">
         <p class="bk-eyebrow">Interactive Lesson</p>
-        <h1 style="view-transition-name: title-${lesson.meta.slug}">${escHtml(lesson.meta.title)}</h1>
+        <h1>${escHtml(lesson.meta.title)}</h1>
         ${lesson.meta.description ? `<p class="bk-deck">${escHtml(lesson.meta.description)}</p>` : ""}
       </header>
       ${bodyHtml}

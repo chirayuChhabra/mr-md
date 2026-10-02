@@ -52,6 +52,39 @@ export function bkInitRouter() {
 
 						document.title = newTitle;
 
+						// Synchronize body classes and shell element
+						if (doc.body) {
+							document.body.className = doc.body.className;
+						}
+						const shell = document.querySelector(".bk-shell");
+						const newShell = doc.querySelector(".bk-shell");
+						if (shell && newShell) {
+							shell.className = newShell.className;
+							const currentTheme =
+								document.documentElement.getAttribute("data-theme");
+							const currentPalette =
+								document.documentElement.getAttribute("data-palette");
+							const currentUi =
+								document.documentElement.getAttribute("data-ui");
+							if (currentTheme) shell.setAttribute("data-theme", currentTheme);
+							if (currentPalette)
+								shell.setAttribute("data-palette", currentPalette);
+							if (currentUi) shell.setAttribute("data-ui", currentUi);
+						}
+
+						// Synchronize custom palette CSS if present in fetched document
+						const oldCustomStyle = document.getElementById(
+							"mrmd-custom-palettes-live",
+						);
+						const newCustomStyle = doc.getElementById(
+							"mrmd-custom-palettes-live",
+						);
+						if (newCustomStyle && oldCustomStyle) {
+							oldCustomStyle.textContent = newCustomStyle.textContent;
+						} else if (newCustomStyle && !oldCustomStyle) {
+							document.head.appendChild(newCustomStyle.cloneNode(true));
+						}
+
 						if (addToHistory) {
 							window.history.pushState({}, "", targetUrl.href);
 						}
@@ -101,6 +134,8 @@ export function bkInitRouter() {
 
 		return true;
 	}
+
+	window.__bk_navigate = handleNavigation;
 
 	// In Studio preview iframe (window.self !== window.top), skip background prefetching
 	// to eliminate dev-server socket contention and gliding stutter.
