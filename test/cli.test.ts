@@ -193,8 +193,8 @@ describe("CLI Deep Tests", () => {
         stderr: "pipe",
       });
 
-      const readStream = async () => {
-        const reader = devProc.stdout.getReader();
+      const readStream = async (stream: ReadableStream<Uint8Array>) => {
+        const reader = stream.getReader();
         const decoder = new TextDecoder();
         try {
           while (true) {
@@ -204,24 +204,33 @@ describe("CLI Deep Tests", () => {
           }
         } catch {}
       };
-      readStream();
+      readStream(devProc.stdout);
+      readStream(devProc.stderr);
 
       try {
         await waitForServer("http://localhost:4020");
         const cssRes = await fetch("http://localhost:4020/style.css");
         expect(cssRes.status).toBe(200);
 
-        const missingRes = await fetch("http://localhost:4020/missing.js");
+        const missingRes = await fetch("http://localhost:4020/missing.svg");
         expect(missingRes.status).toBe(404);
 
-        await new Promise((r) => setTimeout(r, 600));
+        // Wait for the HTTP log to appear in stdout
+        const start = Date.now();
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip ANSI escape codes for test assertion
+        const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, "");
+        while (Date.now() - start < 3000) {
+          if (stripAnsi(logs).includes("GET /missing.svg")) break;
+          await new Promise((r) => setTimeout(r, 100));
+        }
 
-        expect(logs).not.toContain("GET /style.css");
-        expect(logs).toContain("GET /missing.js");
+        const cleanLogs = stripAnsi(logs);
+        expect(cleanLogs).not.toContain("GET /style.css");
+        expect(cleanLogs).toContain("GET /missing.svg");
       } finally {
         devProc.kill();
       }
-    }, 15000);
+    }, 20000);
 
     test("Should support detached mode (-d) and stop command", async () => {
       await writeFile(join(tempDir, "chapter.md"), "---\nindex: 1\n---\ntest");

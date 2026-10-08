@@ -24,12 +24,21 @@ export function getOriginalCwd(): string {
  * Opens a URL in the user's default web browser cross-platform.
  */
 export function openBrowser(url: string): void {
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+			return;
+		}
+	} catch {
+		return;
+	}
+
 	const platform = process.platform;
 	try {
 		if (platform === "darwin") {
 			spawn("open", [url], { stdio: "ignore", detached: true }).unref();
 		} else if (platform === "win32") {
-			spawn("cmd", ["/c", "start", "", url], {
+			spawn("rundll32", ["url.dll,FileProtocolHandler", url], {
 				stdio: "ignore",
 				detached: true,
 			}).unref();
