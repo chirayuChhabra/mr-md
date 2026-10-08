@@ -2,11 +2,13 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 
+import { spawn } from "node:child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as readline from "readline";
 import { logger } from "./logger.js";
-import { getOriginalCwd } from "./utils.js";
+import { getOriginalCwd, openBrowser } from "./utils.js";
 
 interface BunServer {
 	port: number;
@@ -20,12 +22,18 @@ declare const Bun: {
 	serve: (options: unknown) => BunServer;
 	file: (path: string) => Blob & { text: () => Promise<string> };
 };
+const STATIC_ASSET_REGEX =
+	/\.(css|js|mjs|map|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot)$/i;
 
 export async function runDev(args: string[]) {
 	const { initHighlighter } = require("../renderer/markdown/math.js");
 	await initHighlighter();
 	process.env.NODE_ENV = "development";
-	const target = args[0];
+	const isVerbose = args.includes("--verbose") || args.includes("-v");
+	const shouldOpen = args.includes("--open");
+	const isDetached = args.includes("-d") || args.includes("--detach");
+	const isDetachedWorker = process.env.__MR_MD_DETACHED_WORKER === "1";
+	const target = args.find((arg) => !arg.startsWith("-"));
 
 	if (!target) {
 		logger.error("Usage: mr-md dev <file-or-directory>");
@@ -59,6 +67,111 @@ export async function runDev(args: string[]) {
 
 	const contentBase = isDirectory ? targetPath : path.dirname(filePath);
 	const outDir = path.resolve(contentBase, "out");
+	const pidFile = path.resolve(outDir, ".dev.pid");
+
+	if (isDetached && !isDetachedWorker) {
+		if (fs.existsSync(pidFile)) {
+			try {
+				const data = JSON.parse(fs.readFileSync(pidFile, "utf-8"));
+				const pid = Number(data.pid);
+				let alive = false;
+				try {
+					process.kill(pid, 0);
+					alive = true;
+				} catch {}
+				if (alive) {
+					logger.warn(
+						`Dev server is already running in background (PID ${pid}${data.localUrl ? ` at ${data.localUrl}` : ""}).`,
+					);
+					logger.info(`Run 'mr-md stop ${target}' to stop it.`);
+					process.exit(0);
+				}
+			} catch {}
+			try {
+				fs.unlinkSync(pidFile);
+			} catch {}
+		}
+
+		if (!fs.existsSync(outDir)) {
+			fs.mkdirSync(outDir, { recursive: true });
+		}
+
+		const workerArgs = process.argv
+			.slice(1)
+			.filter((a) => a !== "-d" && a !== "--detach");
+
+		const worker = spawn(process.execPath, workerArgs, {
+			detached: true,
+			cwd: process.cwd(),
+			env: { ...process.env, __MR_MD_DETACHED_WORKER: "1" },
+			stdio: ["ignore", "pipe", "ignore"],
+		});
+
+		let stdoutBuffer = "";
+		worker.stdout?.on("data", (chunk: Buffer) => {
+			stdoutBuffer += chunk.toString();
+			if (stdoutBuffer.includes("\n")) {
+				try {
+					const line = stdoutBuffer.trim().split("\n")[0];
+					const info = JSON.parse(line);
+					if (info.ready) {
+						const logFileRel =
+							path.relative(process.cwd(), path.resolve(outDir, "dev.log")) ||
+							"out/dev.log";
+						logger.serveBox(
+							info.localUrl,
+							info.networkUrl,
+							info.basePort,
+							info.port,
+							false,
+						);
+						logger.info(`Logs: tail -f ${logFileRel}`);
+
+						worker.unref();
+						worker.stdout?.destroy();
+						process.exit(0);
+					}
+				} catch {}
+			}
+		});
+
+		worker.on("error", (err) => {
+			logger.error(`Failed to start detached dev server: ${err.message}`);
+			process.exit(1);
+		});
+
+		worker.on("exit", (code) => {
+			if (code !== 0 && code !== null) {
+				logger.error(
+					`Detached dev server exited unexpectedly with code ${code}.`,
+				);
+				process.exit(code);
+			}
+		});
+
+		setTimeout(() => {
+			logger.error("Timed out waiting for background dev server to start.");
+			process.exit(1);
+		}, 15000).unref();
+
+		return;
+	}
+
+	if (isDetachedWorker) {
+		if (!fs.existsSync(outDir)) {
+			fs.mkdirSync(outDir, { recursive: true });
+		}
+		const logPath = path.resolve(outDir, "dev.log");
+		const logStream = fs.createWriteStream(logPath, { flags: "w" });
+		const writeLog = (...msgs: unknown[]) => {
+			const text = msgs
+				.map((m) => (typeof m === "string" ? m : JSON.stringify(m)))
+				.join(" ");
+			logStream.write(`${text}\n`);
+		};
+		console.log = writeLog;
+		console.error = writeLog;
+	}
 
 	const displayPath =
 		path.relative(process.cwd(), targetPath) || path.basename(targetPath);
@@ -316,13 +429,16 @@ export async function runDev(args: string[]) {
 
 		const res = await handle();
 		if (res) {
-			logger.http(
-				clientIp,
-				method,
-				decodedPath,
-				res.status,
-				Date.now() - start,
-			);
+			const isStaticAsset = STATIC_ASSET_REGEX.test(decodedPath);
+			if (isVerbose || res.status >= 400 || !isStaticAsset) {
+				logger.http(
+					clientIp,
+					method,
+					decodedPath,
+					res.status,
+					Date.now() - start,
+				);
+			}
 			return res;
 		}
 	};
@@ -334,10 +450,44 @@ export async function runDev(args: string[]) {
 		},
 	};
 
+	const interfaces = os.networkInterfaces();
+	let networkHost: string | null = null;
+	for (const name of Object.keys(interfaces)) {
+		for (const iface of interfaces[name] || []) {
+			if (iface.family === "IPv4" && !iface.internal) {
+				networkHost = iface.address;
+				break;
+			}
+		}
+		if (networkHost) break;
+	}
+
+	const getUrlSuffix = () =>
+		!isDirectory && singleFileSlug ? `/${singleFileSlug}.html` : "";
+	const getLocalUrl = () =>
+		`http://localhost:${server?.port ?? port}${getUrlSuffix()}`;
+	const getNetworkUrl = () =>
+		networkHost
+			? `http://${networkHost}:${server?.port ?? port}${getUrlSuffix()}`
+			: null;
+
 	let shuttingDown = false;
-	process.on("SIGINT", () => {
+	const shutdown = () => {
 		if (shuttingDown) return; // Ignore any extra Ctrl+C or duplicate signals
 		shuttingDown = true;
+
+		if (fs.existsSync(pidFile)) {
+			try {
+				fs.unlinkSync(pidFile);
+			} catch {}
+		}
+
+		if (process.stdin.isTTY) {
+			try {
+				process.stdin.setRawMode(false);
+				process.stdin.pause();
+			} catch {}
+		}
 
 		console.log(); // Add a newline so it doesn't print on the same line as ^C
 		logger.info("Gracefully shutting down. Please wait...");
@@ -358,7 +508,10 @@ export async function runDev(args: string[]) {
 		watcher.close();
 		clearTimeout(timeout);
 		setTimeout(() => process.exit(0), 3000).unref();
-	});
+	};
+
+	process.on("SIGINT", shutdown);
+	process.on("SIGTERM", shutdown);
 
 	while (port <= maxPort) {
 		try {
@@ -367,23 +520,81 @@ export async function runDev(args: string[]) {
 				fetch: fetchHandler,
 				websocket: wsHandler,
 			});
-			const urlSuffix =
-				!isDirectory && singleFileSlug ? `/${singleFileSlug}.html` : "";
-			const localUrl = `http://localhost:${server.port}${urlSuffix}`;
 
-			const interfaces = os.networkInterfaces();
-			let networkUrl: string | null = null;
-			for (const name of Object.keys(interfaces)) {
-				for (const iface of interfaces[name] || []) {
-					if (iface.family === "IPv4" && !iface.internal) {
-						networkUrl = `http://${iface.address}:${server.port}${urlSuffix}`;
-						break;
-					}
-				}
-				if (networkUrl) break;
+			if (isDetachedWorker) {
+				fs.writeFileSync(
+					pidFile,
+					JSON.stringify({
+						pid: process.pid,
+						port: server.port,
+						localUrl: getLocalUrl(),
+						targetPath,
+						startedAt: Date.now(),
+					}),
+				);
+				process.stdout.write(
+					`${JSON.stringify({
+						ready: true,
+						port: server.port,
+						localUrl: getLocalUrl(),
+						networkUrl: getNetworkUrl(),
+						basePort,
+					})}\n`,
+				);
+			} else {
+				logger.serveBox(getLocalUrl(), getNetworkUrl(), basePort, port);
 			}
 
-			logger.serveBox(localUrl, networkUrl, basePort, port);
+			if (shouldOpen) {
+				openBrowser(getLocalUrl());
+			}
+
+			if (process.stdin.isTTY && !isDetachedWorker) {
+				readline.emitKeypressEvents(process.stdin);
+				process.stdin.setRawMode(true);
+				process.stdin.resume();
+
+				process.stdin.on("keypress", (_str, key: readline.Key) => {
+					if (key.ctrl && (key.name === "c" || key.name === "d")) {
+						shutdown();
+						return;
+					}
+
+					switch (key.name) {
+						case "u":
+							logger.serveBox(
+								getLocalUrl(),
+								getNetworkUrl(),
+								basePort,
+								server?.port ?? port,
+							);
+							break;
+						case "o":
+							logger.info(`Opening ${getLocalUrl()} in browser...`);
+							openBrowser(getLocalUrl());
+							break;
+						case "c":
+							console.clear();
+							logger.serveBox(
+								getLocalUrl(),
+								getNetworkUrl(),
+								basePort,
+								server?.port ?? port,
+							);
+							break;
+
+						case "q":
+							shutdown();
+							break;
+						case "h":
+							logger.info(
+								"Dev shortcuts: [u] Show URL  [o] Open browser  [c] Clear console  [q] Quit",
+							);
+							break;
+					}
+				});
+			}
+
 			break;
 		} catch (err: unknown) {
 			if (

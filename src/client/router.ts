@@ -96,6 +96,12 @@ export function bkInitRouter() {
 			pathname.endsWith(".html") || !pathname.split("/").pop()?.includes(".");
 
 		if (targetUrl.origin === window.location.origin && isHtmlOrNoExt) {
+			if (
+				targetUrl.pathname === window.location.pathname &&
+				targetUrl.search === window.location.search
+			) {
+				return;
+			}
 			const cleanHref =
 				targetUrl.origin + targetUrl.pathname + targetUrl.search;
 			if (!prefetched.has(cleanHref)) {
