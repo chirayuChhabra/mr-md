@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Sidebar State Persistence**: Sidebar collapsed state is now remembered across page reloads and transitions in `localStorage`, with an early initialization script to eliminate layout flickering.
 - **Keyboard Navigation**: Pressing `Escape` now cleanly closes/dismisses maximized object views.
+- **Dev server keyboard shortcuts**: While `mr-md dev` is running in a TTY, press `u` to reprint the URL box, `o` to open the browser, `c` to clear the console, `q` to quit, or `h` for shortcut help.
+- **Dev server `--open` flag**: Automatically opens the browser on startup (`mr-md dev --open`).
+- **Detached mode (`-d` / `--detach`)**: Run the dev server as a background process. The parent prints the URL box and a `tail -f` log hint, then exits immediately (`mr-md dev -d <target>`).
+- **`mr-md stop` command**: Stops a background dev server by reading the PID file and sending `SIGINT` (`mr-md stop <target>`).
+- **Cross-platform browser opener**: `openBrowser(url)` helper in `src/cli/utils.ts` using the appropriate OS command (`open`, `xdg-open`, `start`).
 
 ### Changed
 - **Sidebar & Header Layout**:
@@ -20,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Neo UI Theme Polish**:
   - Eliminated the visual glitch of sharp outer corners and curved inner borders on Neo timeline cards and nodes.
   - Refined Neo segmented controls, setting panels, and tag pill styling.
+- **Dev server serve box**: Replaced the tall multi-line box with a compact wide 2-column layout (URLs on the left, keyboard shortcuts on the right).
+- **Dev server HTTP logging**: Static assets (`.css`, `.js`, images, fonts, etc.) are now silenced from terminal output by default. Use `--verbose` / `-v` to restore full logging.
 
 ### Fixed
 - **Router Popstate Navigation**: In-page hash navigation via browser back/forward no longer triggers a full PJAX re-fetch or page flash.
@@ -30,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quiz Parsing**: Added whitespace trimming prior to Base64 decoding in quiz parser to prevent decode crashes on untrimmed markup.
 - **Clipboard Fallback**: Added a document fallback copy mechanism for non-secure / HTTP environments where `navigator.clipboard` is unavailable.
 - **YouTube Embed Interactivity**: Removed intrusive global mousemove blur handler from YouTube embeds.
+- **Router prefetch**: `prefetchLink` no longer attempts to prefetch the current page when hovering in-page hash (`#`) anchor links.
 
 ## [4.0.0-alpha.1] - 2026-09-24
 

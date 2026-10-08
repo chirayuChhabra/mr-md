@@ -94,18 +94,44 @@ export const logger = {
 		networkUrl: string | null,
 		basePort?: number,
 		currentPort?: number,
+		shortcuts = true,
 	) => {
-		let text = `${pc.greenBright("Serving!")}\n\n`;
-		text += `- ${pc.bold("Local:")}    ${localUrl}\n`;
-		if (networkUrl) {
-			text += `- ${pc.bold("Network:")}  ${networkUrl}\n`;
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip ANSI escape codes for column alignment
+		const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, "");
+		const pad = (str: string, width: number) =>
+			str + " ".repeat(Math.max(0, width - stripAnsi(str).length));
+
+		const col1Line1 = `${pc.bold("Local:")}    ${pc.cyan(localUrl)}`;
+		const col1Line2 = networkUrl
+			? `${pc.bold("Network:")}  ${pc.cyan(networkUrl)}`
+			: "";
+		const col1Line3 = `${pc.green("✔")} ${pc.gray("Copied local address to clipboard!")}`;
+
+		let text = "";
+
+		if (shortcuts) {
+			const col2Line1 = `${pc.bold("u")} ${pc.gray("url")}    ${pc.bold("o")} ${pc.gray("open")}`;
+			const col2Line2 = `${pc.bold("c")} ${pc.gray("clear")}  ${pc.bold("q")} ${pc.gray("quit")}`;
+
+			const colWidth = Math.max(
+				33,
+				stripAnsi(col1Line1).length + 2,
+				stripAnsi(col1Line2).length + 2,
+			);
+			const sep = pc.gray("  │  ");
+
+			text += `${pad(col1Line1, colWidth)}${sep}${col2Line1}\n`;
+			text += `${pad(col1Line2, colWidth)}${sep}${col2Line2}\n`;
+			text += `${col1Line3}`;
+		} else {
+			text += `${col1Line1}\n`;
+			if (col1Line2) text += `${col1Line2}\n`;
+			text += `${col1Line3}`;
 		}
 
 		if (basePort && currentPort && basePort !== currentPort) {
-			text += `\n${pc.red(`This port was picked because ${pc.underline(basePort.toString())} is in use.`)}\n`;
+			text += `\n${pc.red(`Port ${basePort} was in use, switched to ${currentPort}`)}`;
 		}
-
-		text += `\nCopied local address to clipboard!`;
 
 		writeText(localUrl).catch((err: unknown) => {
 			logger.warn(
@@ -113,6 +139,12 @@ export const logger = {
 			);
 		});
 
-		safeLog(boxen(text, { padding: 1, margin: 1, borderColor: "green" }));
+		safeLog(
+			boxen(text, {
+				padding: { top: 0, bottom: 0, left: 1, right: 1 },
+				margin: { top: 1, bottom: 1 },
+				borderColor: "green",
+			}),
+		);
 	},
 };

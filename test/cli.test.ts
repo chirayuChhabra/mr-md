@@ -179,5 +179,77 @@ describe("CLI Deep Tests", () => {
         devProc.kill();
       }
     }, 15000);
+
+    test("Should filter static asset logs in dev mode and log on 404", async () => {
+      await writeFile(join(tempDir, "chapter.md"), "---\nindex: 1\n---\ntest");
+      await mkdir(join(tempDir, "out"), { recursive: true });
+      await writeFile(join(tempDir, "out", "style.css"), "body { color: red; }");
+
+      let logs = "";
+      const devProc = Bun.spawn(["bun", "run", CLI_PATH, "dev", "."], {
+        cwd: tempDir,
+        env: { ...process.env, PORT: "4020" },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+
+      const readStream = async () => {
+        const reader = devProc.stdout.getReader();
+        const decoder = new TextDecoder();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            logs += decoder.decode(value);
+          }
+        } catch {}
+      };
+      readStream();
+
+      try {
+        await waitForServer("http://localhost:4020");
+        const cssRes = await fetch("http://localhost:4020/style.css");
+        expect(cssRes.status).toBe(200);
+
+        const missingRes = await fetch("http://localhost:4020/missing.js");
+        expect(missingRes.status).toBe(404);
+
+        await new Promise((r) => setTimeout(r, 600));
+
+        expect(logs).not.toContain("GET /style.css");
+        expect(logs).toContain("GET /missing.js");
+      } finally {
+        devProc.kill();
+      }
+    }, 15000);
+
+    test("Should support detached mode (-d) and stop command", async () => {
+      await writeFile(join(tempDir, "chapter.md"), "---\nindex: 1\n---\ntest");
+
+      const devResult = await $`bun run ${CLI_PATH} dev . -d`.cwd(tempDir).env({ ...process.env, PORT: "4030" });
+      expect(devResult.exitCode).toBe(0);
+
+      const pidFile = join(tempDir, "out", ".dev.pid");
+      const logFile = join(tempDir, "out", "dev.log");
+
+      expect(existsSync(pidFile)).toBe(true);
+      expect(existsSync(logFile)).toBe(true);
+
+      const pidData = JSON.parse(await readFile(pidFile, "utf-8"));
+      expect(pidData.pid).toBeGreaterThan(0);
+
+      const res = await waitForServer("http://localhost:4030");
+      expect(res.status).toBe(200);
+
+      const dupResult = await $`bun run ${CLI_PATH} dev . -d`.cwd(tempDir).env({ ...process.env, PORT: "4030" });
+      expect(dupResult.exitCode).toBe(0);
+      expect(dupResult.stdout.toString() + dupResult.stderr.toString()).toContain("already running in background");
+
+      const stopResult = await $`bun run ${CLI_PATH} stop .`.cwd(tempDir);
+      expect(stopResult.exitCode).toBe(0);
+      expect(existsSync(pidFile)).toBe(false);
+    }, 20000);
   });
 });
+
+
