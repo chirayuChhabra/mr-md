@@ -186,5 +186,26 @@ Some text here.`;
 			expect(html).toContain('class="bk-sidebar-top-bar"');
 			expect(html).toContain('class="bk-back-link"');
 		});
+
+		test("renders sticky top bar with breadcrumbs and reading progress", () => {
+			const mdContent = `---
+title: Sticky Topbar Test
+parentSlug: index
+---
+# Main Content
+Here is the reading text.`;
+			const l = parseLesson(mdContent, { contentBase: testDir });
+			const html = render(l);
+
+			expect(html).toContain('class="bk-topbar"');
+			expect(html).toContain('id="bk-topbar-sidebar-toggle"');
+			expect(html).toContain('class="bk-topbar-breadcrumbs"');
+			expect(html).toContain('class="bk-topbar-crumb-link"');
+			expect(html).toContain('Sticky Topbar Test');
+			expect(html).toContain('id="bk-scroll-progress-bar"');
+			expect(html).toContain('id="bk-reading-percent"');
+			expect(html).toContain('id="bk-topbar-settings-btn"');
+			expect(html).toContain('id="bk-backdrop"');
+		});
 	});
 });

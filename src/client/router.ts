@@ -32,6 +32,9 @@ export function bkInitRouter() {
 						if (navEl) navEl.innerHTML = newNav.innerHTML;
 						if (headerEl) headerEl.innerHTML = newHeader.innerHTML;
 
+						const shell = document.querySelector(".bk-shell");
+						if (shell) shell.removeAttribute("data-mobile-open");
+
 						document.title = newTitle;
 						currentPathname = targetUrl.pathname;
 

@@ -42,9 +42,15 @@ export function bkWireThemeControls() {
 	const root = document.documentElement;
 	const button = document.getElementById("bk-settings-button");
 	const panel = document.getElementById("bk-theme-panel");
-	const themeBtns = document.querySelectorAll("#bk-theme-icons button");
-	const paletteBtns = document.querySelectorAll("#bk-palette-icons button");
-	const uiBtns = document.querySelectorAll("#bk-ui-icons button");
+	const topbarButton = document.getElementById("bk-topbar-settings-btn");
+	const topbarPanel = document.getElementById("bk-topbar-theme-panel");
+	const themeBtns = document.querySelectorAll(
+		".bk-theme-panel button[data-theme]",
+	);
+	const paletteBtns = document.querySelectorAll(
+		".bk-theme-panel button[data-palette]",
+	);
+	const uiBtns = document.querySelectorAll(".bk-theme-panel button[data-ui]");
 	let savedTheme = localStorage.getItem("bk-theme");
 	if (!savedTheme) savedTheme = "auto";
 	const savedPalette = localStorage.getItem("bk-palette");
@@ -120,17 +126,41 @@ export function bkWireThemeControls() {
 			button.setAttribute("aria-expanded", String(open));
 		});
 
+	topbarButton &&
+		topbarPanel &&
+		topbarButton.addEventListener("click", (event) => {
+			event.stopPropagation();
+			const open = topbarPanel.hasAttribute("hidden");
+			topbarPanel.hidden = !open;
+			topbarButton.setAttribute("aria-expanded", String(open));
+		});
+
 	panel?.addEventListener("click", (event) => event.stopPropagation());
+	topbarPanel?.addEventListener("click", (event) => event.stopPropagation());
+
 	document.addEventListener("click", () => {
-		if (!button || !panel || panel.hidden) return;
-		panel.hidden = true;
-		button.setAttribute("aria-expanded", "false");
+		if (button && panel && !panel.hidden) {
+			panel.hidden = true;
+			button.setAttribute("aria-expanded", "false");
+		}
+		if (topbarButton && topbarPanel && !topbarPanel.hidden) {
+			topbarPanel.hidden = true;
+			topbarButton.setAttribute("aria-expanded", "false");
+		}
 	});
+
 	document.addEventListener("keydown", (event) => {
-		if (event.key !== "Escape" || !button || !panel || panel.hidden) return;
-		panel.hidden = true;
-		button.setAttribute("aria-expanded", "false");
-		button.focus();
+		if (event.key !== "Escape") return;
+		if (button && panel && !panel.hidden) {
+			panel.hidden = true;
+			button.setAttribute("aria-expanded", "false");
+			button.focus();
+		}
+		if (topbarButton && topbarPanel && !topbarPanel.hidden) {
+			topbarPanel.hidden = true;
+			topbarButton.setAttribute("aria-expanded", "false");
+			topbarButton.focus();
+		}
 	});
 
 	themeBtns.forEach((btn) => {

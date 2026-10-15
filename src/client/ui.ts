@@ -58,6 +58,28 @@ export function bkWireSidebarToggle() {
 		} else if (target.closest("#bk-sidebar-expand")) {
 			currentShell?.removeAttribute("data-collapsed");
 			localStorage.setItem("bk-sidebar-collapsed", "false");
+		} else if (target.closest("#bk-topbar-sidebar-toggle")) {
+			if (window.innerWidth <= 800) {
+				const isOpen =
+					currentShell?.getAttribute("data-mobile-open") === "true";
+				if (isOpen) {
+					currentShell?.removeAttribute("data-mobile-open");
+				} else {
+					currentShell?.setAttribute("data-mobile-open", "true");
+				}
+			} else {
+				const isCollapsed =
+					currentShell?.getAttribute("data-collapsed") === "true";
+				if (isCollapsed) {
+					currentShell?.removeAttribute("data-collapsed");
+					localStorage.setItem("bk-sidebar-collapsed", "false");
+				} else {
+					currentShell?.setAttribute("data-collapsed", "true");
+					localStorage.setItem("bk-sidebar-collapsed", "true");
+				}
+			}
+		} else if (target.closest("#bk-backdrop")) {
+			currentShell?.removeAttribute("data-mobile-open");
 		}
 	});
 
@@ -66,6 +88,7 @@ export function bkWireSidebarToggle() {
 		if (localStorage.getItem("bk-sidebar-collapsed") === "true") {
 			currentShell?.setAttribute("data-collapsed", "true");
 		}
+		currentShell?.removeAttribute("data-mobile-open");
 	});
 }
 
@@ -220,6 +243,25 @@ export function bkWireScrollSpy() {
 				}
 			}
 		}
+
+		// Update topbar breadcrumb active section
+		const topbarSection = document.querySelector<HTMLElement>(
+			".bk-topbar-active-section",
+		);
+		const topbarSep = document.querySelector<HTMLElement>(
+			".bk-topbar-active-sep",
+		);
+		if (topbarSection && topbarSep) {
+			const label = target?.link?.textContent?.trim() || "";
+			if (label && idx > 0) {
+				topbarSection.textContent = label;
+				topbarSection.style.display = "";
+				topbarSep.style.display = "";
+			} else {
+				topbarSection.style.display = "none";
+				topbarSep.style.display = "none";
+			}
+		}
 	}
 
 	const mainScrollContainer = document.querySelector<HTMLElement>(".bk-main");
@@ -355,32 +397,124 @@ export function bkWireLastLessonTracking() {
 	if (!isChapterPage) {
 		const lessonPath = path.replace(/\/$/, "").split("/").pop();
 		if (lessonPath) {
-			localStorage.setItem(
-				"mr-md-last-lesson",
-				lessonPath.replace(".html", ""),
-			);
+			const slug = lessonPath.replace(".html", "");
+			localStorage.setItem("mr-md-last-lesson", slug);
 		}
 	} else {
 		const lastLesson = localStorage.getItem("mr-md-last-lesson");
-		if (lastLesson) {
-			const cards = document.querySelectorAll(".bk-timeline-card");
-			for (const card of cards) {
-				const href = (card as HTMLAnchorElement).href;
-				if (!href) continue;
+		const cards = document.querySelectorAll(".bk-timeline-card");
+		const continueBtn = document.getElementById("bk-hero-continue-btn");
+		let lastCardTitle = "";
+		let lastCardHref = "";
 
-				const cardUrl = new URL(href, window.location.href);
-				const cardPath = cardUrl.pathname
+		for (const card of cards) {
+			const href = (card as HTMLAnchorElement).href;
+			if (!href) continue;
+
+			const cardUrl = new URL(href, window.location.href);
+			const cardPath = cardUrl.pathname
+				.replace(/\/$/, "")
+				.split("/")
+				.pop()
+				?.replace(".html", "");
+
+			if (
+				cardPath &&
+				localStorage.getItem(`mr-md-completed:${cardPath}`) === "true"
+			) {
+				card.classList.remove("bk-status-unread");
+				card.classList.add("bk-status-read", "bk-status-completed");
+				const label = card.querySelector(".bk-card-status-label");
+				if (label) label.textContent = "Completed";
+			}
+
+			if (cardPath === lastLesson) {
+				card.scrollIntoView({ behavior: "auto", block: "center" });
+				card.classList.add("bk-last-opened");
+				const titleEl = card.querySelector(".bk-timeline-title");
+				if (titleEl) lastCardTitle = titleEl.textContent?.trim() || "";
+				lastCardHref = card.getAttribute("href") || "";
+			}
+		}
+
+		if (continueBtn && lastCardTitle && lastCardHref) {
+			continueBtn.setAttribute("href", lastCardHref);
+			const span = continueBtn.querySelector("span");
+			if (span) span.textContent = `Continue: ${lastCardTitle}`;
+		}
+	}
+}
+
+let activeScrollProgressCleanup: (() => void) | null = null;
+
+export function bkWireScrollProgress() {
+	if (activeScrollProgressCleanup) {
+		activeScrollProgressCleanup();
+		activeScrollProgressCleanup = null;
+	}
+
+	const main = document.querySelector<HTMLElement>(".bk-main");
+	const progressBar = document.getElementById("bk-scroll-progress-bar");
+	const percentText = document.getElementById("bk-reading-percent");
+	if (!progressBar && !percentText) return;
+
+	const target: EventTarget = main || window;
+
+	const updateProgress = () => {
+		const container = main || document.documentElement;
+		const scrollTop = main ? main.scrollTop : window.scrollY;
+		const scrollHeight = container.scrollHeight;
+		const clientHeight = main ? main.clientHeight : window.innerHeight;
+		const maxScroll = scrollHeight - clientHeight;
+
+		let percent = 0;
+		if (maxScroll > 0) {
+			percent = Math.min(
+				100,
+				Math.max(0, Math.round((scrollTop / maxScroll) * 100)),
+			);
+		}
+
+		if (progressBar) {
+			progressBar.style.width = `${percent}%`;
+		}
+		if (percentText) {
+			percentText.textContent = `${percent}%`;
+		}
+
+		// Mark lesson as completed in localStorage if percent >= 85
+		if (percent >= 85) {
+			const path = window.location.pathname;
+			const isChapterPage =
+				document.querySelector(".bk-chapter-timeline") !== null;
+			if (!isChapterPage) {
+				const lessonSlug = path
 					.replace(/\/$/, "")
 					.split("/")
 					.pop()
 					?.replace(".html", "");
-
-				if (cardPath === lastLesson) {
-					card.scrollIntoView({ behavior: "auto", block: "center" });
-					card.classList.add("bk-last-opened");
-					break;
+				if (lessonSlug) {
+					localStorage.setItem(`mr-md-completed:${lessonSlug}`, "true");
 				}
 			}
 		}
-	}
+	};
+
+	let ticking = false;
+	const onScroll = () => {
+		if (!ticking) {
+			requestAnimationFrame(() => {
+				updateProgress();
+				ticking = false;
+			});
+			ticking = true;
+		}
+	};
+
+	target.addEventListener("scroll", onScroll, { passive: true });
+	activeScrollProgressCleanup = () => {
+		target.removeEventListener("scroll", onScroll);
+	};
+
+	updateProgress();
 }

@@ -2,6 +2,66 @@ import type { BuildOptions } from "../../types.js";
 import { escHtml } from "../blocks.js";
 import { clientScript, pageCSS } from "./assets.js";
 
+function renderThemePanelContent(
+	theme: string,
+	palette: string,
+	ui: string,
+	isSidebar = true,
+): string {
+	const ids = isSidebar
+		? {
+				theme: 'id="bk-theme-icons"',
+				palette: 'id="bk-palette-icons"',
+				ui: 'id="bk-ui-icons"',
+			}
+		: { theme: "", palette: "", ui: "" };
+
+	return `
+          <div class="bk-theme-row">
+            <span>Theme</span>
+            <div class="bk-segmented-control bk-theme-segmented" ${ids.theme}>
+               <button type="button" class="bk-segment-btn ${theme === "light" ? "active" : ""}" data-theme="light" title="Light" aria-label="Light theme">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+               </button>
+               <button type="button" class="bk-segment-btn ${theme === "auto" ? "active" : !theme ? "active" : ""}" data-theme="auto" title="System" aria-label="System theme">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+               </button>
+               <button type="button" class="bk-segment-btn ${theme === "dark" ? "active" : ""}" data-theme="dark" title="Dark" aria-label="Dark theme">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+               </button>
+            </div>
+          </div>
+          <div class="bk-theme-row">
+            <span>Palette</span>
+            <div class="bk-segmented-control bk-palette-segmented" ${ids.palette}>
+               <button type="button" class="bk-segment-btn ${palette === "ink" ? "active" : ""}" data-palette="ink" title="Ink" aria-label="Ink palette">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+               </button>
+               <button type="button" class="bk-segment-btn ${palette === "field" ? "active" : ""}" data-palette="field" title="Field" aria-label="Field palette">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>
+               </button>
+               <button type="button" class="bk-segment-btn ${palette === "ember" ? "active" : ""}" data-palette="ember" title="Ember" aria-label="Ember palette">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"></path></svg>
+               </button>
+            </div>
+          </div>
+          <div class="bk-theme-row">
+            <span>UI</span>
+            <div class="bk-segmented-control bk-ui-segmented" ${ids.ui}>
+               <button type="button" class="bk-segment-btn ${ui === "standard" ? "active" : ""}" data-ui="standard" title="Standard" aria-label="Standard UI">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" ry="4"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+               </button>
+               <button type="button" class="bk-segment-btn ${ui === "neo" ? "active" : ""}" data-ui="neo" title="Neo Brutalist" aria-label="Neo UI">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="3" width="18" height="18"></rect><path d="M3 10h18"></path><path d="M10 10v11"></path></svg>
+               </button>
+               <button type="button" class="bk-segment-btn ${ui === "playful" ? "active" : ""}" data-ui="playful" title="Playful" aria-label="Playful UI">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6" ry="6"></rect><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"></circle></svg>
+               </button>
+            </div>
+          </div>
+	`;
+}
+
 export function renderLayout(
 	title: string,
 	description: string | undefined,
@@ -10,6 +70,8 @@ export function renderLayout(
 	opts: BuildOptions,
 	extraSidebar: string = "",
 	topBarHtml: string = "",
+	breadcrumbsHtml: string = "",
+	_isChapter: boolean = false,
 ): string {
 	const theme = opts.theme ?? "light";
 	const schemeAttr = `data-theme="${theme}"`;
@@ -71,6 +133,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
     }
   })();
 </script>
+  <div class="bk-backdrop" id="bk-backdrop" aria-hidden="true"></div>
   <aside class="bk-sidebar">
     <div class="bk-sidebar-inner">
       <div class="bk-sidebar-header">
@@ -85,48 +148,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
           <span class="bk-sr-only">Display settings</span>
         </button>
         <div class="bk-theme-panel" id="bk-theme-panel" aria-label="Display settings" hidden>
-          <div class="bk-theme-row">
-            <span>Theme</span>
-            <div class="bk-segmented-control" id="bk-theme-icons">
-               <button type="button" class="bk-segment-btn ${theme === "light" ? "active" : ""}" data-theme="light" title="Light" aria-label="Light theme">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-               </button>
-               <button type="button" class="bk-segment-btn ${theme === "auto" ? "active" : !theme ? "active" : ""}" data-theme="auto" title="System" aria-label="System theme">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-               </button>
-               <button type="button" class="bk-segment-btn ${theme === "dark" ? "active" : ""}" data-theme="dark" title="Dark" aria-label="Dark theme">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-               </button>
-            </div>
-          </div>
-          <div class="bk-theme-row">
-            <span>Palette</span>
-            <div class="bk-segmented-control" id="bk-palette-icons">
-               <button type="button" class="bk-segment-btn ${palette === "ink" ? "active" : ""}" data-palette="ink" title="Ink" aria-label="Ink palette">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-               </button>
-               <button type="button" class="bk-segment-btn ${palette === "field" ? "active" : ""}" data-palette="field" title="Field" aria-label="Field palette">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>
-               </button>
-               <button type="button" class="bk-segment-btn ${palette === "ember" ? "active" : ""}" data-palette="ember" title="Ember" aria-label="Ember palette">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"></path></svg>
-               </button>
-            </div>
-          </div>
-          <div class="bk-theme-row">
-            <span>UI</span>
-            <div class="bk-segmented-control" id="bk-ui-icons">
-               <button type="button" class="bk-segment-btn ${ui === "standard" ? "active" : ""}" data-ui="standard" title="Standard" aria-label="Standard UI">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" ry="4"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-               </button>
-               <button type="button" class="bk-segment-btn ${ui === "neo" ? "active" : ""}" data-ui="neo" title="Neo Brutalist" aria-label="Neo UI">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="3" width="18" height="18"></rect><path d="M3 10h18"></path><path d="M10 10v11"></path></svg>
-               </button>
-               <button type="button" class="bk-segment-btn ${ui === "playful" ? "active" : ""}" data-ui="playful" title="Playful" aria-label="Playful UI">
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6" ry="6"></rect><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"></circle></svg>
-               </button>
-            </div>
-          </div>
+          ${renderThemePanelContent(theme, palette, ui, true)}
         </div>
       </div>
     </div>
@@ -138,6 +160,32 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
     <button class="bk-icon-btn bk-sidebar-expand" id="bk-sidebar-expand" type="button" aria-label="Expand sidebar" title="Expand sidebar">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
     </button>
+    <header class="bk-topbar" id="bk-topbar">
+      <div class="bk-topbar-left">
+        <button class="bk-icon-btn bk-topbar-btn bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle navigation menu" title="Toggle navigation menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+        </button>
+        <nav class="bk-topbar-breadcrumbs" aria-label="Breadcrumb">
+          ${breadcrumbsHtml || `<span class="bk-topbar-crumb-item bk-topbar-crumb-current">${escHtml(title)}</span>`}
+        </nav>
+      </div>
+      <div class="bk-topbar-right">
+        <div class="bk-topbar-reading-info" id="bk-reading-progress-info" title="Reading progress">
+          <span class="bk-reading-percent" id="bk-reading-percent">0%</span>
+        </div>
+        <div class="bk-topbar-settings-wrapper">
+          <button class="bk-icon-btn bk-topbar-btn bk-topbar-settings-btn" id="bk-topbar-settings-btn" type="button" aria-expanded="false" aria-controls="bk-topbar-theme-panel" title="Display settings">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+          <div class="bk-theme-panel bk-topbar-theme-panel" id="bk-topbar-theme-panel" aria-label="Display settings" hidden>
+            ${renderThemePanelContent(theme, palette, ui, false)}
+          </div>
+        </div>
+      </div>
+      <div class="bk-topbar-progress" aria-hidden="true">
+        <div class="bk-topbar-progress-bar" id="bk-scroll-progress-bar"></div>
+      </div>
+    </header>
     ${contentHtml}
   </main>
 </div>
