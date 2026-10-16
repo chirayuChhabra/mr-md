@@ -20,6 +20,7 @@ export function bkInitRouter() {
 				const newMain = doc.querySelector(".bk-main");
 				const newNav = doc.querySelector(".bk-nav");
 				const newHeader = doc.querySelector(".bk-sidebar-header");
+				const newTopBar = doc.querySelector(".bk-topbar");
 				const newTitle = doc.title;
 
 				if (newMain && newNav && newHeader) {
@@ -27,10 +28,12 @@ export function bkInitRouter() {
 						const mainEl = document.querySelector(".bk-main");
 						const navEl = document.querySelector(".bk-nav");
 						const headerEl = document.querySelector(".bk-sidebar-header");
+						const topbarEl = document.querySelector(".bk-topbar");
 
 						if (mainEl) mainEl.innerHTML = newMain.innerHTML;
 						if (navEl) navEl.innerHTML = newNav.innerHTML;
 						if (headerEl) headerEl.innerHTML = newHeader.innerHTML;
+						if (topbarEl && newTopBar) topbarEl.innerHTML = newTopBar.innerHTML;
 
 						const shell = document.querySelector(".bk-shell");
 						if (shell) shell.removeAttribute("data-mobile-open");

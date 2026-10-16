@@ -199,6 +199,8 @@ Here is the reading text.`;
 
 			expect(html).toContain('class="bk-topbar"');
 			expect(html).toContain('id="bk-topbar-sidebar-toggle"');
+			expect(html).toContain('id="bk-topbar-back-btn"');
+			expect(html).toContain('class="bk-body"');
 			expect(html).toContain('class="bk-topbar-breadcrumbs"');
 			expect(html).toContain('class="bk-topbar-crumb-link"');
 			expect(html).toContain('Sticky Topbar Test');

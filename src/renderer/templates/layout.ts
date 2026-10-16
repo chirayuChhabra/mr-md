@@ -133,61 +133,73 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
     }
   })();
 </script>
-  <div class="bk-backdrop" id="bk-backdrop" aria-hidden="true"></div>
-  <aside class="bk-sidebar">
-    <div class="bk-sidebar-inner">
-      <div class="bk-sidebar-header">
-        ${topBarHtml ? `<div class="bk-sidebar-top-bar">${topBarHtml}</div>` : ""}
-        <div class="bk-sidebar-title">${escHtml(title)}</div>
-        ${extraSidebar}
+  <header class="bk-topbar" id="bk-topbar">
+    <div class="bk-topbar-left">
+      <button class="bk-icon-btn bk-topbar-btn bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle navigation menu" title="Toggle navigation menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+      </button>
+      ${
+				!_isChapter
+					? `<a href="index.html" class="bk-topbar-back-btn" id="bk-topbar-back-btn" title="Back to Overview">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        <span>Back</span>
+      </a>`
+					: topBarHtml
+						? `<div class="bk-topbar-back-wrapper">${topBarHtml}</div>`
+						: ""
+			}
+      <nav class="bk-topbar-breadcrumbs" aria-label="Breadcrumb">
+        ${breadcrumbsHtml || `<span class="bk-topbar-crumb-item bk-topbar-crumb-current">${escHtml(title)}</span>`}
+      </nav>
+    </div>
+    <div class="bk-topbar-right">
+      <div class="bk-topbar-reading-info" id="bk-reading-progress-info" title="Reading progress">
+        <span class="bk-reading-percent" id="bk-reading-percent">0%</span>
       </div>
-      <nav class="bk-nav">${navHtml}</nav>
-      <div class="bk-sidebar-footer">
-        <button class="bk-icon-btn bk-settings-button" id="bk-settings-button" type="button" aria-expanded="false" aria-controls="bk-theme-panel" title="Display settings">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          <span class="bk-sr-only">Display settings</span>
+      <div class="bk-topbar-settings-wrapper">
+        <button class="bk-icon-btn bk-topbar-btn bk-topbar-settings-btn" id="bk-topbar-settings-btn" type="button" aria-expanded="false" aria-controls="bk-topbar-theme-panel" title="Display settings">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
-        <div class="bk-theme-panel" id="bk-theme-panel" aria-label="Display settings" hidden>
-          ${renderThemePanelContent(theme, palette, ui, true)}
+        <div class="bk-theme-panel bk-topbar-theme-panel" id="bk-topbar-theme-panel" aria-label="Display settings" hidden>
+          ${renderThemePanelContent(theme, palette, ui, false)}
         </div>
       </div>
     </div>
-  </aside>
-  <button class="bk-sidebar-collapse" id="bk-sidebar-collapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-  </button>
-  <main class="bk-main">
-    <button class="bk-icon-btn bk-sidebar-expand" id="bk-sidebar-expand" type="button" aria-label="Expand sidebar" title="Expand sidebar">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-    </button>
-    <header class="bk-topbar" id="bk-topbar">
-      <div class="bk-topbar-left">
-        <button class="bk-icon-btn bk-topbar-btn bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle navigation menu" title="Toggle navigation menu">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-        </button>
-        <nav class="bk-topbar-breadcrumbs" aria-label="Breadcrumb">
-          ${breadcrumbsHtml || `<span class="bk-topbar-crumb-item bk-topbar-crumb-current">${escHtml(title)}</span>`}
-        </nav>
-      </div>
-      <div class="bk-topbar-right">
-        <div class="bk-topbar-reading-info" id="bk-reading-progress-info" title="Reading progress">
-          <span class="bk-reading-percent" id="bk-reading-percent">0%</span>
+    <div class="bk-topbar-progress" aria-hidden="true">
+      <div class="bk-topbar-progress-bar" id="bk-scroll-progress-bar"></div>
+    </div>
+  </header>
+  <div class="bk-backdrop" id="bk-backdrop" aria-hidden="true"></div>
+  <div class="bk-body" id="bk-body">
+    <aside class="bk-sidebar">
+      <div class="bk-sidebar-inner">
+        <div class="bk-sidebar-header">
+          ${topBarHtml ? `<div class="bk-sidebar-top-bar">${topBarHtml}</div>` : ""}
+          <div class="bk-sidebar-title">${escHtml(title)}</div>
+          ${extraSidebar}
         </div>
-        <div class="bk-topbar-settings-wrapper">
-          <button class="bk-icon-btn bk-topbar-btn bk-topbar-settings-btn" id="bk-topbar-settings-btn" type="button" aria-expanded="false" aria-controls="bk-topbar-theme-panel" title="Display settings">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <nav class="bk-nav">${navHtml}</nav>
+        <div class="bk-sidebar-footer">
+          <button class="bk-icon-btn bk-settings-button" id="bk-settings-button" type="button" aria-expanded="false" aria-controls="bk-theme-panel" title="Display settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span class="bk-sr-only">Display settings</span>
           </button>
-          <div class="bk-theme-panel bk-topbar-theme-panel" id="bk-topbar-theme-panel" aria-label="Display settings" hidden>
-            ${renderThemePanelContent(theme, palette, ui, false)}
+          <div class="bk-theme-panel" id="bk-theme-panel" aria-label="Display settings" hidden>
+            ${renderThemePanelContent(theme, palette, ui, true)}
           </div>
         </div>
       </div>
-      <div class="bk-topbar-progress" aria-hidden="true">
-        <div class="bk-topbar-progress-bar" id="bk-scroll-progress-bar"></div>
-      </div>
-    </header>
-    ${contentHtml}
-  </main>
+    </aside>
+    <button class="bk-sidebar-collapse" id="bk-sidebar-collapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <main class="bk-main">
+      <button class="bk-icon-btn bk-sidebar-expand" id="bk-sidebar-expand" type="button" aria-label="Expand sidebar" title="Expand sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      ${contentHtml}
+    </main>
+  </div>
 </div>
 ${opts.standalone === false ? `<script type="module" src="assets/app.bundle.js?v=${Date.now()}"></script>` : `<script type="module">\n${clientScript()}\n</script>`}
 </body>

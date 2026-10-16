@@ -242,17 +242,27 @@ body {
 
 .bk-shell {
 	display: flex;
+	flex-direction: column;
+	height: 100vh;
 	min-height: 100vh;
 	overflow: hidden;
 	position: relative;
 }
 
+.bk-body {
+	display: flex;
+	flex: 1;
+	height: calc(100vh - 54px);
+	overflow: hidden;
+	position: relative;
+	min-width: 0;
+}
 
 .bk-sidebar {
 	width: 288px;
 	flex-shrink: 0;
 	position: relative;
-	height: 100vh;
+	height: 100%;
 	overflow-y: auto;
 	border-right: 1px solid var(--line);
 	background: color-mix(in srgb, var(--paper) 88%, transparent);
@@ -270,7 +280,7 @@ body {
 .bk-main {
 	flex-grow: 1;
 	position: relative;
-	height: 100vh;
+	height: 100%;
 	overflow-y: auto;
 	min-width: 0;
 }
@@ -448,18 +458,19 @@ a.bk-back-link:active {
 
 /* --- Top Bar & Breadcrumbs --- */
 .bk-topbar {
-	position: sticky;
-	top: 0;
-	z-index: 45;
-	height: 52px;
+	flex-shrink: 0;
+	width: 100%;
+	height: 54px;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 0 24px;
-	background: color-mix(in srgb, var(--paper) 85%, transparent);
+	padding: 0 20px;
+	background: color-mix(in srgb, var(--paper) 88%, transparent);
 	backdrop-filter: blur(18px);
 	-webkit-backdrop-filter: blur(18px);
 	border-bottom: 1px solid var(--line);
+	position: relative;
+	z-index: 70;
 	transition: background 0.3s ease, border-color 0.3s ease;
 }
 
@@ -490,6 +501,39 @@ a.bk-back-link:active {
 	color: var(--ink);
 	border-color: color-mix(in srgb, var(--ink) 30%, var(--line));
 	background: color-mix(in srgb, var(--paper) 90%, var(--ink));
+}
+
+.bk-topbar-back-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 30px;
+	padding: 0 10px 0 8px;
+	border-radius: 6px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ink);
+	background: color-mix(in srgb, var(--paper) 90%, var(--ink));
+	border: 1px solid var(--line);
+	text-decoration: none !important;
+	transition: background 0.18s, border-color 0.18s, transform 0.12s, color 0.18s;
+	flex-shrink: 0;
+}
+
+.bk-topbar-back-btn:hover {
+	background: color-mix(in srgb, var(--paper) 75%, var(--ink));
+	border-color: color-mix(in srgb, var(--ink) 25%, var(--line));
+	transform: translateX(-1px);
+	color: var(--accent);
+}
+
+.bk-topbar-back-btn svg {
+	flex-shrink: 0;
+	transition: transform 0.18s ease;
+}
+
+.bk-topbar-back-btn:hover svg {
+	transform: translateX(-2px);
 }
 
 .bk-topbar-breadcrumbs {
@@ -1983,13 +2027,29 @@ body.bk-is-scrolling .bk-embed-interactive.is-interactive iframe {
 	.bk-sidebar-expand {
 		display: none !important;
 	}
+	.bk-topbar {
+		position: sticky;
+		top: 0;
+		z-index: 90;
+		height: 52px;
+		padding: 0 16px;
+	}
+	.bk-backdrop {
+		top: 52px;
+	}
+	.bk-body {
+		flex: 1;
+		height: calc(100vh - 52px);
+		position: relative;
+		overflow: hidden;
+	}
 	.bk-sidebar {
 		position: fixed;
-		top: 0;
+		top: 52px;
 		bottom: 0;
 		left: 0;
 		width: 288px;
-		height: 100vh;
+		height: calc(100vh - 52px);
 		z-index: 100;
 		transform: translateX(-100%);
 		transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
@@ -2008,13 +2068,10 @@ body.bk-is-scrolling .bk-embed-interactive.is-interactive iframe {
 	}
 	.bk-main {
 		flex: 1;
-		height: 100vh;
+		height: 100%;
 		overflow-y: auto;
 		width: 100%;
 		min-width: 0;
-	}
-	.bk-topbar {
-		padding: 0 16px;
 	}
 	.bk-sidebar-inner {
 		padding: 24px 0;
@@ -2293,6 +2350,24 @@ html[data-ui="neo"][data-theme="dark"] .bk-topbar-btn {
 	border-color: var(--accent);
 	box-shadow: 2px 2px 0px 0px var(--accent);
 }
+html[data-ui="neo"] .bk-topbar-back-btn {
+	border: 2px solid var(--ink);
+	border-radius: 0;
+	box-shadow: 2px 2px 0px 0px var(--ink);
+	background: var(--paper);
+	font-weight: 700;
+}
+html[data-ui="neo"][data-theme="dark"] .bk-topbar-back-btn {
+	border-color: var(--accent);
+	box-shadow: 2px 2px 0px 0px var(--accent);
+}
+html[data-ui="neo"] .bk-topbar-back-btn:hover {
+	transform: translate(-1px, -1px);
+	box-shadow: 3px 3px 0px 0px var(--ink);
+}
+html[data-ui="neo"][data-theme="dark"] .bk-topbar-back-btn:hover {
+	box-shadow: 3px 3px 0px 0px var(--accent);
+}
 html[data-ui="neo"] .bk-reading-percent {
 	border-radius: 0;
 	border: 1.5px solid var(--ink);
@@ -2467,6 +2542,14 @@ html[data-ui="playful"] ol > li::before {
 
 html[data-ui="playful"] .bk-topbar-btn {
 	border-radius: 50%;
+}
+html[data-ui="playful"] .bk-topbar-back-btn {
+	border-radius: 999px;
+	border-width: 1.5px;
+	font-weight: 600;
+}
+html[data-ui="playful"] .bk-topbar-back-btn:hover {
+	transform: translateY(-1px) scale(1.02);
 }
 html[data-ui="playful"] .bk-hero-start-btn {
 	border-radius: 999px;
