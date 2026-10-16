@@ -8,20 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Modern Full-Width Topbar**: Introduced a persistent top navigation bar spanning the entire width above the layout, housing breadcrumb context, navigation controls, and quick settings.
+- **Dynamic Contextual Breadcrumbs**:
+  - Displays hierarchical navigation (`<Course / Chapter Title> / <Lesson Title> / <Active Section>`), dynamically resolving the parent chapter/course title (e.g. `Mr Markdown Documentation`) instead of generic placeholders.
+  - Interactive breadcrumbs: parent link navigates back to chapter overview, lesson title smoothly scrolls the page back to the top, and active section dynamically updates on scroll and jumps to heading anchors.
+- **Dedicated Sidebar Panel Toggle**: Replaced generic hamburger drawer lines with a modern developer-focused panel toggle icon (`panel-left` rect with vertical divider).
+- **Quick Theme Toggle in Topbar**: Added a topbar dark/light mode toggle with smooth sun/moon SVG transitions for one-click theme switching without needing to open the full settings panel.
+- **Top Bar Reading Progress**: Added a minimal reading progress indicator along the bottom edge of the topbar that updates dynamically during lesson reading.
+- **Configurable Eyebrow & Metadata**: Added full support for custom eyebrow headers (`eyebrow` in frontmatter), optional disabling, author bylines, descriptions, and tag badges with `+N` overflow counters.
 - **Sidebar State Persistence**: Sidebar collapsed state is now remembered across page reloads and transitions in `localStorage`, with an early initialization script to eliminate layout flickering.
+- **Responsive Mobile Drawer**: Sidebar expands into an off-canvas drawer with smooth backdrop dismissal on screens under 800px.
 - **Keyboard Navigation**: Pressing `Escape` now cleanly closes/dismisses maximized object views.
 
 ### Changed
+- **Unified Sidebar Across All Pages**: Restored consistent sidebar navigation on the course/chapter dashboard (`index.html`), maintaining uniform layout and muscle memory across both lesson reading and course browsing.
+- **Motionless Topbar Controls**: Enforced stable, motionless hover and active states (`transform: none`, no jump or spring cubic-bezier) on topbar icon buttons across standard, neo, and playful themes.
+- **Playful UI Layout Alignment**: Removed the radius gap between playful sidebar and topbar, rendering sidebar flush against the topbar border for a cohesive visual structure.
 - **Sidebar & Header Layout**:
+  - Restored display settings gear icon to the sidebar footer for easy access.
   - Removed redundant tags and author initials badge from the sidebar for cleaner, focused navigation.
   - Reorganized lesson hero header: tags are displayed neatly in an eyebrow row with a `+N` badge for overflow tags, and the author is presented with an explicit byline below.
-  - Aligned sidebar collapse and expand toggle buttons to the same vertical position.
-  - Fixed subtle hover reflow under the "Back to Chapter" button.
 - **Neo UI Theme Polish**:
   - Eliminated the visual glitch of sharp outer corners and curved inner borders on Neo timeline cards and nodes.
   - Refined Neo segmented controls, setting panels, and tag pill styling.
 
 ### Fixed
+- **Chapter Overview Routing**: Generated both `index.html` and `${slug}.html` on chapter builds to prevent 404 errors when navigating back from lesson breadcrumbs.
+- **Breadcrumb Hierarchy Naming**: Corrected breadcrumb parent title resolution to inherit the actual course/chapter title rather than static `"Overview"`.
 - **Router Popstate Navigation**: In-page hash navigation via browser back/forward no longer triggers a full PJAX re-fetch or page flash.
 - **Scroll Container Anchor Handling**: Initial URL hash scrolling correctly targets the `.bk-main` container instead of `window`.
 - **Iframe Pointer Trapping**: Window scroll capture now properly adds `.bk-is-scrolling` during `.bk-main` scrolls, preventing embedded iframes from capturing mouse events.

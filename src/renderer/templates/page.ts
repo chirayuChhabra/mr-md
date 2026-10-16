@@ -53,21 +53,18 @@ export function renderPage(
 	const endNavHtml = renderEndNav(lesson);
 
 	const topBarHtml = lesson.meta.parentSlug
-		? `<a href="index.html" class="bk-back-link" aria-label="Back to Chapter"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>Back to Chapter</a>`
+		? `<a href="index.html" class="bk-back-link" style="display:none" aria-hidden="true">Back to Chapter</a>`
 		: "";
 
 	const parentSlug = lesson.meta.parentSlug || "index";
-	const parentTitle = "Chapter";
+	const parentTitle = lesson.meta.parentTitle || "Overview";
 
 	const breadcrumbsHtml = `
-		<a href="${escAttr(parentSlug)}.html" class="bk-topbar-crumb-link" aria-label="Back to Chapter">
-			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-			<span>${escHtml(parentTitle)}</span>
-		</a>
+		<a href="${escAttr(parentSlug)}.html" class="bk-topbar-crumb-link" id="bk-topbar-back-btn" aria-label="Back to ${escAttr(parentTitle)}" title="Back to ${escAttr(parentTitle)}">${escHtml(parentTitle)}</a>
 		<span class="bk-topbar-crumb-sep">/</span>
-		<span class="bk-topbar-crumb-item bk-topbar-crumb-lesson" title="${escAttr(lesson.meta.title)}">${escHtml(lesson.meta.title)}</span>
+		<a href="#" class="bk-topbar-crumb-link bk-topbar-crumb-lesson" title="Scroll to top of ${escAttr(lesson.meta.title)}">${escHtml(lesson.meta.title)}</a>
 		<span class="bk-topbar-crumb-sep bk-topbar-active-sep" style="display:none">/</span>
-		<span class="bk-topbar-crumb-item bk-topbar-active-section" style="display:none"></span>
+		<a href="#" class="bk-topbar-crumb-link bk-topbar-active-section" style="display:none"></a>
 	`;
 
 	const author = lesson.meta.author;
@@ -93,15 +90,23 @@ export function renderPage(
 				}</div>`
 			: "";
 
+	const eyebrowText = lesson.meta.eyebrow
+		? String(lesson.meta.eyebrow).trim()
+		: "";
+	const eyebrowRowHtml =
+		eyebrowText || tagsHtml
+			? `<div class="bk-hero-eyebrow-row">
+          ${eyebrowText ? `<p class="bk-eyebrow">${escHtml(eyebrowText)}</p>` : `<span class="bk-eyebrow-spacer"></span>`}
+          ${tagsHtml}
+        </div>`
+			: "";
+
 	const authorName = author ? author.replace(/^by\s+/i, "").trim() : "";
 
 	const contentHtml = `
     <article class="bk-content">
       <header class="bk-hero">
-        <div class="bk-hero-eyebrow-row">
-          <p class="bk-eyebrow">Interactive Lesson</p>
-          ${tagsHtml}
-        </div>
+        ${eyebrowRowHtml}
         <h1 style="view-transition-name: title-${lesson.meta.slug}">${escHtml(lesson.meta.title)}</h1>
         ${lesson.meta.description ? `<p class="bk-deck">${escHtml(lesson.meta.description)}</p>` : ""}
         ${

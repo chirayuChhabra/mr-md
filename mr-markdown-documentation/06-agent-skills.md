@@ -2,6 +2,9 @@
 index: 6
 title: Agent Skills
 slug: agent-skills
+description: Teach AI coding assistants to generate mathematically grounded simulations and structured lessons for mr-md.
+author: Antigravity Agentic Systems
+tags: [ai-agents, llm, prompt-engineering, automation]
 ---
 
 # Agent Skills

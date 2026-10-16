@@ -34,17 +34,18 @@ export function renderChapter(
 	const timelineHtml = renderChapterTimeline(chapter);
 
 	const breadcrumbsHtml = `
-		<span class="bk-topbar-crumb-item bk-topbar-crumb-current">
-			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-			<span>${escHtml(chapter.meta.title)}</span>
-		</span>
+		<span class="bk-topbar-crumb-item bk-topbar-crumb-current">${escHtml(chapter.meta.title)}</span>
 	`;
+
+	const eyebrowText = chapter.meta.eyebrow
+		? String(chapter.meta.eyebrow).trim()
+		: "";
 
 	const contentHtml = `
     <article class="bk-content bk-chapter-dashboard" style="max-width: 1024px; margin: 0 auto;">
       <header class="bk-hero bk-chapter-hero">
         <div class="bk-chapter-eyebrow-row">
-          <p class="bk-eyebrow">Interactive Course</p>
+          ${eyebrowText ? `<p class="bk-eyebrow">${escHtml(eyebrowText)}</p>` : `<span class="bk-eyebrow-spacer"></span>`}
           <span class="bk-chapter-lesson-counter">${totalLessons} ${totalLessons === 1 ? "Lesson" : "Lessons"}</span>
         </div>
         <h1>${escHtml(chapter.meta.title)}</h1>

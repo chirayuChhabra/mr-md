@@ -255,6 +255,7 @@ export function bkWireScrollSpy() {
 			const label = target?.link?.textContent?.trim() || "";
 			if (label && idx > 0) {
 				topbarSection.textContent = label;
+				topbarSection.setAttribute("href", `#${target.id}`);
 				topbarSection.style.display = "";
 				topbarSep.style.display = "";
 			} else {

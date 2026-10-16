@@ -115,6 +115,17 @@ export function bkWireThemeControls() {
 
 	document.addEventListener("click", (event) => {
 		const target = event.target as HTMLElement;
+		const themeToggle = target.closest<HTMLElement>("#bk-theme-toggle");
+		if (themeToggle) {
+			event.stopPropagation();
+			const current = root.getAttribute("data-theme") || "light";
+			const next = current === "dark" ? "light" : "dark";
+			localStorage.setItem("bk-theme", next);
+			updateThemeBtn(next);
+			applyThemeSetting(next);
+			bkBroadcastTheme();
+			return;
+		}
 
 		const sidebarBtn = target.closest<HTMLElement>("#bk-settings-button");
 		if (sidebarBtn) {

@@ -138,8 +138,10 @@ export interface LessonMeta {
 	description?: string;
 	tags?: string[];
 	author?: string;
+	eyebrow?: string | boolean;
 	status?: "read" | "unread" | "locked";
 	parentSlug?: string;
+	parentTitle?: string;
 	prevSlug?: string;
 	prevTitle?: string;
 	nextSlug?: string;
@@ -269,6 +271,7 @@ export interface ChapterMeta {
 	title: string;
 	slug: string;
 	description?: string;
+	eyebrow?: string | boolean;
 	status?: "completed" | "active" | "locked";
 }
 
