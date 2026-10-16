@@ -89,6 +89,7 @@ export function generateChapterContent(targetPath: string): string {
 
 	return `---
 title: ${formattedTitle}
+description: Complete guides, interactive sandbox modules, and architectural references for ${formattedTitle}.
 chapter: true
 ---
 ${listItems}

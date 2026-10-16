@@ -2,6 +2,10 @@
 index: 2
 title: Quickstart
 slug: quickstart
+description: Get up and running in seconds. From single-file markdown notes to production-ready multi-page chapters.
+author: DevEx Working Group
+tags: [getting-started, cli, workflow, setup]
+eyebrow: Fast Track
 ---
 
 # Quickstart

@@ -12,6 +12,7 @@ import {
 	bkWireCodeCopy,
 	bkWireLastLessonTracking,
 	bkWireMaximizeControls,
+	bkWireScrollProgress,
 	bkWireScrollSpy,
 	bkWireSidebarToggle,
 } from "./ui.js";
@@ -35,6 +36,7 @@ function initOnPageLoad() {
 	bkInitSimControls();
 	bkInitInteractiveFrames();
 	bkWireScrollSpy();
+	bkWireScrollProgress();
 	bkWireLastLessonTracking();
 	bkBroadcastTheme();
 }

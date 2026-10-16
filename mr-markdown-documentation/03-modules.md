@@ -2,6 +2,9 @@
 index: 3
 title: Modules and Features
 slug: modules
+description: "Deep dive into all supported blocks: Callouts, KaTeX math, GitHub Flavored Markdown, and Shiki syntax highlighting."
+author: Documentation SIG
+tags: [syntax, math, katex, shiki, callouts]
 ---
 
 # Modules and Features

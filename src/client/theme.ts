@@ -40,11 +40,13 @@ export function bkBroadcastTheme(targetWindow) {
 
 export function bkWireThemeControls() {
 	const root = document.documentElement;
-	const button = document.getElementById("bk-settings-button");
-	const panel = document.getElementById("bk-theme-panel");
-	const themeBtns = document.querySelectorAll("#bk-theme-icons button");
-	const paletteBtns = document.querySelectorAll("#bk-palette-icons button");
-	const uiBtns = document.querySelectorAll("#bk-ui-icons button");
+	const themeBtns = document.querySelectorAll(
+		".bk-theme-panel button[data-theme]",
+	);
+	const paletteBtns = document.querySelectorAll(
+		".bk-theme-panel button[data-palette]",
+	);
+	const uiBtns = document.querySelectorAll(".bk-theme-panel button[data-ui]");
 	let savedTheme = localStorage.getItem("bk-theme");
 	if (!savedTheme) savedTheme = "auto";
 	const savedPalette = localStorage.getItem("bk-palette");
@@ -111,75 +113,145 @@ export function bkWireThemeControls() {
 		if (shell) shell.setAttribute("data-ui", savedUi);
 	}
 
-	button &&
-		panel &&
-		button.addEventListener("click", (event) => {
+	document.addEventListener("click", (event) => {
+		const target = event.target as HTMLElement;
+		const themeToggle = target.closest<HTMLElement>("#bk-theme-toggle");
+		if (themeToggle) {
 			event.stopPropagation();
-			const open = panel.hasAttribute("hidden");
-			panel.hidden = !open;
-			button.setAttribute("aria-expanded", String(open));
-		});
-
-	panel?.addEventListener("click", (event) => event.stopPropagation());
-	document.addEventListener("click", () => {
-		if (!button || !panel || panel.hidden) return;
-		panel.hidden = true;
-		button.setAttribute("aria-expanded", "false");
-	});
-	document.addEventListener("keydown", (event) => {
-		if (event.key !== "Escape" || !button || !panel || panel.hidden) return;
-		panel.hidden = true;
-		button.setAttribute("aria-expanded", "false");
-		button.focus();
-	});
-
-	themeBtns.forEach((btn) => {
-		btn.addEventListener("click", () => {
-			const val = btn.dataset.theme;
-			localStorage.setItem("bk-theme", val);
-			updateThemeBtn(val);
-			applyThemeSetting(val);
+			const current = root.getAttribute("data-theme") || "light";
+			const next = current === "dark" ? "light" : "dark";
+			localStorage.setItem("bk-theme", next);
+			updateThemeBtn(next);
+			applyThemeSetting(next);
 			bkBroadcastTheme();
-		});
-	});
+			return;
+		}
 
-	paletteBtns.forEach((btn) => {
-		btn.addEventListener("click", (e) => {
-			const baseVal = btn.dataset.palette;
-			const currentVal = root.getAttribute("data-palette") || "ink";
-			let newVal = baseVal;
-
-			if (e.detail === 2) {
-				if (currentVal === proPalettes[baseVal]) {
-					newVal = baseVal;
-				} else {
-					newVal = proPalettes[baseVal];
-				}
-			} else {
-				if (currentVal === proPalettes[baseVal]) {
-					newVal = proPalettes[baseVal];
-				}
+		const sidebarBtn = target.closest<HTMLElement>("#bk-settings-button");
+		if (sidebarBtn) {
+			event.stopPropagation();
+			const p = document.getElementById("bk-theme-panel");
+			if (p) {
+				const open = p.hasAttribute("hidden");
+				p.hidden = !open;
+				sidebarBtn.setAttribute("aria-expanded", String(open));
 			}
+			return;
+		}
 
-			localStorage.setItem("bk-palette", newVal);
-			updatePaletteBtn(newVal);
-			root.setAttribute("data-palette", newVal);
-			const shell = document.querySelector(".bk-shell");
-			if (shell) shell.setAttribute("data-palette", newVal);
-			bkBroadcastTheme();
-		});
+		const topbarBtn = target.closest<HTMLElement>("#bk-topbar-settings-btn");
+		if (topbarBtn) {
+			event.stopPropagation();
+			const p = document.getElementById("bk-topbar-theme-panel");
+			if (p) {
+				const open = p.hasAttribute("hidden");
+				p.hidden = !open;
+				topbarBtn.setAttribute("aria-expanded", String(open));
+			}
+			return;
+		}
+
+		const tBtn = target.closest<HTMLElement>(
+			".bk-theme-panel button[data-theme]",
+		);
+		if (tBtn) {
+			event.stopPropagation();
+			const val = tBtn.dataset.theme;
+			if (val) {
+				localStorage.setItem("bk-theme", val);
+				updateThemeBtn(val);
+				applyThemeSetting(val);
+				bkBroadcastTheme();
+			}
+			return;
+		}
+
+		const pBtn = target.closest<HTMLElement>(
+			".bk-theme-panel button[data-palette]",
+		);
+		if (pBtn) {
+			event.stopPropagation();
+			const baseVal = pBtn.dataset.palette;
+			if (baseVal) {
+				const currentVal = root.getAttribute("data-palette") || "ink";
+				let newVal = baseVal;
+				if (event.detail === 2) {
+					newVal =
+						currentVal === proPalettes[baseVal]
+							? baseVal
+							: proPalettes[baseVal];
+				} else {
+					newVal =
+						currentVal === proPalettes[baseVal]
+							? proPalettes[baseVal]
+							: baseVal;
+				}
+				localStorage.setItem("bk-palette", newVal);
+				updatePaletteBtn(newVal);
+				root.setAttribute("data-palette", newVal);
+				const shell = document.querySelector(".bk-shell");
+				if (shell) shell.setAttribute("data-palette", newVal);
+				bkBroadcastTheme();
+			}
+			return;
+		}
+
+		const uBtn = target.closest<HTMLElement>(".bk-theme-panel button[data-ui]");
+		if (uBtn) {
+			event.stopPropagation();
+			const val = uBtn.dataset.ui;
+			if (val) {
+				localStorage.setItem("bk-ui", val);
+				updateUiBtn(val);
+				root.setAttribute("data-ui", val);
+				const shell = document.querySelector(".bk-shell");
+				if (shell) shell.setAttribute("data-ui", val);
+				bkBroadcastTheme();
+			}
+			return;
+		}
+
+		if (target.closest(".bk-theme-panel")) {
+			event.stopPropagation();
+			return;
+		}
+
+		const p1 = document.getElementById("bk-theme-panel");
+		const p2 = document.getElementById("bk-topbar-theme-panel");
+		const b1 = document.getElementById("bk-settings-button");
+		const b2 = document.getElementById("bk-topbar-settings-btn");
+		if (p1 && !p1.hidden) {
+			p1.hidden = true;
+			b1?.setAttribute("aria-expanded", "false");
+		}
+		if (p2 && !p2.hidden) {
+			p2.hidden = true;
+			b2?.setAttribute("aria-expanded", "false");
+		}
 	});
 
-	uiBtns.forEach((btn) => {
-		btn.addEventListener("click", () => {
-			const val = btn.dataset.ui;
-			localStorage.setItem("bk-ui", val);
-			updateUiBtn(val);
-			root.setAttribute("data-ui", val);
-			const shell = document.querySelector(".bk-shell");
-			if (shell) shell.setAttribute("data-ui", val);
-			bkBroadcastTheme();
-		});
+	document.addEventListener("keydown", (event) => {
+		if (event.key !== "Escape") return;
+		const p1 = document.getElementById("bk-theme-panel");
+		const p2 = document.getElementById("bk-topbar-theme-panel");
+		const b1 = document.getElementById("bk-settings-button");
+		const b2 = document.getElementById("bk-topbar-settings-btn");
+		if (p1 && !p1.hidden) {
+			p1.hidden = true;
+			b1?.setAttribute("aria-expanded", "false");
+			b1?.focus();
+		}
+		if (p2 && !p2.hidden) {
+			p2.hidden = true;
+			b2?.setAttribute("aria-expanded", "false");
+			b2?.focus();
+		}
+	});
+
+	window.addEventListener("bk-page-loaded", () => {
+		updateThemeBtn(localStorage.getItem("bk-theme") || "auto");
+		updatePaletteBtn(localStorage.getItem("bk-palette") || "ink");
+		updateUiBtn(localStorage.getItem("bk-ui") || "standard");
 	});
 
 	// Broadcast the initial theme to any iframes already present

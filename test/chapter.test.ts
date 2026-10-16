@@ -53,4 +53,39 @@ describe("Chapter Renderer", () => {
 		expect(html).toContain("No Desc");
 		expect(html).not.toContain('class="bk-deck"');
 	});
+
+	test("should render rich course dashboard stats and feature badges", () => {
+		const richChapter: Chapter = {
+			meta: {
+				title: "Interactive Physics",
+				description: "Learn physics with sims and quizzes",
+			},
+			lessons: [
+				{
+					meta: { title: "Quantum Intro", slug: "quantum-intro" },
+					blocks: [
+						{ type: "markdown", src: "Welcome to quantum mechanics. This is a very interesting field of physics." },
+						{ type: "simulation", src: "./sims/wave.js" },
+					],
+				},
+				{
+					meta: { title: "Particle Quiz", slug: "particle-quiz" },
+					blocks: [
+						{ type: "quiz", questions: [] } as any,
+					],
+				},
+			],
+		};
+		const html = renderChapter(richChapter);
+		expect(html).toContain("bk-chapter-dashboard");
+		expect(html).toContain("bk-chapter-stats-bar");
+		expect(html).toContain("<strong>2</strong> Lessons");
+		expect(html).toContain("<strong>1</strong> Simulation");
+		expect(html).toContain("<strong>1</strong> Quiz");
+		expect(html).toContain('id="bk-hero-continue-btn"');
+		expect(html).toContain("quantum-intro.html");
+		expect(html).toContain("bk-badge-sim");
+		expect(html).toContain("bk-badge-quiz");
+		expect(html).toContain("bk-timeline-node-index");
+	});
 });

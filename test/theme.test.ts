@@ -65,5 +65,19 @@ describe("simulation theme colors", () => {
 		// Hero eyebrow row and byline
 		expect(css).toContain('.bk-hero-eyebrow-row');
 		expect(css).toContain('.bk-hero-byline');
+
+		// Sticky top bar and reading progress
+		expect(css).toContain('.bk-topbar');
+		expect(css).toContain('.bk-topbar-progress-bar');
+		expect(css).toContain('.bk-backdrop');
+
+		// Chapter dashboard and hero stats
+		expect(css).toContain('.bk-chapter-hero');
+		expect(css).toContain('.bk-chapter-stats-bar');
+		expect(css).toContain('.bk-hero-start-btn');
+
+		// Neo & Playful overrides for topbar and hero
+		expect(css).toContain('html[data-ui="neo"] .bk-topbar');
+		expect(css).toContain('html[data-ui="playful"] .bk-hero-start-btn');
 	});
 });

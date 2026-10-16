@@ -27,8 +27,10 @@ const LessonFrontmatterSchema = z
 		description: z.string().optional(),
 		tags: z.array(z.string()).optional(),
 		author: z.string().optional(),
+		eyebrow: z.union([z.string(), z.boolean()]).optional(),
 		status: z.enum(["read", "unread", "locked"]).optional(),
 		parentSlug: z.string().optional(),
+		parentTitle: z.string().optional(),
 		prevSlug: z.string().optional(),
 		prevTitle: z.string().optional(),
 		nextSlug: z.string().optional(),
@@ -297,6 +299,7 @@ const ChapterFrontmatterSchema = z
 		title: z.string().optional(),
 		slug: z.string().optional(),
 		description: z.string().optional(),
+		eyebrow: z.union([z.string(), z.boolean()]).optional(),
 		status: z.enum(["completed", "active", "locked"]).optional(),
 		chapter: z.boolean().optional(),
 		type: z.string().optional(),
@@ -362,7 +365,8 @@ export function parseChapter(
 						title,
 						path.basename(fullPath),
 					);
-					lesson.meta.parentSlug = meta.slug;
+					lesson.meta.parentSlug = lesson.meta.parentSlug || meta.slug;
+					lesson.meta.parentTitle = lesson.meta.parentTitle || meta.title;
 					lessons.push(lesson);
 				} else {
 					logger.warn(`[Chapter] Warning: Lesson file not found: ${fullPath}`);
@@ -439,6 +443,10 @@ export function buildChapter(
 	const outPathDir = path.dirname(outPath);
 	if (!fs.existsSync(outPathDir)) fs.mkdirSync(outPathDir, { recursive: true });
 	fs.writeFileSync(outPath, html, "utf-8");
+	if (chapter.meta.slug && chapter.meta.slug !== "index") {
+		const aliasPath = path.join(outDir, `${chapter.meta.slug}.html`);
+		fs.writeFileSync(aliasPath, html, "utf-8");
+	}
 	if (options.standalone === false) {
 		copyAssets(outDir);
 	}

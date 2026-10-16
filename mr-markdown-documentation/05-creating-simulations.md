@@ -2,6 +2,9 @@
 index: 5
 title: Creating Simulations
 slug: creating-simulations
+description: Mount theme-aware 2D/3D JavaScript and TypeScript interactive canvas sandboxes with zero external dependencies.
+author: Graphics & Engine Team
+tags: [canvas, simulations, graphics, theme-aware]
 ---
 
 # Creating Simulations
