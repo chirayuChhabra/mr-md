@@ -149,7 +149,7 @@ function stripTypeScript(code: string): string {
 		.replace(/type\s+[A-Za-z0-9_<>,\s]+=\s*[\s\S]*?;/g, "")
 		.replace(/:\s*([A-Za-z0-9_<>[\]]+|\{[^}]*\})(?=\s*[,=);])/g, "")
 		.replace(/\s+as\s+[A-Za-z0-9_<>[\]]+/g, "")
-		.replace(/<[A-Za-z0-9_,\s]+>(?=\()/g, "");
+		.replace(/([a-zA-Z0-9_$])<[A-Za-z0-9_,\s]+>(?=\()/g, "$1");
 }
 
 // Fast Web Worker JavaScript Runner with abort signal
