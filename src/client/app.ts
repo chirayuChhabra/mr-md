@@ -5,6 +5,7 @@ import {
 } from "./interactive.js";
 import { bkWireQuizzes } from "./quiz.js";
 import { bkInitRouter } from "./router.js";
+import { bkInitCodeRunners, bkWireCodeRunners } from "./runner.js";
 import { bkInitSimControls, bkWireSimControls } from "./simulation.js";
 import { bkBroadcastTheme, bkWireThemeControls } from "./theme.js";
 import {
@@ -28,11 +29,13 @@ function wireOnce() {
 	bkWireSimControls();
 	bkWireInteractiveFrames();
 	bkWireCodeCopy();
+	bkWireCodeRunners();
 	bkWireQuizzes();
 }
 
 function initOnPageLoad() {
 	bkInitCodeCopy();
+	bkInitCodeRunners();
 	bkInitSimControls();
 	bkInitInteractiveFrames();
 	bkWireScrollSpy();
