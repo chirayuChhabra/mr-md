@@ -1,11 +1,25 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { $ } from "bun";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 
 let browser: Browser;
 let page: Page;
 
 beforeAll(async () => {
+	const htmlPath = join(
+		process.cwd(),
+		"mr-markdown-documentation",
+		"out",
+		"showcase.html",
+	);
+
+	if (!existsSync(htmlPath)) {
+		await $`bun dist/cli.js build mr-markdown-documentation`.quiet();
+	}
+
 	browser = await puppeteer.launch({
 		headless: true,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -25,7 +39,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 		"showcase.html",
 	);
 
-	await page.goto(`file://${htmlPath}`, { waitUntil: "domcontentloaded" });
+	await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "domcontentloaded" });
 
 	// 1. Verify runner component is mounted and syntax highlighted
 	await page.waitForSelector(".bk-code-runner");

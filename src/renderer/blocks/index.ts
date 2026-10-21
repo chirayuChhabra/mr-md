@@ -76,11 +76,12 @@ export function renderBlock(
 			result.html &&
 			"src" in block &&
 			typeof block.src === "string" &&
+			!block.src.includes("\n") &&
 			block.src.includes(".")
 		) {
 			result.html = result.html.replace(
 				/^<([a-zA-Z0-9-]+)([^>]*)>/,
-				`<$1 data-bk-src="${escAttr(block.src)}"$2>`,
+				(_, tag, rest) => `<${tag} data-bk-src="${escAttr(block.src)}"${rest}>`,
 			);
 		}
 		return result;

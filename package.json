@@ -24,7 +24,7 @@
     "dev:docs": "bun dist/cli.js dev mr-markdown-documentation",
     "build:docs": "bun dist/cli.js build mr-markdown-documentation",
     "typecheck": "bunx tsc --noEmit",
-    "test": "bun run build && bun test --timeout 60000 && bun run typecheck",
+    "test": "bun run build && bun run build:docs && bun test --timeout 60000 && bun run typecheck",
     "test:watch": "bun test --watch",
     "lint": "biome lint .",
     "format": "biome format --write .",
