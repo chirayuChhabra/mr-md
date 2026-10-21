@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Interactive Runnable Code Blocks (`.bk-code-runner`)**: Embed and execute live code blocks natively within Markdown lessons using the `run` or `runnable` fence flags.
+- **Client-Side Sandbox Runners (JavaScript & TypeScript)**: Execute code directly in browser-native Web Workers with circular-safe custom console streaming and TypeScript type stripping.
+- **In-Browser Python Engine**: Instantaneous zero-server Python 3 compilation and execution via Skulpt with stdlib support and runaway execution timeouts.
+- **Dual-Layer Live Syntax Highlighting**: Lightweight Prism server-side pre-tokenization and 60fps client synchronizer with pixel-perfect line numbers and synchronized scrolling.
+- **IDE Shortcuts & Editing Ergonomics**:
+  - `Cmd + /` / `Ctrl + /` line and multi-line comment toggling across 17+ programming languages with preserved native undo/redo history.
+  - Multi-line `Tab` indent and `Shift + Tab` unindent.
+  - Smart indentation on `Enter` (matching indentation and auto-indenting after `{`, `:`, `[`, `(`).
+  - Bracket & quote pair auto-wrapping and matched backspace deletion.
+- **Two-Stage Ahead-of-Time Compilation (`two-step` mode)**: Compiles C++, C, Rust, Go, Java, Zig with Wandbox, caches binary output, and provides instant machine code execution (`$ ./a.out`) to teach learners the speed difference between ahead-of-time compilation and execution.
+- **Interactive Programming Quizzes & Challenges**:
+  - Clean YAML frontmatter authoring (`challenge` flag) with `title`, `expected`, `match`, `hint`, and `stdin`, automatically parsed and stripped from the student's starter code.
+  - Support for `exact`, `regex` (for dynamic or random outputs like dice rolls), and `contains` evaluation strategies.
+  - Collapsible hint drawers, celebratory success banners, and structured expected vs. actual comparison cards.
+- **Compiled Language Challenges**: Algorithmic challenges in C++, Rust, Go, and C with single-action automated compilation, stdout capture, and compiler error diagnostics.
 - **Modern Full-Width Topbar**: Introduced a persistent top navigation bar spanning the entire width above the layout, housing breadcrumb context, navigation controls, and quick settings.
 - **Dynamic Contextual Breadcrumbs**:
   - Displays hierarchical navigation (`<Course / Chapter Title> / <Lesson Title> / <Active Section>`), dynamically resolving the parent chapter/course title (e.g. `Mr Markdown Documentation`) instead of generic placeholders.
@@ -40,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dev server HTTP logging**: Static assets (`.css`, `.js`, images, fonts, etc.) are now silenced from terminal output by default. Use `--verbose` / `-v` to restore full logging.
 
 ### Fixed
+- **Runner Code Copy Detachment**: Added an exclusion guard in `bkInitCodeCopy()` preventing global code-block copy containers from wrapping and displacing `.bk-code-runner` highlight layers.
+- **Premature Compilation Abort Bug**: Added a double-click debounce guard in two-step compilation mode and separated timeout events from manual user aborts so compiling never gets erroneously canceled.
+- **Challenge Header Cohesion**: Removed cluttered goal pills from the header, merged duplicate language and challenge tags into clean unified badges, and enforced single-line baseline alignment with `white-space: nowrap;` across all action buttons.
 - **Chapter Overview Routing**: Generated both `index.html` and `${slug}.html` on chapter builds to prevent 404 errors when navigating back from lesson breadcrumbs.
 - **Breadcrumb Hierarchy Naming**: Corrected breadcrumb parent title resolution to inherit the actual course/chapter title rather than static `"Overview"`.
 - **Router Popstate Navigation**: In-page hash navigation via browser back/forward no longer triggers a full PJAX re-fetch or page flash.
