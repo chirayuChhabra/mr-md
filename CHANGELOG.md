@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Interactive Step-by-Step Simulations (`type: "steps"`)**:
+  - Guided interactive labs with milestones, progressive objectives, LaTeX and Markdown instructions, hint drawers, and success feedback toasts.
+  - Companion `.config.json` schema with `"type": "steps"`, step definitions, target badges, and custom per-step parameters (`initialProps`).
+  - First-class custom audio asset bundling (`audio: "./path.mp3"`) with fingerprinting to `out/assets/`, alongside opt-in text-to-speech (`voice`).
+  - Dedicated step runner controls with keyboard shortcuts (`Space` to toggle play/pause, `R` to reset trial, `←` / `→` arrow keys to navigate steps, and clickable milestone progress dots).
+  - Programmatic Builder API: `lesson.steps()` and automatic routing in `lesson.lab()` when the config specifies `"type": "steps"`.
+  - Author runtime hooks: `window.bkOnStep(cb)`, `window.bkOnReset(cb)`, and flexible `window.bkCompleteStep(feedback)`.
+  - Seamless theme adaptation for Standard, Neo, and Playful design systems.
 - **Interactive Runnable Code Blocks (`.bk-code-runner`)**: Embed and execute live code blocks natively within Markdown lessons using the `run` or `runnable` fence flags.
 - **Client-Side Sandbox Runners (JavaScript & TypeScript)**: Execute code directly in browser-native Web Workers with circular-safe custom console streaming and TypeScript type stripping.
 - **In-Browser Python Engine**: Instantaneous zero-server Python 3 compilation and execution via Skulpt with stdlib support and runaway execution timeouts.

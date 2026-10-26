@@ -27,7 +27,7 @@ export function bkBroadcastTheme(targetWindow) {
 		targetWindow.postMessage({ type: "bk:theme-sync", state }, "*");
 	} else {
 		document
-			.querySelectorAll(".bk-embed-interactive iframe")
+			.querySelectorAll(".bk-embed-interactive iframe, .bk-steps-frame iframe")
 			.forEach((iframe) => {
 				if (iframe.contentWindow)
 					iframe.contentWindow.postMessage(

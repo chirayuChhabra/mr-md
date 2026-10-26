@@ -15,6 +15,7 @@ export type BlockType =
 	| "image"
 	| "columns"
 	| "quiz"
+	| "steps"
 	| "caution";
 
 export interface BaseBlock {
@@ -117,6 +118,35 @@ export interface QuizBlock extends BaseBlock, CaptionedBlock {
 	src: string; // path to .json file or inline json
 }
 
+export interface SimulationStep {
+	id?: string;
+	title?: string;
+	target?: string;
+	badge?: string;
+	instruction?: string;
+	prompt?: string;
+	voice?: string;
+	feedback?: string;
+	hint?: string;
+	audio?: string;
+	initialProps?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+}
+
+export interface StepsBlock extends BaseBlock, CaptionedBlock {
+	type: "steps";
+	src: string;
+	steps?: SimulationStep[];
+	props?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+	height?: number;
+	accent?: BlockAccent;
+	dependencies?: string[];
+	kicker?: string;
+	voice?: boolean | string;
+	audio?: boolean | string;
+}
+
 export type Block =
 	| HeadingBlock
 	| MarkdownBlock
@@ -128,7 +158,8 @@ export type Block =
 	| YouTubeBlock
 	| ImageBlock
 	| ColumnsBlock
-	| QuizBlock;
+	| QuizBlock
+	| StepsBlock;
 
 // ─── Lesson Schema ────────────────────────────────────────────────────────────
 
@@ -220,7 +251,33 @@ export interface SimulationOptions {
 	accent?: BlockAccent;
 }
 
+/** Supported simulation presentation types in .config.json */
+export type SimulationType = "block" | "steps" | "world" | string;
+
 export interface SimulationConfig extends SimulationOptions {
+	type?: SimulationType;
+	steps?: SimulationStep[];
+	kicker?: string;
+	dependencies?: string[];
+	voice?: boolean | string;
+	audio?: boolean | string;
+}
+
+export interface StepsOptions {
+	steps?: SimulationStep[];
+	props?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+	height?: number;
+	label?: string;
+	caption?: string;
+	accent?: BlockAccent;
+	kicker?: string;
+	voice?: boolean | string;
+	audio?: boolean | string;
+}
+
+export interface StepsConfig extends StepsOptions {
+	type?: SimulationType;
 	dependencies?: string[];
 }
 

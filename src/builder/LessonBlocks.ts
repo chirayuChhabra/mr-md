@@ -19,6 +19,8 @@ import type {
 	SimulationBlock,
 	SimulationConfig,
 	SimulationOptions,
+	StepsBlock,
+	StepsOptions,
 	YouTubeBlock,
 	YouTubeOptions,
 } from "../types.js";
@@ -141,6 +143,26 @@ export abstract class LessonBlocks {
 		return null;
 	}
 
+	steps(src: string, opts: StepsOptions = {}): this {
+		const fileConfig = this.loadSimulationConfig(src);
+		this.blocks.push({
+			type: "steps",
+			src,
+			label: opts.label || fileConfig?.label,
+			caption: opts.caption || fileConfig?.caption,
+			steps: opts.steps || fileConfig?.steps || [],
+			props: opts.props || fileConfig?.props,
+			tunables: opts.tunables || fileConfig?.tunables,
+			height: opts.height ?? fileConfig?.height,
+			accent: opts.accent ?? fileConfig?.accent ?? "blue",
+			dependencies: fileConfig?.dependencies,
+			kicker: opts.kicker || fileConfig?.kicker,
+			voice: opts.voice ?? fileConfig?.voice,
+			audio: opts.audio ?? fileConfig?.audio,
+		} as StepsBlock);
+		return this;
+	}
+
 	simulation(
 		src: string,
 		opts: SimulationOptions | Record<string, unknown> = {},
@@ -157,7 +179,12 @@ export abstract class LessonBlocks {
 		return this;
 	}
 
-	lab(src: string, opts: SimulationOptions = {}): this {
+	lab(src: string, opts: SimulationOptions & StepsOptions = {}): this {
+		const fileConfig = this.loadSimulationConfig(src);
+		// Opinionated: exactly ONE way to identify a step-by-step simulation ("type": "steps")
+		if (fileConfig?.type === "steps") {
+			return this.steps(src, opts);
+		}
 		return this.simulation(src, { controls: "interactive", ...opts });
 	}
 

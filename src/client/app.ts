@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 import {
 	bkInitInteractiveFrames,
 	bkWireInteractiveFrames,
@@ -7,6 +8,7 @@ import { bkWireQuizzes } from "./quiz.js";
 import { bkInitRouter } from "./router.js";
 import { bkInitCodeRunners, bkWireCodeRunners } from "./runner.js";
 import { bkInitSimControls, bkWireSimControls } from "./simulation.js";
+import { bkInitSteps, bkWireSteps } from "./steps.js";
 import { bkBroadcastTheme, bkWireThemeControls } from "./theme.js";
 import {
 	bkInitCodeCopy,
@@ -31,6 +33,7 @@ function wireOnce() {
 	bkWireCodeCopy();
 	bkWireCodeRunners();
 	bkWireQuizzes();
+	bkWireSteps();
 }
 
 function initOnPageLoad() {
@@ -38,6 +41,7 @@ function initOnPageLoad() {
 	bkInitCodeRunners();
 	bkInitSimControls();
 	bkInitInteractiveFrames();
+	bkInitSteps();
 	bkWireScrollSpy();
 	bkWireScrollProgress();
 	bkWireLastLessonTracking();
