@@ -1,5 +1,16 @@
 // @ts-nocheck
+import DOMPurify from "isomorphic-dompurify";
 import { bkThemeColors } from "./theme.js";
+
+const DOMPURIFY_CONFIG = {
+	USE_PROFILES: { mathMl: true, html: true },
+	ADD_ATTR: ["aria-hidden", "style"],
+};
+
+function safeHtml(raw: string): string {
+	if (!raw) return "";
+	return DOMPurify.sanitize(raw, DOMPURIFY_CONFIG);
+}
 
 let audioCtx: AudioContext | null = null;
 function getAudioContext(): AudioContext | null {
@@ -145,7 +156,13 @@ function stopSpeech() {
 
 function formatMessage(raw: string): string {
 	if (!raw) return "";
-	let formatted = raw.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+	const escaped = raw
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+	let formatted = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 	formatted = formatted.replace(/`([^`]+)`/g, "<code>$1</code>");
 	const win =
 		typeof window !== "undefined"
@@ -172,7 +189,7 @@ function formatMessage(raw: string): string {
 			'<span style="font-family:serif;font-style:italic;">$1</span>',
 		);
 	}
-	return formatted;
+	return safeHtml(formatted);
 }
 
 interface StepsState {
@@ -362,11 +379,15 @@ function updateStepsStep(
 	const headerBadge = card.querySelector(".bk-steps-step-badge");
 	if (headerBadge) {
 		const allSolved = state.solved.every(Boolean);
+		headerBadge.replaceChildren();
 		if (allSolved) {
-			headerBadge.innerHTML = "Completed &#10003;";
+			headerBadge.textContent = "Completed ✓";
 			headerBadge.classList.add("is-completed");
 		} else {
-			headerBadge.innerHTML = `Step <strong class="bk-step-cur">${targetIndex + 1}</strong> of ${state.steps.length}`;
+			const stepCur = document.createElement("strong");
+			stepCur.className = "bk-step-cur";
+			stepCur.textContent = String(targetIndex + 1);
+			headerBadge.append("Step ", stepCur, ` of ${state.steps.length}`);
 			headerBadge.classList.remove("is-completed");
 		}
 	}
@@ -385,7 +406,7 @@ function updateStepsStep(
 			const group = card.querySelector(".bk-steps-title-group");
 			if (group) group.appendChild(targetEl);
 		}
-		targetEl.innerHTML = targetHtml;
+		targetEl.innerHTML = safeHtml(targetHtml);
 		targetEl.style.display = "";
 	} else if (targetEl) {
 		targetEl.style.display = "none";
@@ -402,8 +423,13 @@ function updateStepsStep(
 		if (!banner) {
 			banner = document.createElement("div");
 			banner.className = "bk-steps-instruction";
-			banner.innerHTML =
-				'<span class="bk-steps-instruction-badge">What to do</span><span class="bk-steps-instruction-text"></span>';
+			const badge = document.createElement("span");
+			badge.className = "bk-steps-instruction-badge";
+			badge.textContent = "What to do";
+			const textSpan = document.createElement("span");
+			textSpan.className = "bk-steps-instruction-text";
+			banner.append(badge, textSpan);
+
 			const parentBanner = card.querySelector(".bk-steps-banner");
 			const hintPopover = card.querySelector(".bk-steps-hint-popover");
 			if (hintPopover && parentBanner) {
@@ -411,10 +437,10 @@ function updateStepsStep(
 			} else if (parentBanner) {
 				parentBanner.appendChild(banner);
 			}
-			instructionEl = banner.querySelector(".bk-steps-instruction-text");
+			instructionEl = textSpan;
 		}
 		if (instructionEl) {
-			instructionEl.innerHTML = instructionHtml;
+			instructionEl.innerHTML = safeHtml(instructionHtml);
 		}
 		banner.style.display = "";
 	} else if (banner) {
@@ -447,7 +473,9 @@ function updateStepsStep(
 		hintPopover.classList.remove("is-visible");
 		const hintContent = hintPopover.querySelector(".bk-steps-hint-content");
 		if (hintContent) {
-			hintContent.innerHTML = step.hintHtml || formatMessage(step.hint || "");
+			hintContent.innerHTML = safeHtml(
+				step.hintHtml || formatMessage(step.hint || ""),
+			);
 		}
 	}
 	if (hintBtn) {
@@ -738,7 +766,11 @@ export function bkWireSteps() {
 				}
 				const headerBadge = card.querySelector(".bk-steps-step-badge");
 				if (headerBadge) {
-					headerBadge.innerHTML = `Step <strong class="bk-step-cur">${state.currentIndex + 1}</strong> of ${state.steps.length}`;
+					headerBadge.replaceChildren();
+					const stepCur = document.createElement("strong");
+					stepCur.className = "bk-step-cur";
+					stepCur.textContent = String(state.currentIndex + 1);
+					headerBadge.append("Step ", stepCur, ` of ${state.steps.length}`);
 					headerBadge.classList.remove("is-completed");
 				}
 				const feedback = card.querySelector(
@@ -1039,13 +1071,6 @@ export function bkWireSteps() {
 				} catch {}
 			});
 
-			if (!matchedCard) {
-				const allCards = document.querySelectorAll(".bk-steps-object");
-				if (allCards.length === 1) {
-					matchedCard = allCards[0] as HTMLElement;
-				}
-			}
-
 			if (matchedCard) {
 				const card = matchedCard as HTMLElement;
 				const state = getStepsState(card);
@@ -1069,20 +1094,11 @@ export function bkWireSteps() {
 				const isLastStep = state.currentIndex >= state.steps.length - 1;
 				const allSolved = state.solved.every(Boolean);
 
-				const iframe = card.querySelector("iframe");
-				if (iframe?.contentWindow) {
-					iframe.contentWindow.postMessage({ type: "bk:pause" }, "*");
-					iframe.contentWindow.postMessage(
-						{ type: "bk:sim-play-state", playing: false },
-						"*",
-					);
-				}
-
 				const currentStep = state.steps[state.currentIndex];
 				const feedbackMsg =
-					e.data.feedback ||
-					currentStep?.feedback ||
-					"Step completed! Excellent job!";
+					typeof e.data.feedback === "string"
+						? e.data.feedback
+						: currentStep?.feedback || "Step completed! Excellent job!";
 
 				const feedback = card.querySelector(
 					".bk-steps-feedback",
@@ -1110,8 +1126,9 @@ export function bkWireSteps() {
 					".bk-steps-feedback-msg",
 				) as HTMLElement | null;
 				if (msgEl) {
-					msgEl.innerHTML =
+					const rawFeedback =
 						currentStep?.feedbackHtml || formatMessage(feedbackMsg);
+					msgEl.innerHTML = safeHtml(rawFeedback);
 				}
 
 				const nextBtn = feedback.querySelector(
@@ -1131,7 +1148,7 @@ export function bkWireSteps() {
 
 				const headerBadge = card.querySelector(".bk-steps-step-badge");
 				if (headerBadge && (isLastStep || allSolved)) {
-					headerBadge.innerHTML = "Completed &#10003;";
+					headerBadge.textContent = "Completed ✓";
 					headerBadge.classList.add("is-completed");
 				}
 
