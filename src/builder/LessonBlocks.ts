@@ -26,6 +26,7 @@ import {
 	extractYouTubeId,
 	extractYouTubeStart,
 	inferMediaKind,
+	isYouTubeUrl,
 	normalizeSimulationOptions,
 } from "./utils.js";
 
@@ -69,12 +70,7 @@ export abstract class LessonBlocks {
 			return this.video(src, opts as Omit<MediaOptions, "kind">);
 		if (lower.match(/\.(mp3|wav|ogg|m4a)$/))
 			return this.audio(src, opts as Omit<MediaOptions, "kind">);
-		if (
-			lower.includes("youtube.com") ||
-			lower.includes("youtu.be") ||
-			lower.includes("youtube-nocookie.com")
-		)
-			return this.youtube(src, opts as YouTubeOptions);
+		if (isYouTubeUrl(src)) return this.youtube(src, opts as YouTubeOptions);
 
 		return this.markdown(src);
 	}

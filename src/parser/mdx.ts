@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
 	extractYouTubeId,
 	extractYouTubeStart,
+	isYouTubeUrl,
 	normalizeSimulationOptions,
 } from "../builder/utils.js";
 import { logger } from "../cli/logger.js";
@@ -136,11 +137,7 @@ export function parseLesson(
 				flushMarkdown();
 
 				// YouTube
-				if (
-					src.includes("youtube.com") ||
-					src.includes("youtu.be") ||
-					src.includes("youtube-nocookie.com")
-				) {
+				if (isYouTubeUrl(src)) {
 					const start = extractYouTubeStart(src);
 					blocks.push({
 						type: "youtube",

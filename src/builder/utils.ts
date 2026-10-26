@@ -159,6 +159,39 @@ export function inferMediaKind(src: string): MediaBlock["kind"] {
 	);
 }
 
+const YOUTUBE_HOSTS = new Set([
+	"youtube.com",
+	"www.youtube.com",
+	"m.youtube.com",
+	"music.youtube.com",
+	"gaming.youtube.com",
+	"youtu.be",
+	"www.youtu.be",
+	"youtube-nocookie.com",
+	"www.youtube-nocookie.com",
+]);
+
+export function isYouTubeUrl(idOrUrl: string): boolean {
+	if (!idOrUrl) return false;
+	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");
+	try {
+		const parsed =
+			clean.startsWith("http://") || clean.startsWith("https://")
+				? new URL(clean)
+				: clean.startsWith("//")
+					? new URL(`https:${clean}`)
+					: new URL(`https://${clean}`);
+		const host = parsed.hostname.toLowerCase();
+		return (
+			YOUTUBE_HOSTS.has(host) ||
+			host.endsWith(".youtube.com") ||
+			host.endsWith(".youtube-nocookie.com")
+		);
+	} catch {
+		return false;
+	}
+}
+
 export function extractYouTubeId(idOrUrl: string): string {
 	if (!idOrUrl) return "";
 	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");

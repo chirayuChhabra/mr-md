@@ -8,6 +8,7 @@ import {
 	mergeOptions,
 	getCallerDir,
 	inferMediaKind,
+	isYouTubeUrl,
 	extractYouTubeId,
 	extractYouTubeStart,
 } from "../src/builder/utils.js";
@@ -134,6 +135,26 @@ describe("Builder Utilities", () => {
 		});
 		test("should throw for unknown extensions", () => {
 			expect(() => inferMediaKind("file.unknown")).toThrow(/Unsupported media type/);
+		});
+	});
+
+	describe("isYouTubeUrl", () => {
+		test("should identify valid YouTube URLs", () => {
+			expect(isYouTubeUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(true);
+			expect(isYouTubeUrl("https://youtu.be/dQw4w9WgXcQ")).toBe(true);
+			expect(isYouTubeUrl("https://youtube.com/shorts/dQw4w9WgXcQ")).toBe(true);
+			expect(isYouTubeUrl("https://www.youtube.com/live/dQw4w9WgXcQ")).toBe(true);
+			expect(isYouTubeUrl("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ")).toBe(true);
+			expect(isYouTubeUrl('"https://www.youtube.com/watch?v=dQw4w9WgXcQ"')).toBe(true);
+			expect(isYouTubeUrl("<https://www.youtube.com/watch?v=dQw4w9WgXcQ>")).toBe(true);
+		});
+		test("should reject non-YouTube or malicious URLs", () => {
+			expect(isYouTubeUrl("https://evil-youtube.com/watch?v=dQw4w9WgXcQ")).toBe(false);
+			expect(isYouTubeUrl("https://evil.com/youtube.com")).toBe(false);
+			expect(isYouTubeUrl("https://evil.com?v=youtube.com")).toBe(false);
+			expect(isYouTubeUrl("https://attacker-youtube-nocookie.com")).toBe(false);
+			expect(isYouTubeUrl("not a url")).toBe(false);
+			expect(isYouTubeUrl("")).toBe(false);
 		});
 	});
 
