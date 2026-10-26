@@ -6,6 +6,7 @@ import pc from "picocolors";
 import { z } from "zod";
 import {
 	extractYouTubeId,
+	extractYouTubeStart,
 	normalizeSimulationOptions,
 } from "../builder/utils.js";
 import { logger } from "../cli/logger.js";
@@ -124,19 +125,27 @@ export function parseLesson(
 		}
 
 		if (token.type === "paragraph") {
-			const tokens = token.tokens || [];
+			const tokens = (token.tokens || []).filter(
+				(t) => t.type !== "space" && (t.type !== "text" || t.raw.trim() !== ""),
+			);
 			if (tokens.length === 1 && tokens[0].type === "image") {
 				const img = tokens[0] as Tokens.Image;
-				const src = img.href;
+				const src = (img.href || "").trim().replace(/^["'<]+|["'>]+$/g, "");
 				const caption = img.text;
 
 				flushMarkdown();
 
 				// YouTube
-				if (src.includes("youtube.com") || src.includes("youtu.be")) {
+				if (
+					src.includes("youtube.com") ||
+					src.includes("youtu.be") ||
+					src.includes("youtube-nocookie.com")
+				) {
+					const start = extractYouTubeStart(src);
 					blocks.push({
 						type: "youtube",
 						id: extractYouTubeId(src),
+						...(start != null ? { start } : {}),
 						caption,
 					});
 					continue;

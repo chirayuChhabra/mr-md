@@ -9,6 +9,7 @@ import {
 	getCallerDir,
 	inferMediaKind,
 	extractYouTubeId,
+	extractYouTubeStart,
 } from "../src/builder/utils.js";
 import type { BuildOptions, LessonFrontmatter } from "../src/types.js";
 
@@ -140,11 +141,45 @@ describe("Builder Utilities", () => {
 		test("should extract from full URL", () => {
 			expect(extractYouTubeId("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
 		});
+		test("should extract from quoted full URL", () => {
+			expect(extractYouTubeId('"https://www.youtube.com/watch?v=dQw4w9WgXcQ"')).toBe("dQw4w9WgXcQ");
+		});
 		test("should extract from short URL", () => {
 			expect(extractYouTubeId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
 		});
+		test("should extract from short URL with share parameters", () => {
+			expect(extractYouTubeId("https://youtu.be/dQw4w9WgXcQ?si=abcdef123")).toBe("dQw4w9WgXcQ");
+		});
+		test("should extract from quoted short URL without query params", () => {
+			expect(extractYouTubeId('"https://youtu.be/dQw4w9WgXcQ"')).toBe("dQw4w9WgXcQ");
+		});
+		test("should extract from shorts URL", () => {
+			expect(extractYouTubeId("https://www.youtube.com/shorts/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+		});
+		test("should extract from live URL", () => {
+			expect(extractYouTubeId("https://www.youtube.com/live/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+		});
+		test("should extract from embed URL", () => {
+			expect(extractYouTubeId("https://www.youtube.com/embed/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+			expect(extractYouTubeId("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+		});
 		test("should return original if just an ID", () => {
 			expect(extractYouTubeId("dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+			expect(extractYouTubeId('"dQw4w9WgXcQ"')).toBe("dQw4w9WgXcQ");
+		});
+	});
+
+	describe("extractYouTubeStart", () => {
+		test("should extract seconds timestamp", () => {
+			expect(extractYouTubeStart("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=45s")).toBe(45);
+			expect(extractYouTubeStart("https://www.youtube.com/watch?v=dQw4w9WgXcQ&start=120")).toBe(120);
+		});
+		test("should extract composite timestamps", () => {
+			expect(extractYouTubeStart("https://youtu.be/dQw4w9WgXcQ?t=1m30s")).toBe(90);
+			expect(extractYouTubeStart("https://youtu.be/dQw4w9WgXcQ?t=1h2m3s")).toBe(3723);
+		});
+		test("should return undefined if no timestamp", () => {
+			expect(extractYouTubeStart("https://youtu.be/dQw4w9WgXcQ")).toBeUndefined();
 		});
 	});
 });
