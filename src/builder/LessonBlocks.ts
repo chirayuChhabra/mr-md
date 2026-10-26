@@ -24,7 +24,9 @@ import type {
 } from "../types.js";
 import {
 	extractYouTubeId,
+	extractYouTubeStart,
 	inferMediaKind,
+	isYouTubeUrl,
 	normalizeSimulationOptions,
 } from "./utils.js";
 
@@ -68,8 +70,7 @@ export abstract class LessonBlocks {
 			return this.video(src, opts as Omit<MediaOptions, "kind">);
 		if (lower.match(/\.(mp3|wav|ogg|m4a)$/))
 			return this.audio(src, opts as Omit<MediaOptions, "kind">);
-		if (lower.includes("youtube.com") || lower.includes("youtu.be"))
-			return this.youtube(src, opts as YouTubeOptions);
+		if (isYouTubeUrl(src)) return this.youtube(src, opts as YouTubeOptions);
 
 		return this.markdown(src);
 	}
@@ -205,10 +206,11 @@ export abstract class LessonBlocks {
 	}
 
 	youtube(idOrUrl: string, opts: YouTubeOptions = {}): this {
+		const start = opts.start ?? extractYouTubeStart(idOrUrl);
 		this.blocks.push({
 			type: "youtube",
 			id: extractYouTubeId(idOrUrl),
-			start: opts.start,
+			...(start != null ? { start } : {}),
 			label: opts.label,
 			caption: opts.caption,
 		} as YouTubeBlock);

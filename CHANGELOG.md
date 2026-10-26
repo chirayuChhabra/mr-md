@@ -68,6 +68,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quiz Parsing**: Added whitespace trimming prior to Base64 decoding in quiz parser to prevent decode crashes on untrimmed markup.
 - **Clipboard Fallback**: Added a document fallback copy mechanism for non-secure / HTTP environments where `navigator.clipboard` is unavailable.
 - **YouTube Embed Interactivity**: Removed intrusive global mousemove blur handler from YouTube embeds.
+- **YouTube URL Parser**: Resolved video ID corruption when URLs are quoted or contain trailing quotes/hash fragments, ensuring both standard watch URLs (`youtube.com/watch?v=...`) and short URLs (`youtu.be/...`) embed reliably.
+- **YouTube Timestamps & Formats**: Supported timestamp/start offsets (`?t=...`, `&start=...`), live stream URLs (`youtube.com/live/...`), and YouTube Shorts across the parser and builder.
 - **Router prefetch**: `prefetchLink` no longer attempts to prefetch the current page when hovering in-page hash (`#`) anchor links.
 
 ## [4.0.0-alpha.1] - 2026-09-24

@@ -159,18 +159,97 @@ export function inferMediaKind(src: string): MediaBlock["kind"] {
 	);
 }
 
+const YOUTUBE_HOSTS = new Set([
+	"youtube.com",
+	"www.youtube.com",
+	"m.youtube.com",
+	"music.youtube.com",
+	"gaming.youtube.com",
+	"youtu.be",
+	"www.youtu.be",
+	"youtube-nocookie.com",
+	"www.youtube-nocookie.com",
+]);
+
+export function isYouTubeUrl(idOrUrl: string): boolean {
+	if (!idOrUrl) return false;
+	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");
+	try {
+		const parsed =
+			clean.startsWith("http://") || clean.startsWith("https://")
+				? new URL(clean)
+				: clean.startsWith("//")
+					? new URL(`https:${clean}`)
+					: new URL(`https://${clean}`);
+		const host = parsed.hostname.toLowerCase();
+		return (
+			YOUTUBE_HOSTS.has(host) ||
+			host.endsWith(".youtube.com") ||
+			host.endsWith(".youtube-nocookie.com")
+		);
+	} catch {
+		return false;
+	}
+}
+
 export function extractYouTubeId(idOrUrl: string): string {
-	const watch = idOrUrl.match(/[?&]v=([^&]+)/);
+	if (!idOrUrl) return "";
+	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");
+
+	const watch = clean.match(/[?&]v=([^&?#/"'\s]+)/);
 	if (watch) return watch[1];
 
-	const short = idOrUrl.match(/youtu\.be\/([^?&/]+)/);
+	const short = clean.match(/youtu\.be\/([^?&#/"'\s]+)/);
 	if (short) return short[1];
 
-	const embed = idOrUrl.match(/youtube\.com\/embed\/([^?&/]+)/);
+	const embed = clean.match(
+		/(?:youtube\.com|youtube-nocookie\.com)\/embed\/([^?&#/"'\s]+)/,
+	);
 	if (embed) return embed[1];
 
-	const shorts = idOrUrl.match(/youtube\.com\/shorts\/([^?&/]+)/);
+	const shorts = clean.match(/youtube\.com\/shorts\/([^?&#/"'\s]+)/);
 	if (shorts) return shorts[1];
 
-	return idOrUrl;
+	const live = clean.match(/youtube\.com\/live\/([^?&#/"'\s]+)/);
+	if (live) return live[1];
+
+	const legacy = clean.match(/youtube\.com\/v\/([^?&#/"'\s]+)/);
+	if (legacy) return legacy[1];
+
+	return clean;
+}
+
+export function extractYouTubeStart(idOrUrl: string): number | undefined {
+	if (!idOrUrl) return undefined;
+	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");
+	const match = clean.match(/[?&#](?:t|start)=([^&#"'\s]+)/);
+	if (!match) return undefined;
+
+	const val = match[1];
+	if (/^\d+s?$/i.test(val)) {
+		return parseInt(val, 10);
+	}
+
+	let totalSeconds = 0;
+	let parsed = false;
+
+	const hours = val.match(/(\d+)h/i);
+	if (hours) {
+		totalSeconds += parseInt(hours[1], 10) * 3600;
+		parsed = true;
+	}
+
+	const minutes = val.match(/(\d+)m/i);
+	if (minutes) {
+		totalSeconds += parseInt(minutes[1], 10) * 60;
+		parsed = true;
+	}
+
+	const seconds = val.match(/(\d+)s/i);
+	if (seconds) {
+		totalSeconds += parseInt(seconds[1], 10);
+		parsed = true;
+	}
+
+	return parsed ? totalSeconds : undefined;
 }
