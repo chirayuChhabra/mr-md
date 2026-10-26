@@ -144,7 +144,7 @@ export function parseLesson(
 
 				const ext = path.extname(src).toLowerCase();
 
-				// Simulation
+				// Simulation or Step-by-Step Simulation
 				if (ext === ".ts" || ext === ".js") {
 					let fileConfig = null;
 					try {
@@ -152,14 +152,34 @@ export function parseLesson(
 							options.contentBase || callerDir,
 							src,
 						);
-						const configPath = `${ext.length > 0 ? resolved.slice(0, -ext.length) : resolved}.config.json`;
+						const configPath = `${resolved.slice(0, -ext.length)}.config.json`;
 						if (fs.existsSync(configPath)) {
 							fileConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 						}
 					} catch (e: unknown) {
 						logger.warn(
-							`Failed to load simulation config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
+							`Failed to load config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
 						);
+					}
+
+					// Opinionated: exactly ONE way to define a step-by-step simulation ("type": "steps")
+					if (fileConfig?.type === "steps") {
+						blocks.push({
+							type: "steps",
+							src,
+							label: fileConfig?.label || caption,
+							caption: fileConfig?.caption,
+							steps: fileConfig?.steps || [],
+							props: fileConfig?.props,
+							tunables: fileConfig?.tunables,
+							height: fileConfig?.height,
+							accent: fileConfig?.accent ?? "blue",
+							dependencies: fileConfig?.dependencies,
+							kicker: fileConfig?.kicker,
+							voice: fileConfig?.voice,
+							audio: fileConfig?.audio,
+						});
+						continue;
 					}
 
 					const normalized = normalizeSimulationOptions(

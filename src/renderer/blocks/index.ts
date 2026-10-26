@@ -11,6 +11,7 @@ import { renderMedia } from "./media.js";
 import { renderQuiz } from "./quiz.js";
 import { renderSection } from "./section.js";
 import { renderSimulation } from "./simulation.js";
+import { renderSteps } from "./steps.js";
 import { escAttr, escHtml } from "./utils.js";
 import { renderYouTube } from "./youtube.js";
 
@@ -57,6 +58,12 @@ export function renderBlockInner(
 			);
 		case "quiz":
 			return renderQuiz(block, idx, options);
+		case "steps":
+			return renderSteps(
+				block as Extract<Block, { type: "steps" }>,
+				idx,
+				options,
+			);
 		default:
 			logger.warn(
 				`Unknown block type encountered: ${"type" in block ? (block as { type: string }).type : "unknown"}`,
