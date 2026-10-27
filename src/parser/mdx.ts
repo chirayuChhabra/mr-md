@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
 	extractYouTubeId,
 	normalizeSimulationOptions,
+	normalizeWorldOptions,
 } from "../builder/utils.js";
 import { logger } from "../cli/logger.js";
 import type {
@@ -160,6 +161,26 @@ export function parseLesson(
 						logger.warn(
 							`Failed to load simulation config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
 						);
+					}
+
+					const isWorld =
+						src.endsWith(".world.js") ||
+						src.endsWith(".world.ts") ||
+						fileConfig?.type === "world";
+
+					if (isWorld) {
+						const normalized = normalizeWorldOptions(
+							{ caption },
+							480,
+							fileConfig,
+						);
+						blocks.push({
+							type: "world",
+							src,
+							dependencies: fileConfig?.dependencies,
+							...normalized,
+						} as Extract<Block, { type: "world" }>);
+						continue;
 					}
 
 					const normalized = normalizeSimulationOptions(
