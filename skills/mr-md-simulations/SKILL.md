@@ -119,12 +119,23 @@ Embed it with Markdown image syntax:
 ![Explore how orbital speed changes the path](./sims/orbit.js)
 ```
 
-For the builder API, use `.lab()` for an interactive simulation:
+For an explorable World simulation, use `.world.js` or tag the caption with `(world)`:
+
+```markdown
+![Explore the Stellar Horizon (world)](./sims/cosmos.world.js)
+```
+
+For the builder API, use `.lab()` for an interactive simulation, or `.world()` for an explorable world simulation:
 
 ```ts
 lesson.lab("./sims/orbit.ts", {
   label: "Orbital Motion",
   caption: "Drag the body and vary its initial speed.",
+});
+
+lesson.world("./sims/cosmos.world.ts", {
+  label: "Stellar Horizon",
+  caption: "Pan across space, zoom into planetary wells, and fly with WASD.",
 });
 ```
 

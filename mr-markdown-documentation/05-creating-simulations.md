@@ -162,3 +162,93 @@ canvas.addEventListener("pointermove", (e) => {
 
 ### `window.bkFitCanvas(canvas, requestedW, requestedH, options)`
 If you are doing custom canvas rendering (like WebGL instead of the 2D context provided by `bkSetup`), call this manually to apply the CSS scaling transforms needed to make your canvas responsive inside the `mr-md` layout container.
+
+---
+
+## 5. Explorable World Simulations
+
+While standard simulations act as inline parameter laboratories, **World Simulations** represent an entirely new medium in `mr-md`: **living, explorable realities**.
+
+Instead of a static box, readers encounter an unboxed physical portal cutting directly into the document. Holding the portal initiates a cinematic traversal that transports the reader seamlessly into full-viewport immersion.
+
+### Three Self-Contained World Styles (Config-Driven)
+
+Each simulation configures its portal aesthetic directly in its `.config.json` file:
+* **Minimalist** (`"portal": "minimal"`, default): A clean, modern framed container with subtle borders and sleek progress indicator. Smooth, professional geometric morph into the viewport.
+* **Cosmic Wormhole** (`"portal": "wormhole"`): A freestanding Einstein-Rosen spatial gateway with shimmering Einstein ring, exotic plasma vortex, 3D parallax destination starfield, and relativistic hyperspace transit.
+* **Retro Pixel Matrix** (`"portal": "pixel"`): Stepped retro 8-bit frame with arcade-style segmented energy bar, live de-pixelating mosaic resolution, and digital warp tunnel.
+* **Modular Extensibility (`bkRegisterWorldTransition`)**: Authors can register custom transition shaders or canvases cleanly at runtime without modifying engine code.
+
+### Integrated Top Bar Immersion UX
+
+* **Persistent Header & Breadcrumbs**: The top navigation bar remains cleanly pinned above the simulation. Breadcrumbs dynamically append the simulation's title (e.g. `Chapter / Lesson / Stellar Dynamics World`).
+* **Header Close Button**: An integrated `×` icon button sits right next to the dark/light mode toggle in the top bar. You can toggle color themes or exit immersion with a single click.
+* **Reverse Exit**: Clicking the close button or pressing `Escape` reverses the traversal smoothly back into the document at the exact scroll position.
+
+### Authoring a World Simulation
+
+Authors use standard Markdown image notation:
+
+```markdown
+![Stellar Dynamics World](./sims/cosmos.world.js)
+```
+
+In the sibling `cosmos.world.config.json`, simply specify `"type": "world"` and your chosen portal style:
+
+```json
+{
+  "type": "world",
+  "portal": "wormhole",
+  "dependencies": ["three"]
+}
+```
+
+### 1. Minimalist Standard (`portal: "minimal"`)
+
+A sleek, architectural card matching the reading column with an interactive aperture and smooth geometric expansion:
+
+![Orbital Mechanics](./sims/minimal.world.js)
+
+---
+
+### 2. Cosmic Wormhole (`portal: "wormhole"`)
+
+A freestanding Einstein-Rosen bridge cutting directly through spacetime, with an iridescent Einstein ring caustic, exotic matter stabilization vortex, and volumetric 3D hyperspace traversal:
+
+> [!TIP]
+> **Cosmic Wormhole World:** Hold down anywhere on the wormhole below to initiate the relativistic traversal and plunge through hyperspace into the explorable universe!
+
+![Stellar Dynamics World](./sims/cosmos.world.js)
+
+---
+
+### 3. Retro Pixel Matrix (`portal: "pixel"`)
+
+A stepped retro 8-bit matrix frame with de-pixelating mosaic resolution and cyber warp tunnel:
+
+> [!TIP]
+> **Pixel Matrix World:** Hold anywhere on the cyber frame below to charge the matrix and enter the quantum realm!
+
+![Quantum Pixel Matrix](./sims/matrix.world.js)
+
+### World Script Example
+
+```javascript
+// cosmos.world.js
+window.bkSetupWorld(function(ctx, world) {
+  // world.camera has { x, y, zoom }
+  // world.props has live configuration props
+  // world.isWorld is true when expanded into full-view immersion
+  
+  // Clear canvas
+  ctx.fillStyle = window.bkColor("bg");
+  ctx.fillRect(-2000, -2000, 4000, 4000);
+
+  // Draw your world at (0, 0)
+  ctx.fillStyle = window.bkColor("accent");
+  ctx.beginPath();
+  ctx.arc(0, 0, 40, 0, Math.PI * 2);
+  ctx.fill();
+});
+```
+

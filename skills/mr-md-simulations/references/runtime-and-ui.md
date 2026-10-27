@@ -129,6 +129,32 @@ Fits a custom canvas and configures its bitmap. Most 2D simulations should use
 `bkSetup`; call `bkFitCanvas` directly only for a custom rendering path such as
 WebGL.
 
+### `window.bkSetupWorld(loopFn)`
+
+Bootstraps an **explorable World simulation** (`.world.js` or `type: "world"`).
+Provides an infinite spatial canvas, automatic high-DPI scaling, and camera
+management:
+
+```js
+window.bkSetupWorld(function(ctx, world) {
+  // world: { width, height, camera: { x, y, zoom }, isWorld: boolean, props }
+  // Center of world (0, 0) is automatically placed at viewport center.
+  // Panning (drag), zooming (wheel), and flying (WASD) are applied automatically.
+});
+```
+
+### `window.bkWorld`
+
+When inside an explorable World simulation, `window.bkWorld` provides camera
+telemetry and coordinate transformation functions:
+
+- `camera`: `{ x: number, y: number, zoom: number }`
+- `toWorld(clientX, clientY)`: converts screen coordinates to world units
+- `toScreen(worldX, worldY)`: converts world coordinates to screen pixels
+- `resetCamera()`: restores camera to origin and 1.0x zoom
+- `setCamera(x, y, zoom)`: programmatically moves the world camera
+- `active`: boolean indicating whether the reader is in full-screen immersion
+
 ### Theme helpers
 
 `bkColor(name)` returns a synchronized theme color. Current names are:
@@ -193,14 +219,18 @@ Inside the mr-md repository:
 | Builder entry points | `src/builder/LessonBlocks.ts` |
 | Markdown image detection | `src/parser/mdx.ts` |
 | Host block and iframe creation | `src/renderer/blocks/simulation.ts` |
+| World block creation & portal | `src/renderer/blocks/world.ts` |
 | Injected canvas/runtime API | `src/renderer/blocks/iframe.ts` |
 | Generated controls | `src/renderer/markdown/controls.ts` |
 | Control-to-prop messages | `src/client/simulation.ts` |
+| World portal expansion controller | `src/client/world.ts` |
 | Activation and pause behavior | `src/client/interactive.ts` |
 | Synchronized token names | `src/client/theme.ts` |
 
 Useful examples:
 
+- `mr-markdown-documentation/sims/cosmos.world.js`
+- `mr-markdown-documentation/sims/cosmos.world.config.json`
 - `mr-markdown-documentation/sims/pathfinder.js`
 - `mr-markdown-documentation/sims/pathfinder.config.json`
 - `mr-markdown-documentation/sims/qcd.js`
