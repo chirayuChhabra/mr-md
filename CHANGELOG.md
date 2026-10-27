@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-platform browser opener**: `openBrowser(url)` helper in `src/cli/utils.ts` using the appropriate OS command (`open`, `xdg-open`, `start`).
 
 ### Changed
+- **Dependencies Update**:
+  - Upgraded `katex` to `^0.19.1` and updated KaTeX CSS CDN link in page templates to `0.19.1`.
+  - Upgraded `isomorphic-dompurify` to `^4.6.0`, `marked` to `^18.1.2`, `shiki` to `^4.5.0`, and `zod` to `^4.6.7`.
+  - Upgraded dev dependencies: `@biomejs/biome` to `^2.6.3`, `@types/node` to `^26.6.5`, `lint-staged` to `^17.6.0`, and `puppeteer` to `^25.16.0`.
 - **Unified Sidebar Across All Pages**: Restored consistent sidebar navigation on the course/chapter dashboard (`index.html`), maintaining uniform layout and muscle memory across both lesson reading and course browsing.
 - **Motionless Topbar Controls**: Enforced stable, motionless hover and active states (`transform: none`, no jump or spring cubic-bezier) on topbar icon buttons across standard, neo, and playful themes.
 - **Playful UI Layout Alignment**: Removed the radius gap between playful sidebar and topbar, rendering sidebar flush against the topbar border for a cohesive visual structure.
