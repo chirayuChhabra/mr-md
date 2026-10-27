@@ -3085,3 +3085,1289 @@ html[data-theme='dark'] .shiki span,
     text-decoration: var(--shiki-dark-text-decoration) !important;
   }
 }
+
+/* ==========================================================================
+   IMMERSIVE SIMULATION WORLDS — WORMHOLE THEME TOKENS
+   All theme-specific world portal customizations are consolidated here.
+   Editing this single section adapts all world portals across UI modes.
+   ========================================================================== */
+
+:root,
+html[data-ui="standard"],
+.bk-shell[data-ui="standard"] {
+	--bk-world-btn-bg: rgba(15, 23, 42, 0.72);
+	--bk-world-btn-border: 1px solid rgba(56, 189, 248, 0.4);
+	--bk-world-btn-radius: 999px;
+	--bk-world-btn-color: #f8fafc;
+	--bk-world-stage-bg: radial-gradient(ellipse at 50% 50%, #0c152d 0%, #060914 65%, #020409 100%);
+	--bk-world-exit-bg: rgba(15, 23, 42, 0.88);
+	--bk-world-exit-border: 1px solid rgba(255, 255, 255, 0.2);
+	--bk-world-exit-radius: 24px;
+	--bk-world-exit-color: #ffffff;
+	--bk-wormhole-glow: rgba(56, 189, 248, 0.6);
+	--bk-wormhole-accent: #38bdf8;
+	--bk-wormhole-meter-bg: rgba(255, 255, 255, 0.12);
+	--bk-wormhole-meter-bar: #22d3ee;
+}
+
+html[data-ui="neo"],
+.bk-shell[data-ui="neo"] {
+	--bk-world-btn-bg: var(--accent);
+	--bk-world-btn-border: 2px solid var(--ink);
+	--bk-world-btn-radius: 0px;
+	--bk-world-btn-color: var(--ink);
+	--bk-world-stage-bg: #000000;
+	--bk-world-exit-bg: var(--accent);
+	--bk-world-exit-border: 2px solid var(--ink);
+	--bk-world-exit-radius: 0px;
+	--bk-world-exit-color: var(--ink);
+	--bk-wormhole-glow: var(--accent);
+	--bk-wormhole-accent: var(--accent);
+	--bk-wormhole-meter-bg: rgba(255, 255, 255, 0.2);
+	--bk-wormhole-meter-bar: var(--accent);
+}
+
+html[data-ui="playful"],
+.bk-shell[data-ui="playful"] {
+	--bk-world-btn-bg: var(--accent);
+	--bk-world-btn-border: 2px solid color-mix(in srgb, var(--paper) 70%, transparent);
+	--bk-world-btn-radius: 999px;
+	--bk-world-btn-color: #ffffff;
+	--bk-world-stage-bg: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 30%, #150928) 0%, #07030e 100%);
+	--bk-world-exit-bg: var(--accent);
+	--bk-world-exit-border: 2px solid color-mix(in srgb, var(--paper) 70%, transparent);
+	--bk-world-exit-radius: 999px;
+	--bk-world-exit-color: #ffffff;
+	--bk-wormhole-glow: #e879f9;
+	--bk-wormhole-accent: #f472b6;
+	--bk-wormhole-meter-bg: rgba(255, 255, 255, 0.2);
+	--bk-wormhole-meter-bar: #f472b6;
+}
+
+/* ==========================================================================
+   IMMERSIVE SIMULATION WORLDS — ARCHITECTURAL CARDS & STAGE STYLES
+   ========================================================================== */
+
+figure.bk-object.bk-object--world {
+	position: relative;
+	margin: 36px auto !important;
+	padding: 0 !important;
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	overflow: visible !important;
+	width: 100%;
+	max-width: 760px;
+}
+
+figure.bk-object.bk-object--world:focus-within {
+	border-color: transparent !important;
+}
+
+figure.bk-object--world.bk-world--active {
+	z-index: 100000 !important;
+}
+
+figure.bk-object--world figcaption,
+figure.bk-object--world .bk-caption {
+	display: none !important;
+}
+
+/* ==========================================================================
+   ARCHITECTURAL CARD SYSTEM
+   ========================================================================== */
+
+.bk-world-card {
+	position: relative;
+	border-radius: 12px;
+	overflow: hidden;
+	background: var(--paper);
+	border: 1px solid var(--line);
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 1. MINIMAL: Refined Architectural Card Portal (Matches Callout Scale & Geometry, 720px × ~128px) */
+figure.bk-object.bk-object--world[data-portal="minimal"] {
+	margin: 28px 0 !important;
+	width: 100% !important;
+	max-width: 720px !important;
+}
+
+.bk-world-card--minimal.bk-world-portal {
+	position: relative;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	width: 100% !important;
+	max-width: 720px !important;
+	aspect-ratio: auto !important;
+	height: auto !important;
+	min-height: 126px !important;
+	box-sizing: border-box;
+	border-radius: var(--radius, 10px) !important;
+	border: 1px solid var(--line) !important;
+	background: var(--panel) !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px -2px rgba(0, 0, 0, 0.04) !important;
+	padding: 24px 26px !important;
+	gap: 20px !important;
+	cursor: pointer;
+	user-select: none;
+	overflow: hidden;
+	transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+	outline: none !important;
+	text-decoration: none;
+	transform: none !important;
+}
+
+[data-theme="dark"] .bk-world-card--minimal.bk-world-portal,
+:root[data-theme="dark"] .bk-world-card--minimal.bk-world-portal,
+.bk-shell[data-theme="dark"] .bk-world-card--minimal.bk-world-portal {
+	background: color-mix(in srgb, var(--panel) 90%, var(--bg, #000000)) !important;
+	border-color: var(--line) !important;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* No card hover elevation or border flash — stays calm */
+.bk-world-card--minimal.bk-world-portal:hover,
+.bk-world-card--minimal.bk-world-portal:focus-visible {
+	transform: none !important;
+}
+
+.bk-world-card--minimal.bk-world-portal:active {
+	transform: none !important;
+}
+
+figure.bk-wormhole--charging .bk-world-card--minimal.bk-world-portal {
+	border-color: var(--accent) !important;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 8px 30px color-mix(in srgb, var(--accent) 22%, transparent) !important;
+}
+
+/* Left Focal Aperture / Lens */
+.bk-world-lens {
+	flex-shrink: 0;
+	width: 72px;
+	height: 72px;
+	border-radius: 12px;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, var(--paper) 60%, var(--panel));
+	border: 1px solid var(--line);
+	color: var(--muted);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+	overflow: hidden;
+	transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-theme="dark"] .bk-world-lens,
+:root[data-theme="dark"] .bk-world-lens,
+.bk-shell[data-theme="dark"] .bk-world-lens {
+	background: color-mix(in srgb, var(--panel) 70%, var(--bg, #000000));
+	border-color: var(--line);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.bk-lens-ambient {
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 22%, transparent) 0%, transparent 72%);
+	opacity: 0.5;
+	transition: opacity 0.3s ease;
+	pointer-events: none;
+}
+
+figure.bk-wormhole--charging .bk-world-lens {
+	border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+	color: var(--ink);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+figure.bk-wormhole--charging .bk-lens-ambient {
+	opacity: 1;
+}
+
+.bk-world-lens-svg {
+	width: 48px;
+	height: 48px;
+	display: block;
+	position: relative;
+	z-index: 1;
+}
+
+.bk-lens-orbit-1 {
+	transform-origin: 24px 24px;
+	transition: transform 0.6s ease;
+}
+
+.bk-lens-orbit-2 {
+	transform-origin: 24px 24px;
+	transition: transform 0.6s ease;
+}
+
+figure.bk-wormhole--charging .bk-lens-orbit-1 {
+	transform: rotate(35deg);
+}
+
+figure.bk-wormhole--charging .bk-lens-orbit-2 {
+	transform: rotate(-35deg);
+}
+
+/* Middle Typographic Content */
+.bk-world-card-body {
+	flex-grow: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 5px;
+	text-align: left;
+}
+
+.bk-world-card-kicker {
+	display: flex;
+	align-items: center;
+	margin-bottom: 2px;
+}
+
+.bk-world-kicker-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	padding: 2.5px 8px;
+	border-radius: 4px;
+	line-height: 1.3;
+}
+
+.bk-world-kicker-dot {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--accent);
+	display: inline-block;
+	box-shadow: 0 0 6px var(--accent);
+}
+
+.bk-world-card-title {
+	font-size: 18.5px !important;
+	font-weight: 600 !important;
+	color: var(--ink) !important;
+	letter-spacing: -0.018em !important;
+	margin: 0 !important;
+	line-height: 1.3 !important;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.bk-world-card-sub {
+	font-size: 13.5px !important;
+	color: var(--muted) !important;
+	margin: 0 !important;
+	line-height: 1.45 !important;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Right Tactile Hold Trigger Dial (Hover effect isolated strictly to this element) */
+.bk-world-hold-trigger {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 16px 10px 12px;
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--paper) 70%, var(--panel));
+	border: 1px solid var(--line);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+	cursor: pointer;
+	transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.bk-world-hold-trigger:hover {
+	border-color: var(--line-strong, color-mix(in srgb, var(--accent) 50%, var(--line)));
+	background: var(--paper);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	transform: translateY(-1px);
+}
+
+figure.bk-wormhole--charging .bk-world-hold-trigger {
+	border-color: var(--accent);
+	background: var(--paper);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 10px color-mix(in srgb, var(--accent) 25%, transparent);
+	transform: none;
+}
+
+.bk-world-hold-dial {
+	width: 38px;
+	height: 38px;
+	position: relative;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.bk-world-hold-ring {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+	transform: rotate(-90deg);
+}
+
+.bk-world-hold-track {
+	fill: none;
+	stroke: color-mix(in srgb, var(--line) 90%, transparent);
+	stroke-width: 2.4;
+}
+
+.bk-world-hold-progress {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 2.6;
+	stroke-linecap: round;
+	stroke-dasharray: 94.25;
+	stroke-dashoffset: 94.25;
+	transition: stroke-dashoffset 0.03s linear;
+}
+
+.bk-world-hold-arrow-svg {
+	position: relative;
+	z-index: 1;
+	width: 15px;
+	height: 15px;
+	display: block;
+	pointer-events: none;
+}
+
+.bk-world-hold-arrow {
+	stroke: var(--muted);
+	stroke-width: 2.2;
+	transition: stroke 0.15s ease, transform 0.2s ease;
+}
+
+.bk-world-hold-trigger:hover .bk-world-hold-arrow {
+	stroke: var(--accent);
+	transform: translateX(1.5px);
+}
+
+figure.bk-wormhole--charging .bk-world-hold-arrow {
+	stroke: var(--accent);
+}
+
+.bk-world-hold-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	text-align: left;
+}
+
+.bk-world-hold-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ink);
+	line-height: 1.25;
+	white-space: nowrap;
+	transition: color 0.15s ease;
+}
+
+.bk-world-hold-trigger:hover .bk-world-hold-label {
+	color: var(--accent);
+}
+
+.bk-world-hold-hint {
+	font-size: 11px;
+	color: var(--muted);
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+/* Responsive adjustments for Minimal World Card */
+@media (max-width: 600px) {
+	.bk-world-card--minimal.bk-world-portal {
+		padding: 16px 16px !important;
+		gap: 14px !important;
+		min-height: 96px !important;
+	}
+	.bk-world-lens {
+		width: 52px;
+		height: 52px;
+	}
+	.bk-world-lens-svg {
+		width: 36px;
+		height: 36px;
+	}
+	.bk-world-card-title {
+		font-size: 16px !important;
+	}
+	.bk-world-card-sub {
+		font-size: 12px !important;
+	}
+	.bk-world-hold-trigger {
+		padding: 6px 10px 6px 8px;
+		gap: 8px;
+	}
+	.bk-world-hold-dial {
+		width: 32px;
+		height: 32px;
+	}
+	.bk-world-hold-ring {
+		width: 32px;
+		height: 32px;
+	}
+	.bk-world-hold-hint {
+		display: none;
+	}
+}
+
+html[data-ui="playful"] .bk-world-card--minimal.bk-world-portal {
+	border-radius: 20px !important;
+	border-width: 2.5px !important;
+	box-shadow: 0 4px 0 0 var(--line), 0 12px 24px rgba(0, 0, 0, 0.06) !important;
+}
+html[data-ui="playful"] .bk-world-lens {
+	border-radius: 14px !important;
+}
+html[data-ui="playful"] .bk-world-hold-trigger {
+	border-radius: 12px !important;
+}
+
+/* 2. WORMHOLE: FREESTANDING EINSTEIN-ROSEN GATEWAY (NO BOX!) */
+.bk-wormhole-standalone {
+	position: relative;
+	width: 100%;
+	max-width: 620px;
+	margin: 44px auto;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	overflow: visible !important;
+}
+
+.bk-world-portal--wormhole {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 16 / 10 !important;
+	border-radius: 0 !important;
+	overflow: visible !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	border: none !important;
+	cursor: pointer;
+	user-select: none;
+	touch-action: none;
+	outline: none !important;
+	transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.bk-world-portal--wormhole,
+.bk-world-portal--wormhole:focus,
+.bk-world-portal--wormhole:focus-visible,
+.bk-world-portal--wormhole:active {
+	box-shadow: none !important;
+	outline: none !important;
+	border: none !important;
+}
+
+.bk-world-portal--wormhole:focus-visible .bk-wormhole-console {
+	box-shadow: 0 0 0 2px var(--accent), 0 12px 32px rgba(0, 0, 0, 0.18) !important;
+	outline: none !important;
+}
+
+figure.bk-wormhole--charging .bk-world-portal--wormhole {
+	transform: scale(1.06);
+}
+
+.bk-wormhole-hud {
+	position: absolute;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 10;
+	pointer-events: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: max-content;
+	max-width: 90%;
+}
+
+.bk-wormhole-console {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 34px;
+	padding: 0 16px;
+	border-radius: 9999px !important;
+	background: color-mix(in srgb, var(--paper) 80%, transparent);
+	backdrop-filter: blur(20px) saturate(180%);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+	box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+	outline: none !important;
+	transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+}
+
+[data-theme="dark"] .bk-wormhole-console,
+:root[data-theme="dark"] .bk-wormhole-console {
+	background: rgba(15, 20, 28, 0.76);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	box-shadow: 0 6px 22px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+	outline: none !important;
+}
+
+figure.bk-wormhole--charging .bk-wormhole-console {
+	border-color: var(--accent) !important;
+	box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 35%, transparent), 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+	outline: none !important;
+}
+
+.bk-wormhole-title {
+	font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+	font-size: 13px;
+	font-weight: 550;
+	letter-spacing: -0.01em;
+	color: var(--ink);
+	white-space: nowrap;
+	line-height: 1;
+}
+
+[data-theme="dark"] .bk-wormhole-title,
+:root[data-theme="dark"] .bk-wormhole-title {
+	color: #f1f5f9;
+}
+
+.bk-wormhole-sep {
+	color: var(--muted);
+	opacity: 0.35;
+	font-size: 11px;
+	line-height: 1;
+	user-select: none;
+}
+
+.bk-wormhole-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.bk-wormhole-progress-ring {
+	display: block;
+	flex-shrink: 0;
+}
+
+.bk-wormhole-rim-track {
+	fill: none;
+	stroke: color-mix(in srgb, var(--line) 85%, transparent);
+	stroke-width: 2.2;
+}
+
+[data-theme="dark"] .bk-wormhole-rim-track,
+:root[data-theme="dark"] .bk-wormhole-rim-track {
+	stroke: rgba(255, 255, 255, 0.18);
+}
+
+.bk-wormhole-rim-progress {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 2.4;
+	stroke-linecap: round;
+	transform: rotate(-90deg);
+	transform-origin: 10px 10px;
+	stroke-dasharray: 50.265;
+	stroke-dashoffset: 50.265;
+	transition: stroke-dashoffset 0.05s linear;
+}
+
+.bk-wormhole-charge-state {
+	font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+	font-size: 12px;
+	font-weight: 450;
+	letter-spacing: 0;
+	color: var(--muted);
+	white-space: nowrap;
+	line-height: 1;
+	transition: color 0.2s ease;
+}
+
+[data-theme="dark"] .bk-wormhole-charge-state,
+:root[data-theme="dark"] .bk-wormhole-charge-state {
+	color: #94a3b8;
+}
+
+figure.bk-wormhole--charging .bk-wormhole-charge-state,
+[data-theme="dark"] figure.bk-wormhole--charging .bk-wormhole-charge-state {
+	color: var(--accent);
+	font-weight: 550;
+}
+
+/* 3. PIXEL: Arched Baroque Pixel Art Window Gateway */
+.bk-pixel-gateway {
+	position: relative;
+	width: 100%;
+	max-width: 360px;
+	margin: 24px auto;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.bk-pixel-window-frame {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 528 / 860;
+}
+
+.bk-pixel-frame-img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	pointer-events: none;
+	z-index: 2;
+	image-rendering: pixelated;
+	image-rendering: -moz-crisp-edges;
+	image-rendering: crisp-edges;
+}
+
+.bk-world-portal--pixel {
+	position: absolute !important;
+	left: 27.08% !important;
+	top: 33.72% !important;
+	width: 46.21% !important;
+	height: 51.28% !important;
+	border-radius: 50% 50% 0 0 / 22% 22% 0 0 !important;
+	overflow: hidden !important;
+	z-index: 1 !important;
+	background: #070818 !important;
+	cursor: pointer;
+	outline: none !important;
+	box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.9) !important;
+	transition: filter 0.25s ease !important;
+}
+
+.bk-pixel-gateway:hover .bk-world-portal--pixel,
+figure.bk-wormhole--charging .bk-world-portal--pixel {
+	filter: brightness(1.2) contrast(1.1);
+}
+
+.bk-pixel-footer {
+	margin-top: 14px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	z-index: 5;
+}
+
+.bk-pixel-label {
+	margin: 0 !important;
+	font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
+	font-size: 15px !important;
+	font-weight: 600 !important;
+	line-height: 1.35 !important;
+	color: var(--ink) !important;
+	letter-spacing: -0.015em !important;
+	text-transform: none !important;
+	text-align: center;
+}
+
+/* Minimalist Precision Viewport Overlays & Telemetry */
+.bk-minimal-telemetry {
+	position: absolute;
+	z-index: 4;
+	pointer-events: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-family: var(--font-mono, monospace);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	color: var(--muted);
+	user-select: none;
+	opacity: 0.75;
+}
+
+.bk-minimal-telemetry--tl { top: 12px; left: 16px; }
+.bk-minimal-telemetry--tr { top: 12px; right: 16px; }
+.bk-minimal-telemetry--bl { bottom: 12px; left: 16px; }
+.bk-minimal-telemetry--br { bottom: 12px; right: 16px; }
+
+.bk-minimal-crosshair {
+	color: var(--accent);
+	font-weight: 700;
+}
+
+.bk-minimal-live-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #10b981;
+	box-shadow: 0 0 6px #10b981;
+}
+
+.bk-minimal-tag {
+	font-size: 10px;
+	line-height: 1;
+}
+
+/* Minimalist Glass Box Center Prompt */
+.bk-minimal-glass-overlay {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	background: transparent;
+	z-index: 3;
+	pointer-events: none;
+}
+
+.bk-minimal-glass-prompt {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 22px 10px 16px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--paper) 70%, transparent);
+	backdrop-filter: blur(20px);
+	-webkit-backdrop-filter: blur(20px);
+	border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+	color: var(--ink);
+	font-size: 14px;
+	font-weight: 500;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+	transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bk-world-portal--minimal:hover .bk-minimal-glass-prompt,
+figure.bk-wormhole--charging .bk-minimal-glass-prompt {
+	border-color: var(--accent);
+	box-shadow: 0 6px 24px color-mix(in srgb, var(--accent) 25%, transparent);
+	transform: scale(1.04);
+}
+
+/* ==========================================================================
+   INTEGRATED CARD HEADER
+   ========================================================================== */
+
+.bk-world-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--line);
+	background: color-mix(in srgb, var(--paper) 94%, var(--ink) 2%);
+	user-select: none;
+}
+
+.bk-world-card--wormhole .bk-world-header {
+	background: rgba(8, 14, 28, 0.95);
+	border-bottom-color: rgba(56, 189, 248, 0.16);
+}
+
+.bk-world-card--pixel .bk-world-header {
+	background: rgba(3, 8, 20, 0.95);
+	border-bottom-color: rgba(16, 185, 129, 0.2);
+}
+
+.bk-world-header-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.bk-world-badge {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 2px 7px;
+	border-radius: 4px;
+	flex-shrink: 0;
+	line-height: 1.4;
+}
+
+.bk-world-badge--minimal {
+	background: color-mix(in srgb, var(--ink) 8%, transparent);
+	color: var(--muted);
+}
+
+.bk-world-badge--wormhole {
+	background: rgba(56, 189, 248, 0.14);
+	color: #38bdf8;
+	border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.bk-world-badge--pixel {
+	background: rgba(16, 185, 129, 0.14);
+	color: #10b981;
+	border: 1px solid rgba(16, 185, 129, 0.28);
+	font-family: var(--font-mono, monospace);
+}
+
+.bk-world-label {
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--ink);
+	margin: 0;
+	line-height: 1.3;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.bk-world-card--wormhole .bk-world-label {
+	color: #f1f5f9;
+}
+
+.bk-world-card--pixel .bk-world-label {
+	color: var(--ink);
+	font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+	letter-spacing: -0.01em;
+}
+
+.bk-world-header-right {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.bk-world-status-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11.5px;
+	color: var(--muted);
+}
+
+.bk-world-card--wormhole .bk-world-status-indicator {
+	color: rgba(255, 255, 255, 0.55);
+}
+
+.bk-world-card--pixel .bk-world-status-indicator {
+	color: rgba(16, 185, 129, 0.7);
+	font-family: var(--font-mono, monospace);
+}
+
+.bk-world-status-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #10b981;
+	box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.bk-world-card--wormhole .bk-world-status-dot {
+	background: #38bdf8;
+	box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+}
+
+/* ==========================================================================
+   VIEWPORT PORTAL STAGE
+   ========================================================================== */
+
+.bk-world-portal {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	cursor: pointer;
+	user-select: none;
+	touch-action: none;
+	background: #000000;
+	outline: none !important;
+}
+
+.bk-world-portal:focus-visible {
+	box-shadow: inset 0 0 0 2px var(--accent) !important;
+}
+
+.bk-world-stage {
+	display: none !important;
+}
+
+.bk-world-canvas,
+.bk-wormhole-canvas,
+.bk-pixel-canvas,
+.bk-minimal-canvas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+	pointer-events: none;
+	z-index: 2;
+}
+
+/* ==========================================================================
+   PRECISION DIAL HUD (BOTTOM-RIGHT GLASS DIAL)
+   ========================================================================== */
+
+.bk-world-hud {
+	position: absolute;
+	bottom: 12px;
+	right: 12px;
+	z-index: 10;
+	pointer-events: none;
+}
+
+.bk-world-hud-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 10px 4px 6px;
+	border-radius: 999px;
+	background: rgba(15, 23, 42, 0.82);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	color: #f8fafc;
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.bk-world-portal--pixel .bk-world-hud-pill {
+	border-radius: 4px;
+	border-color: rgba(16, 185, 129, 0.3);
+	color: #10b981;
+	font-family: var(--font-mono, monospace);
+}
+
+.bk-world-hud-dial {
+	display: block;
+	transform: rotate(-90deg);
+	color: #f8fafc;
+}
+
+.bk-world-hud-dial-track {
+	fill: none;
+	stroke: rgba(255, 255, 255, 0.2);
+	stroke-width: 2.2;
+}
+
+.bk-world-hud-dial-fill {
+	fill: none;
+	stroke: var(--accent, #38bdf8);
+	stroke-width: 2.2;
+	stroke-linecap: round;
+	stroke-dasharray: 62.83;
+	stroke-dashoffset: 62.83;
+	transition: stroke-dashoffset 0.05s linear;
+}
+
+.bk-world-portal--pixel .bk-world-hud-dial-fill {
+	stroke: #10b981;
+}
+
+.bk-world-hud-dial-arrow {
+	transform: rotate(90deg);
+	transform-origin: 14px 14px;
+	stroke: #f8fafc;
+}
+
+.bk-world-portal--pixel .bk-world-hud-dial-arrow {
+	stroke: #10b981;
+}
+
+/* ==========================================================================
+   OPTICAL VIEWPORT OVERLAYS (MINIMAL, WORMHOLE, PIXEL)
+   ========================================================================== */
+
+/* 1. Minimal Optical Viewfinder */
+.bk-minimal-viewfinder {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 3;
+}
+
+.bk-vf-corner {
+	position: absolute;
+	width: 14px;
+	height: 14px;
+	border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+	border-style: solid;
+	transition: border-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bk-vf-corner--tl { top: 12px; left: 12px; border-width: 1px 0 0 1px; }
+.bk-vf-corner--tr { top: 12px; right: 12px; border-width: 1px 1px 0 0; }
+.bk-vf-corner--bl { bottom: 12px; left: 12px; border-width: 0 0 1px 1px; }
+.bk-vf-corner--br { bottom: 12px; right: 12px; border-width: 0 1px 1px 0; }
+
+.bk-world-portal--minimal:hover .bk-vf-corner,
+figure.bk-wormhole--charging .bk-vf-corner {
+	border-color: var(--accent);
+	transform: scale(0.92);
+}
+
+.bk-vf-crosshair {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 12px;
+	height: 12px;
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	opacity: 0.22;
+	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.bk-vf-crosshair::before,
+.bk-vf-crosshair::after {
+	content: '';
+	position: absolute;
+	background: var(--ink);
+}
+.bk-vf-crosshair::before {
+	top: 5px;
+	left: 0;
+	width: 12px;
+	height: 1px;
+}
+.bk-vf-crosshair::after {
+	top: 0;
+	left: 5px;
+	width: 1px;
+	height: 12px;
+}
+.bk-world-portal--minimal:hover .bk-vf-crosshair {
+	opacity: 0.55;
+}
+figure.bk-wormhole--charging .bk-vf-crosshair {
+	opacity: 0.85;
+	transform: translate(-50%, -50%) scale(1.3);
+}
+
+
+/* 3. High-Density Micro-Dot Voxel Matrix */
+.bk-pixel-matrix-grid {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 3;
+	background-image: radial-gradient(
+		circle,
+		rgba(255, 255, 255, 0.16) 1px,
+		transparent 1px
+	);
+	background-size: 8px 8px;
+	opacity: 0.65;
+	mix-blend-mode: overlay;
+	transition: opacity 0.2s ease;
+}
+
+.bk-pixel-telemetry {
+	position: absolute;
+	top: 10px;
+	left: 12px;
+	z-index: 5;
+	pointer-events: none;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.bk-pixel-tag {
+	font-family: var(--font-mono, monospace);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	color: rgba(255, 255, 255, 0.7);
+	background: rgba(0, 0, 0, 0.55);
+	padding: 2px 7px;
+	border-radius: 3px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	text-transform: uppercase;
+}
+
+.bk-world-hud--pixel {
+	position: relative;
+	bottom: auto;
+	right: auto;
+	z-index: 10;
+	pointer-events: none;
+	display: flex;
+	justify-content: center;
+}
+
+.bk-pixel-charge-state {
+	font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	color: var(--muted);
+	background: color-mix(in srgb, var(--paper) 60%, var(--panel));
+	border: 1px solid var(--line);
+	padding: 4px 12px;
+	border-radius: 6px;
+	display: inline-block;
+	transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.bk-pixel-gateway:hover .bk-pixel-charge-state {
+	color: var(--ink);
+	border-color: var(--line-strong, var(--line));
+	background: var(--paper);
+}
+
+figure.bk-wormhole--charging .bk-pixel-charge-state {
+	color: var(--accent);
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+	box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ==========================================================================
+   TOPBAR INTEGRATION & PIXEL-PERFECT EXIT BUTTON ALIGNMENT
+   ========================================================================== */
+
+body.bk-world-immersive .bk-topbar {
+	position: relative !important;
+	width: 100% !important;
+	height: 48px !important;
+	z-index: 100005 !important;
+	background: color-mix(in srgb, var(--paper) 92%, transparent) !important;
+	backdrop-filter: blur(20px) !important;
+	-webkit-backdrop-filter: blur(20px) !important;
+	border-bottom: 1px solid var(--line) !important;
+}
+
+.bk-topbar-btn.bk-world-exit-topbar-btn {
+	width: 32px;
+	height: 32px;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	display: inline-grid;
+	place-items: center;
+	border-radius: 6px;
+	border: 1px solid var(--line);
+	background: var(--paper);
+	color: var(--muted);
+	cursor: pointer;
+	line-height: 1;
+	transform: none !important;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.bk-topbar-btn.bk-world-exit-topbar-btn[hidden] {
+	display: none !important;
+}
+
+.bk-topbar-btn.bk-world-exit-topbar-btn:hover {
+	color: #ef4444 !important;
+	border-color: color-mix(in srgb, #ef4444 35%, var(--line)) !important;
+	background: color-mix(in srgb, #ef4444 10%, var(--paper)) !important;
+	transform: none !important;
+}
+
+.bk-world-crumb-item {
+	font-weight: 600;
+	color: var(--ink);
+}
+
+/* ==========================================================================
+   FULLSCREEN WORLD IMMERSION — UNDER TOPBAR
+   ========================================================================== */
+
+.bk-world-fullscreen {
+	display: none;
+}
+
+.bk-world-fullscreen.bk-world--active,
+.bk-world-fullscreen.bk-world--flying,
+.bk-object--world.bk-world--active .bk-world-fullscreen {
+	display: block !important;
+	position: fixed !important;
+	top: 48px !important;
+	left: 0 !important;
+	right: 0 !important;
+	bottom: 0 !important;
+	width: 100vw !important;
+	height: calc(100vh - 48px) !important;
+	z-index: 100000 !important;
+	background: #03050a !important;
+	transform: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	border: none !important;
+	overflow: hidden !important;
+}
+
+.bk-world-fullscreen.bk-world--flying {
+	background: transparent !important;
+}
+
+.bk-world-fullscreen.bk-world--exiting {
+	opacity: 0 !important;
+	transform: scale(0.96) !important;
+	transition: opacity 0.16s ease-out, transform 0.16s ease-out !important;
+	pointer-events: none !important;
+}
+
+.bk-world-flight-overlay {
+	position: fixed;
+	top: 48px;
+	left: 0;
+	width: 100vw;
+	height: calc(100vh - 48px);
+	pointer-events: none;
+	z-index: 100003 !important;
+	display: none;
+}
+
+.bk-world-fullscreen.bk-world--flying .bk-world-flight-overlay {
+	display: block;
+}
+
+.bk-world-flight-canvas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+.bk-world-frame-slot {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 100001 !important;
+}
+
+.bk-world-frame-slot iframe {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	border: none;
+	display: block;
+}
