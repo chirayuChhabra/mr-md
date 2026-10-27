@@ -1,0 +1,6 @@
+{
+  "type": "world",
+  "portal": "wormhole",
+  "label": "Stellar Dynamics World",
+  "caption": "An explorable gravitational multi-body system. Hold to enter wormhole."
+}
