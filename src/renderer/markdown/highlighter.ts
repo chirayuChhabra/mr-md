@@ -5,6 +5,7 @@ import {
 	createHighlighter,
 	type Highlighter,
 } from "shiki";
+import { mrMdShikiTheme } from "./syntax-theme.js";
 
 export let shiki: Highlighter | undefined;
 
@@ -153,10 +154,12 @@ export function normalizeLanguage(lang?: string): string {
 	return LANGUAGE_ALIASES[raw] || raw;
 }
 
+export const SHIKI_THEME_NAME = "mr-md";
+
 export async function initHighlighter(): Promise<Highlighter> {
 	if (!shiki) {
 		shiki = await createHighlighter({
-			themes: ["github-dark", "github-light"],
+			themes: [mrMdShikiTheme],
 			langs: COMMON_LANGUAGES,
 		});
 	}

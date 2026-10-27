@@ -3,3 +3,4 @@ export * from "./controls.js";
 export * from "./highlighter.js";
 export * from "./math.js";
 export * from "./sanitize.js";
+export * from "./syntax-theme.js";
