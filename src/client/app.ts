@@ -16,6 +16,7 @@ import {
 	bkWireScrollSpy,
 	bkWireSidebarToggle,
 } from "./ui.js";
+import { bkInitWorldPortals, bkWireWorldPortals } from "./world.js";
 
 function wireOnce() {
 	if (window.__bk_wired_once) return;
@@ -29,12 +30,14 @@ function wireOnce() {
 	bkWireInteractiveFrames();
 	bkWireCodeCopy();
 	bkWireQuizzes();
+	bkWireWorldPortals();
 }
 
 function initOnPageLoad() {
 	bkInitCodeCopy();
 	bkInitSimControls();
 	bkInitInteractiveFrames();
+	bkInitWorldPortals();
 	bkWireScrollSpy();
 	bkWireScrollProgress();
 	bkWireLastLessonTracking();
