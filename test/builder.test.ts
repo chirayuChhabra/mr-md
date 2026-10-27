@@ -147,4 +147,46 @@ describe("Builder Utilities", () => {
 			expect(extractYouTubeId("dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
 		});
 	});
+
+	describe("LessonBlocks.world", () => {
+		test("should append a WorldBlock", async () => {
+			const { LessonBlocks } = await import("../src/builder/LessonBlocks.js");
+			class ConcreteLesson extends LessonBlocks {
+				public get contentBase() {
+					return testDir;
+				}
+				public getBlocks() {
+					return this.blocks;
+				}
+			}
+			const lesson = new ConcreteLesson();
+			lesson.world("deep-space.world.ts", { label: "Deep Space" });
+			const blocks = lesson.getBlocks();
+			expect(blocks.length).toBe(1);
+			expect(blocks[0].type).toBe("world");
+			expect((blocks[0] as any).label).toBe("Deep Space");
+			expect((blocks[0] as any).src).toBe("deep-space.world.ts");
+		});
+
+		test("simulation() delegates to WorldBlock if config type is world", async () => {
+			const { LessonBlocks } = await import("../src/builder/LessonBlocks.js");
+			const simConfigPath = path.join(testDir, "star-field.config.json");
+			fs.writeFileSync(simConfigPath, JSON.stringify({ type: "world", portal: "wormhole" }));
+
+			class ConcreteLesson extends LessonBlocks {
+				public get contentBase() {
+					return testDir;
+				}
+				public getBlocks() {
+					return this.blocks;
+				}
+			}
+			const lesson = new ConcreteLesson();
+			lesson.simulation("star-field.js", { label: "Star Field" });
+			const blocks = lesson.getBlocks();
+			expect(blocks.length).toBe(1);
+			expect(blocks[0].type).toBe("world");
+			expect((blocks[0] as any).portal).toBe("wormhole");
+		});
+	});
 });

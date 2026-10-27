@@ -6,6 +6,9 @@ import type {
 	MediaBlock,
 	SimulationConfig,
 	SimulationOptions,
+	WorldConfig,
+	WorldOptions,
+	WorldPortalType,
 } from "../types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,6 +150,45 @@ export function normalizeSimulationOptions(
 		caption: inline.caption ?? fileConfig?.caption,
 		controls: inline.controls ?? fileConfig?.controls ?? "interactive",
 		accent: inline.accent ?? fileConfig?.accent ?? "blue",
+	};
+}
+
+export function normalizeWorldOptions(
+	opts: WorldOptions | Record<string, unknown> = {},
+	legacyHeight = 480,
+	fileConfig: WorldConfig | null = null,
+): WorldOptions {
+	let inline: WorldOptions;
+	const optionKeys = [
+		"props",
+		"tunables",
+		"height",
+		"label",
+		"caption",
+		"accent",
+		"portal",
+	];
+	const looksLikeOptions = Object.keys(opts).every((key) =>
+		optionKeys.includes(key),
+	);
+
+	if (!looksLikeOptions) {
+		inline = { props: opts as Record<string, unknown> };
+	} else {
+		inline = opts as WorldOptions;
+	}
+
+	const portal: WorldPortalType =
+		inline.portal ?? fileConfig?.portal ?? "minimal";
+
+	return {
+		props: { ...(fileConfig?.props ?? {}), ...(inline.props ?? {}) },
+		tunables: inline.tunables ?? fileConfig?.tunables,
+		height: inline.height ?? fileConfig?.height ?? legacyHeight,
+		label: inline.label ?? fileConfig?.label,
+		caption: inline.caption ?? fileConfig?.caption,
+		accent: inline.accent ?? fileConfig?.accent ?? "blue",
+		portal,
 	};
 }
 
