@@ -5,13 +5,14 @@ import * as path from "path";
 
 import { renderQuiz } from "../src/renderer/blocks/quiz.js";
 import { renderSimulation } from "../src/renderer/blocks/simulation.js";
+import { renderWorld } from "../src/renderer/blocks/world.js";
 import { iframeDoc } from "../src/renderer/blocks/iframe.js";
 import { renderAnimation } from "../src/renderer/blocks/animation.js";
 import { renderMedia } from "../src/renderer/blocks/media.js";
 import { renderHeading } from "../src/renderer/blocks/heading.js";
 import { renderSection } from "../src/renderer/blocks/section.js";
 import { renderImage } from "../src/renderer/blocks/image.js";
-import type { BuildOptions, QuizBlock, SimulationBlock, AnimationBlock, MediaBlock, HeadingBlock, SectionBlock, ImageBlock } from "../src/types.js";
+import type { BuildOptions, QuizBlock, SimulationBlock, WorldBlock, AnimationBlock, MediaBlock, HeadingBlock, SectionBlock, ImageBlock } from "../src/types.js";
 
 describe("Block Renderers", () => {
 	let testDir: string;
@@ -109,6 +110,83 @@ describe("Block Renderers", () => {
 			const result = renderSimulation(block, 0, options);
 
 			expect(result.html).toContain('{&quot;test&quot;:123}');
+		});
+	});
+
+	describe("renderWorld", () => {
+		test("should render an explorable world portal with three distinct styles (minimal, wormhole, pixel)", () => {
+			const worldPath = path.join(testDir, "cosmos.world.ts");
+			fs.writeFileSync(worldPath, "console.log('cosmos world');");
+
+			// 1. Pixel style
+			const blockPixel: WorldBlock = {
+				type: "world",
+				src: "cosmos.world.ts",
+				label: "Quantum Matrix",
+				props: { gravity: 9.8 },
+				portal: "pixel",
+			};
+			const resultPixel = renderWorld(blockPixel, 0, options);
+			expect(resultPixel.html).toContain("bk-object--world");
+			expect(resultPixel.html).toContain("bk-world-portal");
+			expect(resultPixel.html).toContain('data-portal="pixel"');
+			expect(resultPixel.html).toContain("bk-pixel-aperture");
+			expect(resultPixel.html).toContain("bk-world-fullscreen");
+			expect(resultPixel.html).toContain("bk-world-frame-template");
+			expect(resultPixel.html).toContain("Quantum Matrix");
+
+			// 2. Minimal style (default)
+			const blockMinimal: WorldBlock = {
+				type: "world",
+				src: "cosmos.world.ts",
+				label: "Standard Model",
+			};
+			const resultMinimal = renderWorld(blockMinimal, 1, options);
+			expect(resultMinimal.html).toContain('data-portal="minimal"');
+			expect(resultMinimal.html).toContain("bk-minimal-aperture");
+			expect(resultMinimal.html).toContain("bk-world-card--minimal");
+
+			// 3. Wormhole style
+			const blockWormhole: WorldBlock = {
+				type: "world",
+				src: "cosmos.world.ts",
+				label: "Cosmic Singularity",
+				portal: "wormhole",
+			};
+			const resultWormhole = renderWorld(blockWormhole, 2, options);
+			expect(resultWormhole.html).toContain('data-portal="wormhole"');
+			expect(resultWormhole.html).toContain("bk-wormhole-aperture");
+			expect(resultWormhole.html).toContain("bk-wormhole-canvas");
+		});
+
+		test("should inject world iframe runtime with edge-to-edge canvas and exit bridge", () => {
+			const doc = iframeDoc("console.log('world');", '{"stars": 500}', true, undefined, true);
+			expect(doc).toContain("window.__isWorld=true");
+			expect(doc).toContain("window.bkSetup");
+			expect(doc).toContain("window.bkSetupWorld");
+			expect(doc).toContain("window.bkWorld");
+			expect(doc).toContain("toWorld");
+			expect(doc).toContain("toScreen");
+			expect(doc).toContain("resetCamera");
+			expect(doc).toContain("bk:world-exit");
+		});
+
+		test("should support standalone data URI and assets src for pixel portal frame", () => {
+			const worldPath = path.join(testDir, "pixel.world.ts");
+			fs.writeFileSync(worldPath, "console.log('pixel');");
+
+			const block: WorldBlock = {
+				type: "world",
+				src: "pixel.world.ts",
+				label: "Pixel Matrix",
+				portal: "pixel",
+			};
+
+			const nonStandalone = renderWorld(block, 3, { ...options, standalone: false });
+			expect(nonStandalone.html).toContain('src="assets/pixel-portal-frame.png"');
+
+			const standalone = renderWorld(block, 4, { ...options, standalone: true });
+			expect(standalone.html).toContain('src="data:image/png;base64,');
 		});
 	});
 

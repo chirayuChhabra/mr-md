@@ -143,6 +143,13 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
       </nav>
     </div>
     <div class="bk-topbar-right">
+      <button class="bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn" id="bk-world-exit-topbar-btn" type="button" aria-label="Exit Simulation" title="Exit Simulation (Esc)" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        <span class="bk-sr-only">Exit Simulation</span>
+      </button>
       <button class="bk-icon-btn bk-topbar-btn bk-theme-toggle" id="bk-theme-toggle" type="button" aria-label="Toggle color theme" title="Toggle dark/light mode">
         <svg class="bk-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
         <svg class="bk-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
