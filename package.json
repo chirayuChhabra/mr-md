@@ -52,29 +52,29 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
-    "@biomejs/cli-darwin-arm64": "2.5.14",
+    "@biomejs/biome": "^2.6.3",
+    "@biomejs/cli-darwin-arm64": "2.6.3",
     "@types/katex": "^0.16.8",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "@types/prismjs": "^1.26.6",
     "husky": "^9.1.7",
-    "lint-staged": "^17.5.1",
-    "puppeteer": "^25.12.0",
+    "lint-staged": "^17.6.0",
+    "puppeteer": "^25.16.0",
     "typescript": "^7.0.2"
   },
   "dependencies": {
     "@11ty/gray-matter": "^3.0.0",
     "boxen": "^9.0.0",
     "consola": "^3.4.2",
-    "isomorphic-dompurify": "^4.3.0",
-    "katex": "^0.18.9",
-    "marked": "^18.0.14",
+    "isomorphic-dompurify": "^4.6.0",
+    "katex": "^0.19.1",
+    "marked": "^18.1.2",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1",
     "prismjs": "^1.30.0",
-    "shiki": "^4.4.3",
+    "shiki": "^4.5.0",
     "tinyclip": "^1.0.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "overrides": {
     "undici": "^7.28.0"

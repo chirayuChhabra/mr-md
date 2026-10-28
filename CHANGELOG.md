@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-platform browser opener**: `openBrowser(url)` helper in `src/cli/utils.ts` using the appropriate OS command (`open`, `xdg-open`, `start`).
 
 ### Changed
+- **Dependencies Update**:
+  - Upgraded `katex` to `^0.19.1` and updated KaTeX CSS CDN link in page templates to `0.19.1`.
+  - Upgraded `isomorphic-dompurify` to `^4.6.0`, `marked` to `^18.1.2`, `shiki` to `^4.5.0`, and `zod` to `^4.6.7`.
+  - Upgraded dev dependencies: `@biomejs/biome` to `^2.6.3`, `@types/node` to `^26.6.5`, `lint-staged` to `^17.6.0`, and `puppeteer` to `^25.16.0`.
 - **Code Block Typography & Aesthetic Parity**:
   - Aligned typography metrics between `.bk-code-block pre` and `.bk-code-runner`: `font-size: 13.5px`, `line-height: 1.6`, and `tab-size: 2`.
   - Aligned code block header bars to `min-height: 44px`, `padding: 8px 14px`, and glass background tint across both static code blocks and runners.
