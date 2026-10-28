@@ -1233,15 +1233,42 @@ hr.bk-divider,
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 8px 16px;
+	padding: 8px 14px;
+	gap: 12px;
+	min-height: 44px;
+	box-sizing: border-box;
 	background: color-mix(in srgb, var(--bg) 60%, transparent);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-	border-bottom: 1px solid var(--line);
-	font-family: var(--font-sans);
-	font-size: 13px;
-	font-weight: 500;
-	color: var(--muted);
+	border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+	user-select: none;
+}
+.bk-code-header-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	flex-wrap: nowrap;
+	overflow: hidden;
+}
+.bk-code-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+.bk-code-badge.lang,
+.bk-code-badge.bk-code-lang,
+.bk-code-lang {
+	text-transform: uppercase;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.6px;
+	padding: 2px 8px;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--accent) 15%, transparent);
+	color: var(--accent);
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .bk-code-label {
@@ -1250,13 +1277,6 @@ hr.bk-divider,
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-.bk-code-lang {
-	text-transform: uppercase;
-	text-align: right;
-	font-size: 11px;
-	letter-spacing: 0.5px;
-	opacity: 0.7;
 }
 .bk-code-scroll {
 	padding: 0;
@@ -1283,8 +1303,10 @@ hr.bk-divider,
 	padding: 16px;
 	overflow: auto;
 	font-family: var(--font-mono);
-	font-size: 14px;
+	font-size: 13.5px;
 	line-height: 1.6;
+	tab-size: 2;
+	-moz-tab-size: 2;
 	font-variant-ligatures: contextual;
 	-webkit-font-smoothing: antialiased;
 }
@@ -1294,76 +1316,41 @@ hr.bk-divider,
 .bk-code-block code {
 	border: none;
 	padding: 0;
-	font-size: 14px;
-}
-.bk-code-block code:not(.hljs) {
+	font-size: 13.5px;
+	line-height: inherit;
 	background: transparent;
 	color: var(--text-code);
-}
-.hljs {
-	background: transparent;
-	color: var(--text-code);
-}
-.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link {
-	color: var(--accent);
-}
-.hljs-function .hljs-keyword {
-	color: var(--accent);
-}
-.hljs-subst {
-	color: var(--text-code);
-}
-.hljs-string, .hljs-title, .hljs-name, .hljs-type, .hljs-attribute, .hljs-symbol, .hljs-bullet, .hljs-addition, .hljs-variable, .hljs-template-tag, .hljs-template-variable {
-	color: color-mix(in srgb, var(--accent) 70%, var(--ink));
-}
-.hljs-comment, .hljs-quote, .hljs-deletion, .hljs-meta {
-	color: var(--muted);
-}
-.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-title, .hljs-section, .hljs-doctag, .hljs-type, .hljs-name, .hljs-strong {
-	font-weight: bold;
-}
-.hljs-emphasis {
-	font-style: italic;
-}
-.hljs-number, .hljs-built_in, .hljs-builtin-name, .hljs-params {
-	color: color-mix(in srgb, var(--accent) 85%, var(--ink));
-}
-.hljs-attr {
-	color: color-mix(in srgb, var(--accent) 50%, var(--text-code));
-}
-.hljs-property {
-	color: color-mix(in srgb, var(--accent) 60%, var(--text-code));
 }
 
 .bk-copy-btn {
 	position: absolute;
 	top: 8px;
 	right: 8px;
-	width: 30px;
-	height: 30px;
-	display: grid;
-	place-items: center;
-	border: 1px solid transparent;
-	background: transparent;
+	width: 28px;
+	height: 28px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+	background: color-mix(in srgb, var(--bg) 80%, transparent);
 	color: var(--muted);
 	border-radius: 6px;
 	cursor: pointer;
 	opacity: 1;
-	transition: all 0.2s ease;
+	transition: all 0.15s ease;
 	z-index: 10;
 }
 
-.bk-code-block:hover .bk-copy-btn {
-	opacity: 1;
+.bk-code-header .bk-copy-btn,
+.bk-runner-header .bk-copy-btn {
+	position: static;
+	background: transparent;
 }
 
 .bk-copy-btn:hover {
 	background: color-mix(in srgb, var(--ink) 8%, transparent);
 	color: var(--ink);
-}
-.bk-code-block:has(.bk-code-header) .bk-copy-btn {
-	top: 4px;
-	right: 4px;
+	border-color: var(--line-strong);
 }
 .bk-copy-btn.copied {
 	color: #61b58d;
@@ -1553,6 +1540,7 @@ hr.bk-divider,
 	flex-shrink: 0;
 }
 .bk-reset-btn,
+.bk-code-header .bk-copy-btn,
 .bk-runner-header .bk-copy-btn {
 	position: static;
 	display: inline-flex;
@@ -1565,11 +1553,11 @@ hr.bk-divider,
 	background: transparent;
 	color: var(--muted);
 	border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-	border-radius: 6px;
 	cursor: pointer;
 	transition: all 0.15s ease;
 }
 .bk-reset-btn:hover,
+.bk-code-header .bk-copy-btn:hover,
 .bk-runner-header .bk-copy-btn:hover {
 	background: color-mix(in srgb, var(--ink) 8%, transparent);
 	color: var(--ink);
@@ -1674,8 +1662,12 @@ hr.bk-divider,
 	color: var(--muted);
 	font-style: italic;
 }
-.token.punctuation {
+.token.punctuation,
+.token.interpolation-punctuation {
 	color: var(--faint);
+}
+.token.interpolation {
+	color: var(--text-code);
 }
 .token.property,
 .token.tag,
@@ -1690,7 +1682,6 @@ hr.bk-divider,
 .token.attr-name,
 .token.string,
 .token.char,
-.token.builtin,
 .token.inserted {
 	color: var(--teal, #0d9488);
 }
@@ -1706,9 +1697,20 @@ hr.bk-divider,
 	font-weight: 600;
 }
 .token.function,
-.token.class-name {
+.token.class-name,
+.token.builtin {
 	color: var(--blue, #2563eb);
 	font-weight: 500;
+}
+.token.directive-hash {
+	color: var(--faint) !important;
+	font-weight: bold;
+}
+.token.macro .token.directive.keyword,
+.token.macro .token.keyword,
+.token.directive {
+	color: var(--accent) !important;
+	font-weight: 600;
 }
 .token.regex,
 .token.important,
@@ -3618,31 +3620,6 @@ html[data-ui="playful"] .bk-chapter-lesson-counter {
   }
   .bk-timeline-title {
     font-size: 1.4rem;
-  }
-}
-
-/* Shiki Dual Theme Support */
-html[data-theme='dark'] .shiki,
-html[data-theme='dark'] .shiki span,
-.bk-shell[data-theme='dark'] .shiki,
-.bk-shell[data-theme='dark'] .shiki span {
-  color: var(--shiki-dark) !important;
-  background-color: transparent !important;
-  font-style: var(--shiki-dark-font-style) !important;
-  font-weight: var(--shiki-dark-font-weight) !important;
-  text-decoration: var(--shiki-dark-text-decoration) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme='light']) .shiki,
-  html:not([data-theme='light']) .shiki span,
-  .bk-shell:not([data-theme='light']) .shiki,
-  .bk-shell:not([data-theme='light']) .shiki span {
-    color: var(--shiki-dark) !important;
-    background-color: transparent !important;
-    font-style: var(--shiki-dark-font-style) !important;
-    font-weight: var(--shiki-dark-font-weight) !important;
-    text-decoration: var(--shiki-dark-text-decoration) !important;
   }
 }
 

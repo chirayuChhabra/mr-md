@@ -3,11 +3,17 @@ import { mdToHtml } from "../src/renderer/markdown/index.js";
 import { highlightCode } from "../src/renderer/markdown/runner-highlighter.js";
 
 describe("Runnable Code Blocks", () => {
-	test("standard code block without run flag renders as .bk-code-block", () => {
+	test("standard code block without run flag renders as .bk-code-block with unified header", async () => {
+		const { initHighlighter } = await import("../src/renderer/markdown/index.js");
+		await initHighlighter();
 		const md = "```javascript\nconsole.log(42);\n```";
 		const { html } = mdToHtml(md);
 
 		expect(html).toContain("bk-code-block");
+		expect(html).toContain("bk-code-header");
+		expect(html).toContain("JavaScript");
+		expect(html).toContain("bk-copy-btn");
+		expect(html).toContain("mr-md");
 		expect(html).not.toContain("bk-code-runner");
 	});
 

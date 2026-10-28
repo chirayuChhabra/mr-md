@@ -6,6 +6,7 @@ import { resolveAssetSrc } from "../utils.js";
 import { normalizeLanguage, shiki } from "./highlighter.js";
 import { marked } from "./math.js";
 import { highlightCode } from "./runner-highlighter.js";
+import { getLanguageDisplay } from "./syntax-theme.js";
 
 const COMPILED_LANGUAGES = new Set([
 	"cpp",
@@ -24,35 +25,6 @@ const COMPILED_LANGUAGES = new Set([
 	"haskell",
 	"hs",
 ]);
-
-const LANG_DISPLAY: Record<string, string> = {
-	javascript: "JavaScript",
-	js: "JavaScript",
-	typescript: "TypeScript",
-	ts: "TypeScript",
-	python: "Python",
-	py: "Python",
-	cpp: "C++",
-	"c++": "C++",
-	c: "C",
-	rust: "Rust",
-	rs: "Rust",
-	go: "Go",
-	golang: "Go",
-	java: "Java",
-	csharp: "C#",
-	cs: "C#",
-	"c#": "C#",
-	ruby: "Ruby",
-	rb: "Ruby",
-	php: "PHP",
-	swift: "Swift",
-	zig: "Zig",
-	sql: "SQL",
-	bash: "Bash",
-	sh: "Shell",
-	shell: "Shell",
-};
 
 const domPurifyConfig = {
 	USE_PROFILES: { html: true, mathMl: true, svg: true },
@@ -258,7 +230,7 @@ export function mdToHtml(
 			);
 			const highlightedCode = highlightCode(studentCode, normalizedLang);
 
-			const langLabel = LANG_DISPLAY[normalizedLang] || safeLang.toUpperCase();
+			const langLabel = getLanguageDisplay(safeLang, normalizedLang);
 
 			return `<div class="bk-code-runner" data-lang="${escAttr(normalizedLang)}" data-initial-code="${escAttr(studentCode)}" data-editable="${isEditable ? "true" : "false"}" data-autorun="${autorun ? "true" : "false"}" data-timeout="${timeout}" data-mode="${escAttr(mode)}" ${isChallenge ? 'data-challenge="true"' : ""} ${expected ? `data-expected="${escAttr(expected)}"` : ""} ${match ? `data-match="${escAttr(match)}"` : ""} ${hint ? `data-hint="${escAttr(hint)}"` : ""} ${title ? `data-title="${escAttr(title)}"` : ""} ${stdin ? `data-stdin="${escAttr(stdin)}"` : ""}>
   <div class="bk-runner-header">
@@ -266,7 +238,7 @@ export function mdToHtml(
       ${
 				isChallenge
 					? `<span class="bk-runner-badge challenge">${escHtml(langLabel)} Challenge</span>`
-					: `<span class="bk-runner-lang">${escHtml(safeLang)}</span>`
+					: `<span class="bk-runner-lang">${escHtml(langLabel)}</span>`
 			}
       ${displayTitle ? `<span class="bk-runner-title">${escHtml(displayTitle)}</span>` : ""}
     </div>
@@ -362,19 +334,33 @@ export function mdToHtml(
 			try {
 				highlightedHtml = shiki.codeToHtml(text, {
 					lang: normalizedLang,
-					themes: { light: "github-light", dark: "github-dark" },
+					theme: "mr-md",
 				});
 			} catch (_e) {
 				highlightedHtml = `<pre><code>${escHtml(text)}</code></pre>`;
 			}
 		}
 
+		const langLabel = getLanguageDisplay(safeLang, normalizedLang);
+
 		return `<div class="bk-code-block">
-          ${safeLang !== "text" ? `<div class="bk-code-header"><span class="bk-code-lang">${escHtml(safeLang)}</span></div>` : ""}
-          <div class="bk-code-scroll">
-            ${highlightedHtml}
-          </div>
-        </div>`;
+  <div class="bk-code-header">
+    <div class="bk-code-header-left">
+      <span class="bk-code-badge bk-code-lang">${escHtml(langLabel)}</span>
+    </div>
+    <div class="bk-code-header-actions">
+      <button type="button" class="bk-copy-btn" title="Copy code" aria-label="Copy code">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="bk-code-scroll">
+    ${highlightedHtml}
+  </div>
+</div>`;
 	};
 
 	renderer.image = ({ href, title, text }) => {
