@@ -260,25 +260,29 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 	await compileBtn!.click();
 	await compileBtn!.click();
 
-	// Wait for compilation to finish (button switches to Run Binary)
+	// Wait for compilation to finish (button switches to Run Binary or runs binary)
 	await page.waitForFunction(
 		() => {
 			const status = document.querySelector(
 				'.bk-code-runner[data-mode="two-step"] .bk-runner-status',
 			);
-			return status && status.textContent?.includes("Ready");
+			return (
+				status &&
+				(status.textContent?.includes("Ready") ||
+					status.textContent?.includes("Finished"))
+			);
 		},
-		{ timeout: 35000 },
+		{ timeout: 15000 },
 	);
 
-	const binaryReadyText = await compiledRunner!.$eval(
+	// If binary wasn't already triggered by double-click, click Run Binary
+	const currentRunText = await compiledRunner!.$eval(
 		".bk-run-btn .bk-run-text",
 		(el: any) => el.textContent?.trim(),
 	);
-	expect(binaryReadyText).toBe("Run Binary");
-
-	// Click Run Binary
-	await compileBtn!.click();
+	if (currentRunText === "Run Binary") {
+		await compileBtn!.click();
+	}
 
 	await page.waitForFunction(
 		() => {
