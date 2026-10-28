@@ -1928,6 +1928,280 @@ hr.bk-divider,
 	color: var(--ink);
 }
 
+/* ─── Code Runner Autocomplete & Hints ──────────────────────────────────────── */
+
+.bk-autocomplete-popup {
+	position: fixed;
+	z-index: 10000;
+	max-height: 220px;
+	min-width: 220px;
+	max-width: 320px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	background: var(--paper, #181b20);
+	border: 1px solid var(--line-strong, #333d47);
+	border-radius: 8px;
+	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+	font-family: var(--font-mono, monospace);
+	font-size: 12.5px;
+	padding: 4px;
+	box-sizing: border-box;
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	animation: bk-autocomplete-in 0.12s ease-out;
+}
+
+@keyframes bk-autocomplete-in {
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.bk-autocomplete-popup::-webkit-scrollbar {
+	width: 5px;
+}
+.bk-autocomplete-popup::-webkit-scrollbar-track {
+	background: transparent;
+}
+.bk-autocomplete-popup::-webkit-scrollbar-thumb {
+	background: var(--line-strong, #475569);
+	border-radius: 4px;
+}
+
+.bk-autocomplete-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 5px 8px;
+	border-radius: 5px;
+	cursor: pointer;
+	user-select: none;
+	color: var(--ink);
+	gap: 8px;
+	line-height: 1.4;
+	transition: background 0.1s ease, color 0.1s ease;
+}
+
+.bk-autocomplete-item:hover,
+.bk-autocomplete-item.active {
+	background: var(--accent-soft, rgba(96, 165, 250, 0.18));
+	color: var(--accent, #38bdf8);
+}
+
+.bk-autocomplete-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 1;
+}
+
+.bk-autocomplete-match {
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.bk-autocomplete-badge {
+	font-size: 9.5px;
+	font-weight: 700;
+	padding: 1px 5px;
+	border-radius: 4px;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	flex-shrink: 0;
+}
+
+.bk-autocomplete-badge.kw {
+	background: rgba(168, 85, 247, 0.15);
+	color: #c084fc;
+}
+
+.bk-autocomplete-badge.fn {
+	background: rgba(59, 130, 246, 0.15);
+	color: #60a5fa;
+}
+
+.bk-autocomplete-badge.var {
+	background: rgba(16, 185, 129, 0.15);
+	color: #34d399;
+}
+
+.bk-autocomplete-badge.snip {
+	background: rgba(245, 158, 11, 0.15);
+	color: #fbbf24;
+}
+
+.bk-autocomplete-badge.prop {
+	background: rgba(236, 72, 153, 0.15);
+	color: #f472b6;
+}
+
+.bk-autocomplete-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 6px 2px;
+	margin-top: 4px;
+	border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+	font-size: 9.5px;
+	color: var(--faint, #94a3b8);
+	user-select: none;
+	letter-spacing: 0.2px;
+}
+.bk-autocomplete-footer kbd {
+	font-family: inherit;
+	background: color-mix(in srgb, var(--ink) 10%, transparent);
+	padding: 1px 4px;
+	border-radius: 3px;
+	font-size: 9px;
+}
+
+/* ─── CodeMirror Autocomplete Tooltip Styling (Matching mr-md theme) ───────── */
+
+.cm-editor .cm-scroller {
+	padding: 16px 0 !important;
+}
+.cm-editor .cm-content {
+	padding: 0 16px 0 6px !important;
+}
+.cm-editor .cm-gutters {
+	padding: 0 8px 0 0 !important;
+	background: transparent !important;
+}
+.cm-editor .cm-gutterElement[style*="hidden"],
+.cm-editor .cm-gutterElement[style*="visibility: hidden"] {
+	height: 0 !important;
+	min-height: 0 !important;
+	line-height: 0 !important;
+	overflow: hidden !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+.cm-editor .cm-gutterElement:not([style*="hidden"]):not([style*="visibility: hidden"]) {
+	height: 21.6px !important;
+	min-height: 21.6px !important;
+	line-height: 21.6px !important;
+	margin-top: 0 !important;
+	box-sizing: border-box !important;
+}
+.cm-editor .cm-line {
+	line-height: 21.6px !important;
+	min-height: 21.6px !important;
+	box-sizing: border-box !important;
+}
+
+.cm-tooltip-autocomplete {
+	background: var(--paper, #181b20) !important;
+	border: 1px solid var(--line-strong, #333d47) !important;
+	border-radius: 8px !important;
+	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+	font-family: var(--font-mono, monospace) !important;
+	font-size: 12.5px !important;
+	padding: 4px !important;
+	box-sizing: border-box !important;
+	backdrop-filter: blur(12px) !important;
+	-webkit-backdrop-filter: blur(12px) !important;
+	overscroll-behavior: contain !important;
+}
+
+.cm-tooltip-autocomplete > ul {
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
+	max-height: 220px !important;
+	min-width: 200px !important;
+}
+
+.cm-tooltip-autocomplete > ul > li {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	padding: 5px 8px !important;
+	border-radius: 5px !important;
+	cursor: pointer !important;
+	color: var(--ink) !important;
+	line-height: 1.4 !important;
+	transition: background 0.1s ease, color 0.1s ease !important;
+}
+
+.cm-tooltip-autocomplete > ul > li[aria-selected] {
+	background: var(--accent-soft, rgba(96, 165, 250, 0.18)) !important;
+	color: var(--accent, #38bdf8) !important;
+}
+
+.cm-completionMatchedText {
+	font-weight: 700 !important;
+	text-decoration: underline !important;
+	text-underline-offset: 2px !important;
+}
+
+.cm-completionDetail {
+	font-size: 9.5px !important;
+	font-weight: 700 !important;
+	padding: 1px 5px !important;
+	border-radius: 4px !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.3px !important;
+	margin-left: auto !important;
+	opacity: 0.8 !important;
+	font-style: normal !important;
+	color: var(--faint) !important;
+}
+
+.cm-completionIcon {
+	display: inline-block !important;
+	font-size: 9px !important;
+	font-weight: 700 !important;
+	padding: 1px 4px !important;
+	border-radius: 3px !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.3px !important;
+	margin-right: 6px !important;
+	width: auto !important;
+	height: auto !important;
+	opacity: 1 !important;
+	line-height: 1.2 !important;
+}
+
+.cm-completionIcon::after {
+	display: none !important;
+}
+
+.cm-completionIcon-keyword::before { content: "KW"; }
+.cm-completionIcon-function::before { content: "FN"; }
+.cm-completionIcon-variable::before { content: "VAR"; }
+.cm-completionIcon-snippet::before { content: "SNIP"; }
+.cm-completionIcon-property::before { content: "PROP"; }
+
+.cm-completionIcon-keyword {
+	background: rgba(168, 85, 247, 0.15) !important;
+	color: #c084fc !important;
+}
+.cm-completionIcon-function {
+	background: rgba(59, 130, 246, 0.15) !important;
+	color: #60a5fa !important;
+}
+.cm-completionIcon-variable {
+	background: rgba(16, 185, 129, 0.15) !important;
+	color: #34d399 !important;
+}
+.cm-completionIcon-snippet {
+	background: rgba(245, 158, 11, 0.15) !important;
+	color: #fbbf24 !important;
+}
+.cm-completionIcon-property {
+	background: rgba(236, 72, 153, 0.15) !important;
+	color: #f472b6 !important;
+}
+
 .bk-object {
 	margin: 34px 0;
 	border: 1px solid var(--line);
