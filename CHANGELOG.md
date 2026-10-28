@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Unified Syntax Theme as Single Source of Truth**:
+  - Custom Shiki TextMate theme (`mrMdShikiTheme`) in `src/renderer/markdown/syntax-theme.ts` emitting CSS variable references (`var(--accent)`, `var(--blue)`, `var(--teal)`, `var(--amber)`, `var(--violet)`, `var(--rose)`, `var(--faint)`, `var(--text-code)`) directly into inline styles, allowing pre-rendered static blocks to dynamically react to light/dark modes and custom themes with zero client runtime overhead.
+  - Shared `getLanguageDisplay()` mapping for consistent language labels and pill badges (`C++`, `JavaScript`, `Python`, `TypeScript`, `Bash`, etc.) across both static blocks and interactive runners.
+  - Static code block chrome modernization with pill badges (`.bk-code-badge`) and action header bars containing a declarative copy button matching `.bk-runner-header`.
 - **Interactive Step-by-Step Simulations (`type: "steps"`)**:
   - Guided interactive labs with milestones, progressive objectives, LaTeX and Markdown instructions, hint drawers, and success feedback toasts.
   - Companion `.config.json` schema with `"type": "steps"`, step definitions, target badges, and custom per-step parameters (`initialProps`).
@@ -49,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-platform browser opener**: `openBrowser(url)` helper in `src/cli/utils.ts` using the appropriate OS command (`open`, `xdg-open`, `start`).
 
 ### Changed
+- **Code Block Typography & Aesthetic Parity**:
+  - Aligned typography metrics between `.bk-code-block pre` and `.bk-code-runner`: `font-size: 13.5px`, `line-height: 1.6`, and `tab-size: 2`.
+  - Aligned code block header bars to `min-height: 44px`, `padding: 8px 14px`, and glass background tint across both static code blocks and runners.
+  - Removed outdated `.hljs-*` CSS rules and obsolete `html[data-theme='dark'] .shiki span { color: var(--shiki-dark) !important; }` overrides.
 - **Unified Sidebar Across All Pages**: Restored consistent sidebar navigation on the course/chapter dashboard (`index.html`), maintaining uniform layout and muscle memory across both lesson reading and course browsing.
 - **Motionless Topbar Controls**: Enforced stable, motionless hover and active states (`transform: none`, no jump or spring cubic-bezier) on topbar icon buttons across standard, neo, and playful themes.
 - **Playful UI Layout Alignment**: Removed the radius gap between playful sidebar and topbar, rendering sidebar flush against the topbar border for a cohesive visual structure.
@@ -63,6 +71,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dev server HTTP logging**: Static assets (`.css`, `.js`, images, fonts, etc.) are now silenced from terminal output by default. Use `--verbose` / `-v` to restore full logging.
 
 ### Fixed
+- **Cross-Engine Syntax Highlighting Parity**:
+  - Resolved function call scope leakage in Shiki where arguments and base objects (`console`, `sample`, `col`, `matrix`, `row`) were incorrectly colored as functions by narrowing TextMate scope to `meta.function-call.generic`.
+  - Aligned C++ template type argument angle brackets (`vector<int>`) to `punctuation` (`var(--faint)`) in Prism runner via a dedicated `generic-type` grammar matching Shiki's TextMate delimiter conventions.
+  - Aligned Python return type annotations (`->`) as a unified operator (`var(--violet)`) in both Prism and Shiki.
+  - Aligned JavaScript template string interpolations (`${result}`) by explicitly scoping embedded expressions to `var(--text-code)` and interpolation delimiters (`${`, `}`) to `var(--faint)`.
 - **Runner Code Copy Detachment**: Added an exclusion guard in `bkInitCodeCopy()` preventing global code-block copy containers from wrapping and displacing `.bk-code-runner` highlight layers.
 - **Premature Compilation Abort Bug**: Added a double-click debounce guard in two-step compilation mode and separated timeout events from manual user aborts so compiling never gets erroneously canceled.
 - **Challenge Header Cohesion**: Removed cluttered goal pills from the header, merged duplicate language and challenge tags into clean unified badges, and enforced single-line baseline alignment with `white-space: nowrap;` across all action buttons.

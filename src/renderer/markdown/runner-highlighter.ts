@@ -28,6 +28,39 @@ import "prismjs/components/prism-swift.js";
 import "prismjs/components/prism-zig.js";
 import "prismjs/components/prism-sql.js";
 
+// Align Prism Python grammar with modern Python 3 (functions, builtins, keywords, return arrow)
+if (Prism.languages.python) {
+	Prism.languages.python.keyword =
+		/\b(?:_(?=\s*:)|and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|exec|finally|for|from|global|if|import|in|is|lambda|match|nonlocal|not|or|pass|raise|return|try|while|with|yield)\b/;
+	Prism.languages.python.function = /\b[a-zA-Z_]\w*(?=\s*\()/;
+	Prism.languages.python.operator =
+		/->|[-+%=]=?|!=|:=|\*\*?=?|\/\/?=?|<[<=>]?|>[=>]?|[&|^~]/;
+}
+
+// Align Prism C++ grammar (generic templates, standard library types)
+if (Prism.languages.cpp) {
+	Prism.languages.insertBefore("cpp", "class-name", {
+		"generic-type": {
+			pattern: /\b[a-zA-Z_]\w*\s*<[^<>;=+\-*/%&|^]+>/,
+			inside: {
+				"class-name": /^\b[a-zA-Z_]\w*/,
+				keyword: Prism.languages.cpp.keyword,
+				punctuation: /[<>,:]/,
+				"stl-type": {
+					pattern:
+						/\b(?:vector|string|wstring|string_view|array|deque|list|forward_list|map|set|multimap|multiset|unordered_map|unordered_set|unordered_multimap|unordered_multiset|stack|queue|priority_queue|pair|tuple|optional|variant|any|unique_ptr|shared_ptr|weak_ptr|span)\b/,
+					alias: "class-name",
+				},
+			},
+		},
+		"stl-type": {
+			pattern:
+				/\b(?:vector|string|wstring|string_view|array|deque|list|forward_list|map|set|multimap|multiset|unordered_map|unordered_set|unordered_multimap|unordered_multiset|stack|queue|priority_queue|pair|tuple|optional|variant|any|unique_ptr|shared_ptr|weak_ptr|span)\b|\b[a-zA-Z_]\w*(?=\s*<[a-zA-Z_])/,
+			alias: "class-name",
+		},
+	});
+}
+
 const LANG_MAP: Record<string, string> = {
 	js: "javascript",
 	javascript: "javascript",
