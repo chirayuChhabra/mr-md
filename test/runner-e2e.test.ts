@@ -22,9 +22,49 @@ beforeAll(async () => {
 
 	browser = await puppeteer.launch({
 		headless: true,
-		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+		args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security"],
 	});
 	page = await browser.newPage();
+
+	// Intercept external Wandbox compilation requests to ensure deterministic and fast E2E tests
+	await page.setRequestInterception(true);
+	page.on("request", async (req) => {
+		if (req.url().includes("wandbox.org/api/compile.json")) {
+			if (req.method() === "OPTIONS") {
+				await req.respond({
+					status: 200,
+					headers: {
+						"Access-Control-Allow-Origin": "*",
+						"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+						"Access-Control-Allow-Headers": "*",
+					},
+				});
+				return;
+			}
+			const postData = req.postData() || "";
+			let programOutput = "Sum from compiled C++: 100\n";
+			if (postData.includes("233168") || postData.includes("multiples") || postData.includes("Multiples")) {
+				programOutput = "Sum: 233168\n";
+			}
+			// Simulate realistic compilation latency so double-click debounce is tested
+			await new Promise((r) => setTimeout(r, 120));
+			await req.respond({
+				status: 200,
+				contentType: "application/json",
+				headers: {
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+					"Access-Control-Allow-Headers": "*",
+				},
+				body: JSON.stringify({
+					status: "0",
+					program_output: programOutput,
+				}),
+			});
+		} else {
+			await req.continue();
+		}
+	});
 });
 
 afterAll(async () => {
