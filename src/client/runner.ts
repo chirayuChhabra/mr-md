@@ -3,6 +3,8 @@ import {
 	escapeHtml,
 	highlightCode,
 } from "../renderer/markdown/runner-highlighter.js";
+import { BkAutocomplete, isInsideStringOrComment } from "./autocomplete.js";
+import { createCodeMirrorEditor } from "./cm-editor.js";
 
 // Wandbox compiler mapping for compiled languages
 const WANDBOX_COMPILERS: Record<string, string> = {
@@ -798,7 +800,9 @@ async function executeRunnerBlock(runner: HTMLElement): Promise<void> {
 		return;
 	}
 
-	const code = textarea.value;
+	const code = runner.__bk_cm_view
+		? runner.__bk_cm_view.state.doc.toString()
+		: textarea.value;
 	const timeout = parseInt(runner.getAttribute("data-timeout") || "3000", 10);
 	const stdin = runner.getAttribute("data-stdin") || "";
 
@@ -969,6 +973,36 @@ export function bkInitCodeRunners(): void {
 		autoSizeEditor(runner, textarea);
 		syncScroll(textarea, highlightPre, linesEl);
 
+		if (!runner.__bk_cm_view && typeof window !== "undefined") {
+			try {
+				const onCodeChange = () => {
+					// Invalidate compiled binary if source code changes
+					if (runner.__bk_binary_ready && runBtn) {
+						delete runner.__bk_binary_ready;
+						delete runner.__bk_compiled_cache;
+						resetRunButtonLabel(runBtn, runner);
+						if (statusEl) {
+							statusEl.textContent = "Source modified";
+							statusEl.className = "bk-runner-status";
+						}
+					}
+				};
+
+				const view = createCodeMirrorEditor(
+					runner,
+					textarea,
+					onCodeChange,
+					() => executeRunnerBlock(runner),
+				);
+				runner.__bk_cm_view = view;
+			} catch (err) {
+				console.warn(
+					"[mr-md] CodeMirror initialization failed, fallback to native editor:",
+					err,
+				);
+			}
+		}
+
 		if (!textarea.__bk_runner_wired) {
 			textarea.__bk_runner_wired = true;
 
@@ -995,22 +1029,69 @@ export function bkInitCodeRunners(): void {
 				});
 			};
 
-			textarea.addEventListener("input", onCodeChange);
+			const autocomplete = new BkAutocomplete(textarea, runner, onCodeChange);
+			textarea.__bk_autocomplete = autocomplete;
+
+			textarea.addEventListener("input", () => {
+				onCodeChange();
+				autocomplete.handleInput();
+			});
 
 			textarea.addEventListener(
 				"scroll",
 				() => {
 					syncScroll(textarea, highlightPre, linesEl);
+					if (autocomplete.isOpen) {
+						autocomplete.close();
+					}
 				},
 				{ passive: true },
 			);
 
+			textarea.addEventListener("click", () => {
+				if (autocomplete.isOpen) {
+					autocomplete.close();
+				}
+			});
+
+			textarea.addEventListener("blur", () => {
+				setTimeout(() => {
+					if (autocomplete.isOpen) {
+						autocomplete.close();
+					}
+				}, 150);
+			});
+
 			textarea.addEventListener("keydown", (e: KeyboardEvent) => {
+				// 0. Autocomplete keyboard interaction (ArrowUp, ArrowDown, Tab, Enter, Escape, PageUp, PageDown, Ctrl+Space)
+				if (autocomplete.handleKeyDown(e)) {
+					return;
+				}
+
+				const lang = (
+					runner.getAttribute("data-lang") || "javascript"
+				).toLowerCase();
 				const start = textarea.selectionStart;
 				const end = textarea.selectionEnd;
 				const val = textarea.value;
 
-				// 1. Cmd + / or Ctrl + / to Toggle Comments
+				// 1. Skip over closing bracket/quote if already directly before it
+				const closingChars = new Set([")", "]", "}", '"', "'", "`"]);
+				if (start === end && closingChars.has(e.key) && val[start] === e.key) {
+					if (
+						(e.key === '"' || e.key === "'" || e.key === "`") &&
+						start > 0 &&
+						val[start - 1] === "\\"
+					) {
+						// escaped quote: allow typing
+					} else {
+						e.preventDefault();
+						textarea.setSelectionRange(start + 1, start + 1);
+						return;
+					}
+				}
+
+				// 2. Cmd + / or Ctrl + / to Toggle Comments
 				if ((e.metaKey || e.ctrlKey) && e.key === "/") {
 					e.preventDefault();
 					toggleLineComments(textarea, runner);
@@ -1093,8 +1174,38 @@ export function bkInitCodeRunners(): void {
 					return;
 				}
 
-				// 4. Smart Enter with Auto-Indentation
+				// 4. Smart Enter with Auto-Indentation & Bracket Expansion
 				if (e.key === "Enter") {
+					// 4a. If between matching brackets {}, [], or (), expand on newline with indent
+					if (
+						start === end &&
+						start > 0 &&
+						((val[start - 1] === "{" && val[start] === "}") ||
+							(val[start - 1] === "[" && val[start] === "]") ||
+							(val[start - 1] === "(" && val[start] === ")"))
+					) {
+						e.preventDefault();
+						const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+						const currentLine = val.slice(lineStart, start);
+						const indentMatch = currentLine.match(/^[ \t]*/);
+						const baseIndent = indentMatch ? indentMatch[0] : "";
+						const extraIndent =
+							lang.includes("python") || lang.includes("py") ? "    " : "  ";
+						const innerIndent = baseIndent + extraIndent;
+						const replacement = `\n${innerIndent}\n${baseIndent}`;
+
+						if (document.queryCommandSupported?.("insertText")) {
+							document.execCommand("insertText", false, replacement);
+						} else {
+							textarea.setRangeText(replacement, start, end, "end");
+						}
+						const targetPos = start + 1 + innerIndent.length;
+						textarea.setSelectionRange(targetPos, targetPos);
+						onCodeChange();
+						return;
+					}
+
+					// 4b. Normal line auto-indent
 					const lineStart = val.lastIndexOf("\n", start - 1) + 1;
 					const currentLine = val.slice(lineStart, start);
 					const indentMatch = currentLine.match(/^[ \t]*/);
@@ -1107,7 +1218,8 @@ export function bkInitCodeRunners(): void {
 						trimmed.endsWith("[") ||
 						trimmed.endsWith("(")
 					) {
-						indent += "  ";
+						indent +=
+							lang.includes("python") || lang.includes("py") ? "    " : "  ";
 					}
 
 					if (indent.length > 0) {
@@ -1116,13 +1228,13 @@ export function bkInitCodeRunners(): void {
 							document.execCommand("insertText", false, `\n${indent}`);
 						} else {
 							textarea.setRangeText(`\n${indent}`, start, end, "end");
-							onCodeChange();
 						}
+						onCodeChange();
 						return;
 					}
 				}
 
-				// 5. Bracket & Quote Pairs
+				// 5. Bracket & Quote Pairs (Auto-close & Wrapping)
 				const pairs: Record<string, string> = {
 					"(": ")",
 					"[": "]",
@@ -1132,21 +1244,72 @@ export function bkInitCodeRunners(): void {
 					"`": "`",
 				};
 
-				if (pairs[e.key] && start !== end) {
+				// 5a. Wrap selection when text is selected (supports both opening and closing brackets)
+				const closingToOpening: Record<string, string> = {
+					")": "(",
+					"]": "[",
+					"}": "{",
+				};
+				if ((pairs[e.key] || closingToOpening[e.key]) && start !== end) {
 					e.preventDefault();
+					const openChar = closingToOpening[e.key] || e.key;
+					const closeChar = pairs[openChar];
 					const selected = val.slice(start, end);
-					const wrapped = `${e.key}${selected}${pairs[e.key]}`;
+					const wrapped = `${openChar}${selected}${closeChar}`;
 					if (document.queryCommandSupported?.("insertText")) {
 						document.execCommand("insertText", false, wrapped);
 					} else {
 						textarea.setRangeText(wrapped, start, end, "select");
-						onCodeChange();
 					}
 					textarea.setSelectionRange(start + 1, end + 1);
+					onCodeChange();
 					return;
 				}
 
-				// 6. Backspace between matching pairs
+				// 5b. Auto-close opening brackets when typing without selection
+				if (
+					(e.key === "(" || e.key === "[" || e.key === "{") &&
+					start === end
+				) {
+					e.preventDefault();
+					const pairText = e.key + pairs[e.key];
+					if (document.queryCommandSupported?.("insertText")) {
+						document.execCommand("insertText", false, pairText);
+					} else {
+						textarea.setRangeText(pairText, start, end, "end");
+					}
+					textarea.setSelectionRange(start + 1, start + 1);
+					onCodeChange();
+					return;
+				}
+
+				// 5c. Auto-close quotes when typing without selection (skip if inside string or adjacent to word chars)
+				if (
+					(e.key === '"' || e.key === "'" || e.key === "`") &&
+					start === end
+				) {
+					const prevChar = start > 0 ? val[start - 1] : "";
+					const nextChar = start < val.length ? val[start] : "";
+
+					if (
+						!isInsideStringOrComment(val, start, lang) &&
+						!/\w/.test(prevChar) &&
+						!/\w/.test(nextChar)
+					) {
+						e.preventDefault();
+						const pairText = e.key + e.key;
+						if (document.queryCommandSupported?.("insertText")) {
+							document.execCommand("insertText", false, pairText);
+						} else {
+							textarea.setRangeText(pairText, start, end, "end");
+						}
+						textarea.setSelectionRange(start + 1, start + 1);
+						onCodeChange();
+						return;
+					}
+				}
+
+				// 6. Backspace between matching pairs (deletes both)
 				if (e.key === "Backspace" && start === end && start > 0) {
 					const prev = val[start - 1];
 					const next = val[start];
@@ -1155,10 +1318,12 @@ export function bkInitCodeRunners(): void {
 						(prev === "[" && next === "]") ||
 						(prev === "{" && next === "}") ||
 						(prev === '"' && next === '"') ||
-						(prev === "'" && next === "'")
+						(prev === "'" && next === "'") ||
+						(prev === "`" && next === "`")
 					) {
 						e.preventDefault();
 						textarea.setRangeText("", start - 1, start + 1, "end");
+						textarea.setSelectionRange(start - 1, start - 1);
 						onCodeChange();
 						return;
 					}
@@ -1226,8 +1391,18 @@ export function bkWireCodeRunners(): void {
 					".bk-runner-lines",
 				) as HTMLElement | null;
 				const initialCode = runner.getAttribute("data-initial-code") || "";
+				if (runner.__bk_cm_view) {
+					runner.__bk_cm_view.dispatch({
+						changes: {
+							from: 0,
+							to: runner.__bk_cm_view.state.doc.length,
+							insert: initialCode,
+						},
+					});
+				}
 				if (textarea) {
 					textarea.value = initialCode;
+					textarea.__bk_autocomplete?.close?.();
 					delete runner.__bk_binary_ready;
 					delete runner.__bk_compiled_cache;
 					const currentRunBtn = runner.querySelector(
@@ -1274,9 +1449,12 @@ export function bkWireCodeRunners(): void {
 				const textarea = runner.querySelector(
 					".bk-runner-editor",
 				) as HTMLTextAreaElement | null;
-				if (textarea) {
+				const codeToCopy = runner.__bk_cm_view
+					? runner.__bk_cm_view.state.doc.toString()
+					: textarea?.value || "";
+				if (codeToCopy) {
 					try {
-						await navigator.clipboard.writeText(textarea.value);
+						await navigator.clipboard.writeText(codeToCopy);
 						copyBtn.classList.add("copied");
 						setTimeout(() => copyBtn.classList.remove("copied"), 1500);
 					} catch (_err) {

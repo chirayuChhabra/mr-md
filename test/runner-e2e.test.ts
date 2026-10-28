@@ -337,3 +337,130 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 	);
 	expect(cppChallengeSuccess).toContain("Correct! Challenge Passed");
 }, 60000);
+
+test("E2E: Autocomplete displays popup on typing, allows keyboard navigation, and completes with Tab", async () => {
+	const htmlPath = join(
+		process.cwd(),
+		"mr-markdown-documentation",
+		"out",
+		"showcase.html",
+	);
+
+	await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "domcontentloaded" });
+	await page.waitForSelector(".bk-code-runner .bk-runner-editor");
+
+	const editorSelector = ".bk-code-runner .bk-runner-editor";
+
+	// 1. Focus editor and type a prefix 'con'
+	await page.focus(editorSelector);
+	await page.keyboard.press("End");
+	await page.keyboard.press("Enter");
+	await page.keyboard.type("con", { delay: 30 });
+
+	// 2. Verify autocomplete popup appears and is visible
+	await page.waitForSelector(".bk-autocomplete-popup", { visible: true, timeout: 3000 });
+
+	const popupVisible = await page.$eval(
+		".bk-autocomplete-popup",
+		(el) => el.style.display !== "none",
+	);
+	expect(popupVisible).toBe(true);
+
+	// 3. Verify suggestions contain keywords and globals
+	const itemLabels = await page.$$eval(
+		".bk-autocomplete-item",
+		(els) => els.map((el) => el.textContent || ""),
+	);
+	expect(itemLabels.some((l) => l.includes("const"))).toBe(true);
+	expect(itemLabels.some((l) => l.includes("console"))).toBe(true);
+
+	// 4. Press ArrowDown to navigate to the second suggestion
+	await page.keyboard.press("ArrowDown");
+
+	const secondActive = await page.$eval(
+		".bk-autocomplete-item:nth-child(2)",
+		(el) => el.classList.contains("active"),
+	);
+	expect(secondActive).toBe(true);
+
+	// 5. Press Tab to accept completion
+	await page.keyboard.press("Tab");
+
+	// 6. Verify popup is closed
+	const isClosed = await page.$eval(
+		".bk-autocomplete-popup",
+		(el) => el.style.display === "none",
+	);
+	expect(isClosed).toBe(true);
+
+	// 7. Verify Escape dismisses popup
+	await page.keyboard.press("Enter");
+	await page.keyboard.type("fun", { delay: 30 });
+	await page.waitForFunction(
+		() => {
+			const popup = document.querySelector(".bk-autocomplete-popup") as HTMLElement;
+			return popup && popup.style.display !== "none";
+		},
+		{ timeout: 3000 },
+	);
+
+	await page.keyboard.press("Escape");
+	const isDismissed = await page.$eval(
+		".bk-autocomplete-popup",
+		(el) => el.style.display === "none",
+	);
+	expect(isDismissed).toBe(true);
+}, 30000);
+
+test("E2E: QOL Features - Auto-closing brackets/quotes, skip-over, smart backspace, and brace expansion", async () => {
+	const htmlPath = join(
+		process.cwd(),
+		"mr-markdown-documentation",
+		"out",
+		"showcase.html",
+	);
+
+	await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "domcontentloaded" });
+	const editorSelector = ".bk-code-runner .bk-runner-editor";
+	await page.waitForSelector(editorSelector);
+
+	// 1. Focus editor and move cursor to the very end
+	await page.evaluate((sel) => {
+		const el = document.querySelector(sel) as HTMLTextAreaElement;
+		el.focus();
+		el.selectionStart = el.selectionEnd = el.value.length;
+	}, editorSelector);
+	await page.keyboard.press("Enter");
+
+	// 2. Type opening bracket '[' -> should auto-close to '[]'
+	await page.keyboard.type("[");
+	let val = await page.$eval(editorSelector, (el: any) => el.value);
+	expect(val.endsWith("[]")).toBe(true);
+
+	// 3. Type inside bracket and closing ']' -> should skip over without duplicate
+	await page.keyboard.type("1");
+	await page.keyboard.type("]");
+	val = await page.$eval(editorSelector, (el: any) => el.value);
+	expect(val.endsWith("[1]")).toBe(true);
+	expect(val.endsWith("[1]]")).toBe(false);
+
+	// 4. Test quote auto-closing
+	await page.keyboard.press("Enter");
+	await page.keyboard.type('"');
+	val = await page.$eval(editorSelector, (el: any) => el.value);
+	expect(val.endsWith('""')).toBe(true);
+
+	// 5. Test Backspace between matching quotes -> deletes both
+	await page.keyboard.press("Backspace");
+	val = await page.$eval(editorSelector, (el: any) => el.value);
+	expect(val.endsWith('""')).toBe(false);
+
+	// 6. Test Enter between braces '{|}' expands with indented newline
+	await page.keyboard.type("{");
+	val = await page.$eval(editorSelector, (el: any) => el.value);
+	expect(val.endsWith("{}")).toBe(true);
+
+	await page.keyboard.press("Enter");
+	val = await page.$eval(editorSelector, (el: any) => el.value);
+	expect(val).toContain("{\n  ");
+}, 30000);

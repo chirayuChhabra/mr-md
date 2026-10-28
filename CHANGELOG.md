@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CodeMirror 6 AST-Backed Code Editor & Autocomplete (`.bk-code-runner`)**:
+  - Interactive CodeMirror 6 code editor engine with real-time Lezer AST parsing, custom syntax highlighting matching the mr-md theme, and line gutters.
+  - Context-aware autocomplete for JavaScript, TypeScript, Python, C++, and Rust:
+    - Smart module import gating (suggests module members such as `math.` or `random.` only when explicitly imported in Python).
+    - Scope and namespace completions (e.g. `std::` namespace members in C++, `Vec::` in Rust).
+    - Interpolation awareness (permits completions inside Python f-string replacement braces `{expr}` and JavaScript template literal expressions `${expr}` while suppressing inside comments and raw string literals).
+    - In-buffer identifier harvesting, built-in global suggestions, and multi-language snippets (`clg`, `def`, `main`, `println!`).
+  - Dual-layer fallback engine (`BkAutocomplete`) providing auto-closing brackets, skip-over typing, and completion popups in non-CodeMirror environments.
+  - Editor state synchronization with run, reset, copy, and Wandbox compilation cache invalidation.
 - **Unified Syntax Theme as Single Source of Truth**:
   - Custom Shiki TextMate theme (`mrMdShikiTheme`) in `src/renderer/markdown/syntax-theme.ts` emitting CSS variable references (`var(--accent)`, `var(--blue)`, `var(--teal)`, `var(--amber)`, `var(--violet)`, `var(--rose)`, `var(--faint)`, `var(--text-code)`) directly into inline styles, allowing pre-rendered static blocks to dynamically react to light/dark modes and custom themes with zero client runtime overhead.
   - Shared `getLanguageDisplay()` mapping for consistent language labels and pill badges (`C++`, `JavaScript`, `Python`, `TypeScript`, `Bash`, etc.) across both static blocks and interactive runners.
