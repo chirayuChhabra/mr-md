@@ -222,7 +222,18 @@ A freestanding Einstein-Rosen bridge cutting directly through spacetime, with an
 
 ---
 
-### 3. Retro Pixel Matrix (`portal: "pixel"`)
+### 3. Solar System Orrery & Core Cutaways (`portal: "wormhole"`)
+
+An astronomical multi-body simulation featuring all 8 planets, the Sun, asteroid belt, and primary moons. Click any planet to fly to it, inspect real telemetry, toggle planetary core cross-sections, and explore satellites like Luna, Europa, and Titan:
+
+> [!TIP]
+> **Planetary Orrery & Anatomical Cutaways:** Hold down on the wormhole below to plunge into the Solar System. Click any planet to fly to it, press **"Inspect Layers"** to slice open its internal mantle and core, or click any moon to orbit it in close up!
+
+![Solar System Explorer](./sims/solarsystem.world.js)
+
+---
+
+### 4. Retro Pixel Matrix (`portal: "pixel"`)
 
 A stepped retro 8-bit matrix frame with de-pixelating mosaic resolution and cyber warp tunnel:
 
