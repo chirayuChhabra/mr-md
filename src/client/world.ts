@@ -1411,7 +1411,18 @@ bkRegisterWorldTransition("pixel", pixelGatewayTransition);
 // CORE RUNTIME: TOPBAR INTEGRATION, ENTER, EXIT, AND INTERACTION CONTROLLER
 // ============================================================================
 
+let worldHistoryPushed = false;
+
+function pushWorldHistoryState() {
+	if (worldHistoryPushed) return;
+	worldHistoryPushed = true;
+	try {
+		window.history.pushState({ bkWorld: true }, "", window.location.href);
+	} catch (_) {}
+}
+
 function attachTopbarWorldControls(figure) {
+	pushWorldHistoryState();
 	const breadcrumbs = document.querySelector(".bk-topbar-breadcrumbs");
 	if (breadcrumbs && !breadcrumbs.querySelector(".bk-world-crumb-item")) {
 		const label =
@@ -1506,7 +1517,7 @@ export function bkEnterWorld(figure) {
 	}
 }
 
-export function bkExitWorld(figure) {
+export function bkExitWorld(figure, options = {}) {
 	const fig =
 		figure ||
 		activeWorldFigure ||
@@ -1520,6 +1531,24 @@ export function bkExitWorld(figure) {
 		document.querySelector(".bk-world-fullscreen.bk-world--flying");
 
 	if (!fullscreen && !fig) return;
+	if (fullscreen?.classList?.contains("bk-world--exiting")) return;
+
+	if (!options?.fromPopstate && worldHistoryPushed) {
+		worldHistoryPushed = false;
+		if (typeof window !== "undefined" && window) {
+			window.__bk_suppress_router_popstate = true;
+			setTimeout(() => {
+				if (typeof window !== "undefined" && window) {
+					window.__bk_suppress_router_popstate = false;
+				}
+			}, 300);
+			try {
+				window.history.back();
+			} catch (_) {}
+		}
+	} else {
+		worldHistoryPushed = false;
+	}
 
 	if (document.fullscreenElement) {
 		try {
@@ -1571,6 +1600,7 @@ export function bkExitWorld(figure) {
 		try {
 			const aperture = fig?.querySelector?.(".bk-world-portal");
 			aperture?.focus?.({ preventScroll: true });
+			fig?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
 		} catch (_) {}
 	};
 
@@ -1977,6 +2007,16 @@ function setupWorldPortal(figure) {
  * Initialize World Portals & Intersection Observer
  */
 export function bkInitWorldPortals() {
+	if (window.history?.state?.bkWorld) {
+		try {
+			window.history.replaceState(
+				{ ...window.history.state, bkWorld: false },
+				"",
+				window.location.href,
+			);
+		} catch (_) {}
+	}
+
 	if (!worldObserver) {
 		worldObserver = new IntersectionObserver(
 			(entries) => {
@@ -2128,9 +2168,23 @@ export function bkWireWorldPortals() {
 		}
 	});
 
+	// Popstate listener: Browser Back button or swipe gesture exits active world view
+	window.addEventListener("popstate", () => {
+		const activeFs = document.querySelector(
+			".bk-world-fullscreen.bk-world--active, .bk-world-fullscreen.bk-world--flying",
+		);
+		if (
+			document.body.classList.contains("bk-world-immersive") ||
+			activeFs ||
+			activeWorldFigure
+		) {
+			bkExitWorld(activeWorldFigure, { fromPopstate: true });
+		}
+	});
+
 	window.addEventListener("bk-page-loaded", () => {
 		if (activeWorldFigure) {
-			bkExitWorld(activeWorldFigure);
+			bkExitWorld(activeWorldFigure, { fromPopstate: true });
 		}
 	});
 }

@@ -4268,9 +4268,9 @@ body.bk-world-immersive .bk-topbar {
 	display: inline-grid;
 	place-items: center;
 	border-radius: 6px;
-	border: 1px solid var(--line);
-	background: var(--paper);
-	color: var(--muted);
+	border: 1px solid color-mix(in srgb, #ef4444 35%, var(--line));
+	background: color-mix(in srgb, #ef4444 10%, var(--paper));
+	color: #ef4444;
 	cursor: pointer;
 	line-height: 1;
 	transform: none !important;
@@ -4282,9 +4282,16 @@ body.bk-world-immersive .bk-topbar {
 }
 
 .bk-topbar-btn.bk-world-exit-topbar-btn:hover {
-	color: #ef4444 !important;
-	border-color: color-mix(in srgb, #ef4444 35%, var(--line)) !important;
-	background: color-mix(in srgb, #ef4444 10%, var(--paper)) !important;
+	color: #ffffff !important;
+	border-color: #ef4444 !important;
+	background: #ef4444 !important;
+	transform: none !important;
+}
+
+.bk-topbar-btn.bk-world-exit-topbar-btn:active {
+	color: #ffffff !important;
+	border-color: #dc2626 !important;
+	background: #dc2626 !important;
 	transform: none !important;
 }
 
