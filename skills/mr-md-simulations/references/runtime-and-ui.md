@@ -59,7 +59,7 @@ defaults to a range, a string to text, and a boolean to a toggle. Explicit
 `tunables` are preferred because their labels and bounds define the intended
 experience.
 
-These generated controls are the only non-spatial input UI. Keep form fields,
+For block/steps, these generated controls are the non-spatial input UI. Keep form fields,
 toggles, selects, ordinary action buttons, and control panels out of the iframe.
 When possible, reshape a task into declarative props—for example,
 comma-separated text for a collection—then use the canvas to show the result.
@@ -131,7 +131,7 @@ WebGL.
 
 ### `window.bkSetupWorld(loopFn)`
 
-Bootstraps an **explorable World simulation** (`.world.js` or `type: "world"`).
+Bootstraps a 2D world configured with `type: "world"`.
 Provides an infinite spatial canvas, automatic high-DPI scaling, and camera
 management:
 
@@ -241,3 +241,12 @@ Notice that generated controls stay in the host while the iframe remains a
 visual scene. Use `visual-quality.md` for containment, contrast, and screenshot
 acceptance gates.
 
+
+## Presentation-specific contracts
+
+Read [steps.md](steps.md) for guided-step schema, completion, reset, and narration.
+Read [worlds.md](worlds.md) for portals, camera transforms, custom WebGL rendering,
+and world lifecycle. The fixed-canvas signature of `bkFitCanvas` above does not
+apply to worlds: their helper is `bkFitCanvas(canvas)` and fits the viewport.
+World rendering does not generate the standard tunable control panel; do not
+assume a field present in a shared type guarantees visible controls.

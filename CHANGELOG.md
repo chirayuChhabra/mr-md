@@ -7,7 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Keep autocomplete suggestions open and repositioned when typing scrolls the editor; make the browser regression start from a deterministic editor state.
+- Run CI for pull requests targeting `immersive_simulation_world_view`.
+
 ### Added
+- Modern simulation authoring skill with guided-step, host-managed 2D world, and custom 3D world starters; lifecycle, navigation, appearance, and validation references.
+- **CodeMirror 6 AST-Backed Code Editor & Autocomplete (`.bk-code-runner`)**:
+  - Interactive CodeMirror 6 code editor engine with real-time Lezer AST parsing, custom syntax highlighting matching the mr-md theme, and line gutters.
+  - Context-aware autocomplete for JavaScript, TypeScript, Python, C++, and Rust:
+    - Smart module import gating (suggests module members such as `math.` or `random.` only when explicitly imported in Python).
+    - Scope and namespace completions (e.g. `std::` namespace members in C++, `Vec::` in Rust).
+    - Interpolation awareness (permits completions inside Python f-string replacement braces `{expr}` and JavaScript template literal expressions `${expr}` while suppressing inside comments and raw string literals).
+    - In-buffer identifier harvesting, built-in global suggestions, and multi-language snippets (`clg`, `def`, `main`, `println!`).
+  - Dual-layer fallback engine (`BkAutocomplete`) providing auto-closing brackets, skip-over typing, and completion popups in non-CodeMirror environments.
+  - Editor state synchronization with run, reset, copy, and Wandbox compilation cache invalidation.
+- **Unified Syntax Theme as Single Source of Truth**:
+  - Custom Shiki TextMate theme (`mrMdShikiTheme`) in `src/renderer/markdown/syntax-theme.ts` emitting CSS variable references (`var(--accent)`, `var(--blue)`, `var(--teal)`, `var(--amber)`, `var(--violet)`, `var(--rose)`, `var(--faint)`, `var(--text-code)`) directly into inline styles, allowing pre-rendered static blocks to dynamically react to light/dark modes and custom themes with zero client runtime overhead.
+  - Shared `getLanguageDisplay()` mapping for consistent language labels and pill badges (`C++`, `JavaScript`, `Python`, `TypeScript`, `Bash`, etc.) across both static blocks and interactive runners.
+  - Static code block chrome modernization with pill badges (`.bk-code-badge`) and action header bars containing a declarative copy button matching `.bk-runner-header`.
+- **Interactive Step-by-Step Simulations (`type: "steps"`)**:
+  - Guided interactive labs with milestones, progressive objectives, LaTeX and Markdown instructions, hint drawers, and success feedback toasts.
+  - Companion `.config.json` schema with `"type": "steps"`, step definitions, target badges, and custom per-step parameters (`initialProps`).
+  - First-class custom audio asset bundling (`audio: "./path.mp3"`) with fingerprinting to `out/assets/`, alongside opt-in text-to-speech (`voice`).
+  - Dedicated step runner controls with keyboard shortcuts (`Space` to toggle play/pause, `R` to reset trial, `←` / `→` arrow keys to navigate steps, and clickable milestone progress dots).
+  - Programmatic Builder API: `lesson.steps()` and automatic routing in `lesson.lab()` when the config specifies `"type": "steps"`.
+  - Author runtime hooks: `window.bkOnStep(cb)`, `window.bkOnReset(cb)`, and flexible `window.bkCompleteStep(feedback)`.
+  - Seamless theme adaptation for Standard, Neo, and Playful design systems.
+- **Interactive Runnable Code Blocks (`.bk-code-runner`)**: Embed and execute live code blocks natively within Markdown lessons using the `run` or `runnable` fence flags.
+- **Client-Side Sandbox Runners (JavaScript & TypeScript)**: Execute code directly in browser-native Web Workers with circular-safe custom console streaming and TypeScript type stripping.
+- **In-Browser Python Engine**: Instantaneous zero-server Python 3 compilation and execution via Skulpt with stdlib support and runaway execution timeouts.
+- **Dual-Layer Live Syntax Highlighting**: Lightweight Prism server-side pre-tokenization and 60fps client synchronizer with pixel-perfect line numbers and synchronized scrolling.
+- **IDE Shortcuts & Editing Ergonomics**:
+  - `Cmd + /` / `Ctrl + /` line and multi-line comment toggling across 17+ programming languages with preserved native undo/redo history.
+  - Multi-line `Tab` indent and `Shift + Tab` unindent.
+  - Smart indentation on `Enter` (matching indentation and auto-indenting after `{`, `:`, `[`, `(`).
+  - Bracket & quote pair auto-wrapping and matched backspace deletion.
+- **Two-Stage Ahead-of-Time Compilation (`two-step` mode)**: Compiles C++, C, Rust, Go, Java, Zig with Wandbox, caches binary output, and provides instant machine code execution (`$ ./a.out`) to teach learners the speed difference between ahead-of-time compilation and execution.
+- **Interactive Programming Quizzes & Challenges**:
+  - Clean YAML frontmatter authoring (`challenge` flag) with `title`, `expected`, `match`, `hint`, and `stdin`, automatically parsed and stripped from the student's starter code.
+  - Support for `exact`, `regex` (for dynamic or random outputs like dice rolls), and `contains` evaluation strategies.
+  - Collapsible hint drawers, celebratory success banners, and structured expected vs. actual comparison cards.
+- **Compiled Language Challenges**: Algorithmic challenges in C++, Rust, Go, and C with single-action automated compilation, stdout capture, and compiler error diagnostics.
 - **Modern Full-Width Topbar**: Introduced a persistent top navigation bar spanning the entire width above the layout, housing breadcrumb context, navigation controls, and quick settings.
 - **Dynamic Contextual Breadcrumbs**:
   - Displays hierarchical navigation (`<Course / Chapter Title> / <Lesson Title> / <Active Section>`), dynamically resolving the parent chapter/course title (e.g. `Mr Markdown Documentation`) instead of generic placeholders.
@@ -26,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-platform browser opener**: `openBrowser(url)` helper in `src/cli/utils.ts` using the appropriate OS command (`open`, `xdg-open`, `start`).
 
 ### Changed
+- **Dependencies Update**:
+  - Upgraded `katex` to `^0.19.1` and updated KaTeX CSS CDN link in page templates to `0.19.1`.
+  - Upgraded `isomorphic-dompurify` to `^4.6.0`, `marked` to `^18.1.2`, `shiki` to `^4.5.0`, and `zod` to `^4.6.7`.
+  - Upgraded dev dependencies: `@biomejs/biome` to `^2.6.3`, `@types/node` to `^26.6.5`, `lint-staged` to `^17.6.0`, and `puppeteer` to `^25.16.0`.
+- **Code Block Typography & Aesthetic Parity**:
+  - Aligned typography metrics between `.bk-code-block pre` and `.bk-code-runner`: `font-size: 13.5px`, `line-height: 1.6`, and `tab-size: 2`.
+  - Aligned code block header bars to `min-height: 44px`, `padding: 8px 14px`, and glass background tint across both static code blocks and runners.
+  - Removed outdated `.hljs-*` CSS rules and obsolete `html[data-theme='dark'] .shiki span { color: var(--shiki-dark) !important; }` overrides.
 - **Unified Sidebar Across All Pages**: Restored consistent sidebar navigation on the course/chapter dashboard (`index.html`), maintaining uniform layout and muscle memory across both lesson reading and course browsing.
 - **Motionless Topbar Controls**: Enforced stable, motionless hover and active states (`transform: none`, no jump or spring cubic-bezier) on topbar icon buttons across standard, neo, and playful themes.
 - **Playful UI Layout Alignment**: Removed the radius gap between playful sidebar and topbar, rendering sidebar flush against the topbar border for a cohesive visual structure.
@@ -40,6 +89,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dev server HTTP logging**: Static assets (`.css`, `.js`, images, fonts, etc.) are now silenced from terminal output by default. Use `--verbose` / `-v` to restore full logging.
 
 ### Fixed
+- **Cross-Engine Syntax Highlighting Parity**:
+  - Resolved function call scope leakage in Shiki where arguments and base objects (`console`, `sample`, `col`, `matrix`, `row`) were incorrectly colored as functions by narrowing TextMate scope to `meta.function-call.generic`.
+  - Aligned C++ template type argument angle brackets (`vector<int>`) to `punctuation` (`var(--faint)`) in Prism runner via a dedicated `generic-type` grammar matching Shiki's TextMate delimiter conventions.
+  - Aligned Python return type annotations (`->`) as a unified operator (`var(--violet)`) in both Prism and Shiki.
+  - Aligned JavaScript template string interpolations (`${result}`) by explicitly scoping embedded expressions to `var(--text-code)` and interpolation delimiters (`${`, `}`) to `var(--faint)`.
+- **Runner Code Copy Detachment**: Added an exclusion guard in `bkInitCodeCopy()` preventing global code-block copy containers from wrapping and displacing `.bk-code-runner` highlight layers.
+- **Premature Compilation Abort Bug**: Added a double-click debounce guard in two-step compilation mode and separated timeout events from manual user aborts so compiling never gets erroneously canceled.
+- **Challenge Header Cohesion**: Removed cluttered goal pills from the header, merged duplicate language and challenge tags into clean unified badges, and enforced single-line baseline alignment with `white-space: nowrap;` across all action buttons.
 - **Chapter Overview Routing**: Generated both `index.html` and `${slug}.html` on chapter builds to prevent 404 errors when navigating back from lesson breadcrumbs.
 - **Breadcrumb Hierarchy Naming**: Corrected breadcrumb parent title resolution to inherit the actual course/chapter title rather than static `"Overview"`.
 - **Router Popstate Navigation**: In-page hash navigation via browser back/forward no longer triggers a full PJAX re-fetch or page flash.
@@ -50,6 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quiz Parsing**: Added whitespace trimming prior to Base64 decoding in quiz parser to prevent decode crashes on untrimmed markup.
 - **Clipboard Fallback**: Added a document fallback copy mechanism for non-secure / HTTP environments where `navigator.clipboard` is unavailable.
 - **YouTube Embed Interactivity**: Removed intrusive global mousemove blur handler from YouTube embeds.
+- **YouTube URL Parser**: Resolved video ID corruption when URLs are quoted or contain trailing quotes/hash fragments, ensuring both standard watch URLs (`youtube.com/watch?v=...`) and short URLs (`youtu.be/...`) embed reliably.
+- **YouTube Timestamps & Formats**: Supported timestamp/start offsets (`?t=...`, `&start=...`), live stream URLs (`youtube.com/live/...`), and YouTube Shorts across the parser and builder.
 - **Router prefetch**: `prefetchLink` no longer attempts to prefetch the current page when hovering in-page hash (`#`) anchor links.
 
 ## [4.0.0-alpha.1] - 2026-09-24

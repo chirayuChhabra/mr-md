@@ -28,3 +28,13 @@ command transparently delegates to the open Agent Skills CLI.
 The `assets/` directory contains a starting pair that an agent can copy into a
 lesson project. It is an example, not another runtime implementation.
 
+
+The skill covers block experiments, guided steps, host-managed 2D worlds, and
+custom Three.js worlds. Copy the matching starter pair from `assets/`.
+
+Install and update both select the source tag matching the running mr-md package
+by re-adding that source. Updating an old mr-md package intentionally retains its
+compatible skill; run the newer package to select the newer release's skill.
+For local unreleased testing, `MR_MD_SKILL_REF` overrides the source ref. Publish
+the updated skill in the same Git tag as its matching package release; changing
+only this checkout does not update released installations.

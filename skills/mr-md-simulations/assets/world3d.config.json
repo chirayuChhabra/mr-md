@@ -1,0 +1,7 @@
+{
+  "type": "world",
+  "portal": "minimal",
+  "label": "Explore a rotating solid",
+  "caption": "A Three.js renderer example. Requires network access to load Three.js.",
+  "dependencies": ["https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"]
+}

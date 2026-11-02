@@ -6,6 +6,8 @@ import pc from "picocolors";
 import { z } from "zod";
 import {
 	extractYouTubeId,
+	extractYouTubeStart,
+	isYouTubeUrl,
 	normalizeSimulationOptions,
 	normalizeWorldOptions,
 } from "../builder/utils.js";
@@ -125,19 +127,23 @@ export function parseLesson(
 		}
 
 		if (token.type === "paragraph") {
-			const tokens = token.tokens || [];
+			const tokens = (token.tokens || []).filter(
+				(t) => t.type !== "space" && (t.type !== "text" || t.raw.trim() !== ""),
+			);
 			if (tokens.length === 1 && tokens[0].type === "image") {
 				const img = tokens[0] as Tokens.Image;
-				const src = img.href;
+				const src = (img.href || "").trim().replace(/^["'<]+|["'>]+$/g, "");
 				const caption = img.text;
 
 				flushMarkdown();
 
 				// YouTube
-				if (src.includes("youtube.com") || src.includes("youtu.be")) {
+				if (isYouTubeUrl(src)) {
+					const start = extractYouTubeStart(src);
 					blocks.push({
 						type: "youtube",
 						id: extractYouTubeId(src),
+						...(start != null ? { start } : {}),
 						caption,
 					});
 					continue;
@@ -145,7 +151,7 @@ export function parseLesson(
 
 				const ext = path.extname(src).toLowerCase();
 
-				// Simulation
+				// Simulation or Step-by-Step Simulation
 				if (ext === ".ts" || ext === ".js") {
 					let fileConfig = null;
 					try {
@@ -153,13 +159,13 @@ export function parseLesson(
 							options.contentBase || callerDir,
 							src,
 						);
-						const configPath = `${ext.length > 0 ? resolved.slice(0, -ext.length) : resolved}.config.json`;
+						const configPath = `${resolved.slice(0, -ext.length)}.config.json`;
 						if (fs.existsSync(configPath)) {
 							fileConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 						}
 					} catch (e: unknown) {
 						logger.warn(
-							`Failed to load simulation config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
+							`Failed to load config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
 						);
 					}
 
@@ -180,6 +186,26 @@ export function parseLesson(
 							dependencies: fileConfig?.dependencies,
 							...normalized,
 						} as Extract<Block, { type: "world" }>);
+						continue;
+					}
+
+					// Opinionated: exactly ONE way to define a step-by-step simulation ("type": "steps")
+					if (fileConfig?.type === "steps") {
+						blocks.push({
+							type: "steps",
+							src,
+							label: fileConfig?.label || caption,
+							caption: fileConfig?.caption,
+							steps: fileConfig?.steps || [],
+							props: fileConfig?.props,
+							tunables: fileConfig?.tunables,
+							height: fileConfig?.height,
+							accent: fileConfig?.accent ?? "blue",
+							dependencies: fileConfig?.dependencies,
+							kicker: fileConfig?.kicker,
+							voice: fileConfig?.voice,
+							audio: fileConfig?.audio,
+						});
 						continue;
 					}
 

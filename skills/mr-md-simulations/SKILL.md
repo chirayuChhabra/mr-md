@@ -1,13 +1,15 @@
 ---
 name: mr-md-simulations
-description: Create, integrate, debug, and review context-aware interactive canvas simulations for mr-md lessons. Use when a task mentions an mr-md simulation, interactive lab or diagram, JavaScript or TypeScript lesson embed, sibling .config.json controls, bkSetup, bkColor, __simProps, or changes to the mr-md simulation runtime and UI. Grounds notation, terminology, formulas, units, labels, and interactions in the target lesson and surrounding course context.
-compatibility: Requires an mr-md lesson project. Bun is required to compile TypeScript simulation sources and to run the mr-md repository's development and test commands.
+description: Create, integrate, debug, and review context-aware block simulations, guided steps, and immersive 2D or 3D worlds for mr-md lessons. Use when a task mentions an mr-md simulation, interactive lab or diagram, JavaScript or TypeScript lesson embed, sibling .config.json controls, bkSetup, bkColor, __simProps, or changes to the mr-md simulation runtime and UI. Grounds notation, terminology, formulas, units, labels, and interactions in the target lesson and surrounding course context.
 metadata:
   author: chirayuChhabra
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # Build mr-md simulations
+
+Requires an mr-md lesson project. Bun compiles TypeScript simulation sources
+and runs repository build and test commands.
 
 Create simulations that behave like part of the lesson, not isolated canvas
 demos. Ground every visible term and model choice in the material being taught.
@@ -91,8 +93,11 @@ as the source of truth. Inspect these files before changing the runtime:
 
 - `src/renderer/blocks/iframe.ts`
 - `src/renderer/blocks/simulation.ts`
+- `src/renderer/blocks/steps.ts`
+- `src/renderer/blocks/steps-iframe.ts`
 - `src/renderer/markdown/controls.ts`
 - `src/client/simulation.ts`
+- `src/client/steps.ts`
 - `src/client/interactive.ts`
 - `src/client/theme.ts`
 - `src/types.ts`
@@ -101,46 +106,33 @@ Do not assume a documented API exists when the checked-out implementation
 differs. Reconcile the documentation and tests with any intentional contract
 change.
 
-## Choose the integration
+## Choose presentation and renderer first
 
-For a Markdown lesson, place the simulation beside the lesson or in a local
-`sims/` directory:
+Use a sibling `.config.json` as the explicit presentation contract:
 
-```text
-lesson.md
-sims/
-├── orbit.js
-└── orbit.config.json
-```
+- `type: "block"`: a bounded experiment or diagram with generated host controls.
+  Use `.lab()` in the builder and `bkSetup(width, height, draw)` for 2D.
+- `type: "steps"`: a sequence of learner goals with instructions, hints, trial
+  resets, and completion feedback. Use `.steps()` (or `.lab()` with a steps
+  config). Read [references/steps.md](references/steps.md).
+- `type: "world"`: a portal opening an immersive spatial experience. Use
+  `.world()` in the builder. Read [references/worlds.md](references/worlds.md).
 
-Embed it with Markdown image syntax:
-
-```markdown
-![Explore how orbital speed changes the path](./sims/orbit.js)
-```
-
-For an explorable World simulation, use `.world.js` or tag the caption with `(world)`:
+Embed any of these with descriptive Markdown image syntax:
 
 ```markdown
-![Explore the Stellar Horizon (world)](./sims/cosmos.world.js)
+![Explore orbital motion](./sims/orbit.js)
 ```
 
-For the builder API, use `.lab()` for an interactive simulation, or `.world()` for an explorable world simulation:
+Pair it with `orbit.config.json`. Set `type` explicitly; do not depend on
+`.world.js` or caption markers for routing, even where older runtimes recognize
+those shortcuts. `.add()` rejects ambiguous JavaScript/TypeScript simulations.
 
-```ts
-lesson.lab("./sims/orbit.ts", {
-  label: "Orbital Motion",
-  caption: "Drag the body and vary its initial speed.",
-});
-
-lesson.world("./sims/cosmos.world.ts", {
-  label: "Stellar Horizon",
-  caption: "Pan across space, zoom into planetary wells, and fly with WASD.",
-});
-```
-
-Do not use `.add()` for a JavaScript or TypeScript simulation; that call is
-intentionally ambiguous and rejected by mr-md.
+Choose the renderer separately: `bkSetup` for block/steps 2D,
+`bkSetupWorld` for world 2D, or a custom renderer for WebGL/Three.js. World
+iframes reject `bkSetup`. Read the world reference before using a custom loop.
+The fixed-canvas workflow and containment rules below apply to block/steps 2D;
+worlds use camera-space layouts and screen-space overlays instead.
 
 ## Build the simulation
 
@@ -156,7 +148,7 @@ Follow this order:
 3. Listen for `bk:props` and update local state when host controls change.
 4. Register pointer listeners once, during initialization.
 5. Convert pointer coordinates with `window.bkCanvasPoint`.
-6. Render with `window.bkSetup`; do not add a competing
+6. For block/steps 2D, render with `window.bkSetup`; do not add a competing
    `requestAnimationFrame` loop.
 7. Obtain host colors through `window.bkColor` on every draw.
 8. Obtain the current visual language through `window.bkUi` on every draw.
@@ -205,14 +197,14 @@ Every tunable must:
 - have meaningful bounds and a usable step size; and
 - preserve its value type when handled by the simulation.
 
-Do not build a second form or toolbar inside the iframe. This prohibition
+For block/steps, do not build a second form or toolbar inside the iframe. This prohibition
 includes sliders, toggles, text fields, number fields, selects, ordinary action
 buttons, and control cards. Reshape the interaction around host props when
 possible. For example, represent a set editor with a host text prop such as
 `Set members` and a membership query with `Test element`, then visualize the
 result on canvas. Do not draw fake input boxes on the canvas.
 
-If the learning objective genuinely requires a control the current config
+For block/steps, if the learning objective genuinely requires a control the current config
 cannot express, stop and ask whether to simplify the interaction or extend
 mr-md's host-control contract. Do not silently create a parallel UI system in
 the simulation. The iframe is sandboxed and cannot directly manipulate the
@@ -220,7 +212,7 @@ host lesson DOM.
 
 ## Plan and contain the viewport
 
-Treat the canvas as a diagram or experimental scene, not a second application
+For block/steps, treat the canvas as a diagram or experimental scene, not a second application
 shell. The host already owns the lab title, controls, fullscreen action, and
 caption. Do not repeat them inside the canvas.
 

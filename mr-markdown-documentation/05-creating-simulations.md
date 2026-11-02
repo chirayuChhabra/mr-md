@@ -125,7 +125,113 @@ window.bkSetup(1280, 720, function(ctx, width, height) {
 
 ---
 
-## 4. The `bk` API Reference
+## 4. Interactive Step-by-Step Simulations (`type: "steps"`)
+
+In addition to open sandboxes, `mr-md` supports **Step-by-Step Simulations**. These share the exact same 16:9 aspect ratio and design language as standard simulations (`.bk-object`), while guiding learners through multi-step milestones with goals, instructions, voiceover narration, hints, and instant milestone feedback:
+
+![Orbital Slingshot Maneuver](./sims/orbital-slingshot.js)
+
+### Creating a Step-by-Step Simulation
+
+A step-by-step simulation is defined in exactly one way: a standard simulation file (`mysim.js`) with a companion `mysim.config.json` declaring `"type": "steps"`:
+
+```json
+{
+  "type": "steps",
+  "label": "Orbital Slingshot Maneuver",
+  "caption": "Explore orbital mechanics, Jupiter gravity assists, and Martian atmospheric aerobraking.",
+  "accent": "blue",
+  "steps": [
+    {
+      "id": "step-1-insertion",
+      "title": "Step 1: Orbital Insertion",
+      "target": "Target: Station Alpha",
+      "instruction": "Drag the blue velocity arrow $\\vec{v}_0$ from Earth so gravity curves the flight path into **Station Alpha**.",
+      "voice": "Drag the blue velocity arrow from Earth so gravity curves the flight path directly into Station Alpha.",
+      "feedback": "Orbital insertion achieved! Earth's gravity curved the trajectory into an elliptical transfer arc.",
+      "hint": "Try pulling the velocity vector slightly below the line of sight so gravity pulls it up into orbit."
+    },
+    {
+      "id": "step-2-slingshot",
+      "title": "Step 2: Jupiter Gravity Assist",
+      "target": "Target: Deep Space Outpost",
+      "instruction": "Aim the probe below **Jupiter** to execute a hyperbolic slingshot into **Outpost Gamma**.",
+      "voice": "Aim the probe below Jupiter to execute a gravity assist slingshot into Deep Space Outpost Gamma.",
+      "feedback": "Slingshot confirmed! The probe gained orbital momentum to achieve deep space escape velocity."
+    }
+  ]
+}
+```
+
+### Step Configuration Schema
+
+* `id` *(string)*: Unique identifier for the milestone.
+* `title` *(string)*: Step headline shown in the banner.
+* `target` *(string, Markdown supported)*: Target indicator badge (e.g. `Goal: Cancel Signal`).
+* `instruction` *(string, Markdown & LaTeX supported)*: Pedagogical instruction explaining what the student needs to do.
+* `audio` *(string, optional)*: Path to a custom recorded audio file (e.g. `./audio/step-1.mp3`, `.wav`, or external URL). `mr-md` bundles and fingerprints the asset automatically into `out/assets/`. This is the recommended first-class option for clean, natural voiceover.
+* `voice` *(string, optional)*: Opt-in text for browser speech synthesis (`window.speechSynthesis`). This is strictly opt-in and will never automatically speak unprompted; if neither `audio` nor `voice` is specified, the simulation is completely silent and the audio control is hidden.
+* `feedback` *(string, Markdown supported)*: Success toast shown upon milestone completion.
+* `hint` *(string, Markdown supported)*: Optional hint revealed when the learner clicks the 💡 hint button.
+* `initialProps` *(object)*: Step-specific parameters passed into `window.__simProps` when entering this step.
+
+### Programmatic Builder API
+
+If building lessons with the TypeScript/JavaScript builder API, you can define step-by-step simulations directly:
+
+```typescript
+lesson.steps("sims/orbital-slingshot.js", {
+  label: "Orbital Slingshot Maneuver",
+  steps: [
+    {
+      title: "Step 1: Orbital Insertion",
+      target: "Target: Station Alpha",
+      instruction: "Reach orbital velocity to rendezvous with Station Alpha.",
+      feedback: "Orbit achieved!",
+    },
+  ],
+});
+```
+
+### Writing the Simulation Script
+
+The author runtime provides clean lifecycle hooks inside the canvas iframe sandbox:
+
+```javascript
+let currentStep = 0;
+
+function setupStep(stepIndex) {
+  currentStep = stepIndex;
+  // Initialize objects, obstacles, or starting vectors for this step
+}
+
+// 1. Listen for Step Changes
+window.bkOnStep((stepIndex, stepData, props) => {
+  setupStep(stepIndex);
+});
+
+// 2. Listen for Trial Resets (e.g. Reset button or 'R' key)
+window.bkOnReset(() => {
+  setupStep(currentStep);
+});
+
+// 3. Main Render Loop
+window.bkSetup(800, 450, function(ctx, width, height) {
+  // Update physics and render canvas using window.bkColor...
+
+  // 4. Trigger Milestone Completion when goal condition is reached:
+  if (checkGoalAchieved()) {
+    window.bkCompleteStep("Orbital insertion achieved!");
+  }
+});
+```
+
+* **Keyboard Navigation**: Learners can use `←` / `→` arrow keys to change steps, `Space` to play/pause, and `R` to reset trials.
+* **Clickable Dots**: Learners can click any progress dot to jump directly to that step.
+
+---
+
+## 5. The `bk` API Reference
 
 To ensure simulations scale perfectly and match the host's theme seamlessly, `mr-md` injects several `bk` (BlogKit) global functions into the iframe sandbox.
 
@@ -137,6 +243,32 @@ Bootstraps a 2D canvas simulation.
 - It invokes your `loopFn(ctx, width, height)` on every animation frame.
 
 > **Tip:** You don't need to write a `requestAnimationFrame` loop. `bkSetup` handles the run loop for you automatically!
+
+### `window.bkOnStep(callback)`
+Registers a callback invoked whenever the user switches steps (via arrows, dot clicks, or initial mount).
+```javascript
+window.bkOnStep((stepIndex, stepData, props) => {
+  console.log("Current step:", stepIndex);
+});
+```
+
+### `window.bkOnReset(callback)`
+Registers a callback invoked when the user resets the current step trial (via the reset button or pressing `R`).
+```javascript
+window.bkOnReset(() => {
+  resetSimulationState();
+});
+```
+
+### `window.bkCompleteStep(stepIndexOrMsg, feedbackMsg)`
+Notifies the parent lesson card that the current milestone has been achieved. Automatically triggers the celebration chime, success badge, and optional feedback toast.
+```javascript
+// Simple message for current step
+window.bkCompleteStep("Orbital insertion achieved!");
+
+// Or explicit step index and message
+window.bkCompleteStep(currentStep, "Excellent trajectory!");
+```
 
 ### `window.bkColor(name)`
 Fetches a dynamically synced color from the `mr-md` theme system. If the user toggles dark mode on your site, these colors update automatically!

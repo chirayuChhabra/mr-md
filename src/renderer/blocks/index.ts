@@ -11,6 +11,7 @@ import { renderMedia } from "./media.js";
 import { renderQuiz } from "./quiz.js";
 import { renderSection } from "./section.js";
 import { renderSimulation } from "./simulation.js";
+import { renderSteps } from "./steps.js";
 import { escAttr, escHtml } from "./utils.js";
 import { renderWorld } from "./world.js";
 import { renderYouTube } from "./youtube.js";
@@ -60,6 +61,12 @@ export function renderBlockInner(
 			);
 		case "quiz":
 			return renderQuiz(block, idx, options);
+		case "steps":
+			return renderSteps(
+				block as Extract<Block, { type: "steps" }>,
+				idx,
+				options,
+			);
 		default:
 			logger.warn(
 				`Unknown block type encountered: ${"type" in block ? (block as { type: string }).type : "unknown"}`,
@@ -79,11 +86,12 @@ export function renderBlock(
 			result.html &&
 			"src" in block &&
 			typeof block.src === "string" &&
+			!block.src.includes("\n") &&
 			block.src.includes(".")
 		) {
 			result.html = result.html.replace(
 				/^<([a-zA-Z0-9-]+)([^>]*)>/,
-				`<$1 data-bk-src="${escAttr(block.src)}"$2>`,
+				(_, tag, rest) => `<${tag} data-bk-src="${escAttr(block.src)}"${rest}>`,
 			);
 		}
 		return result;

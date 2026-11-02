@@ -94,6 +94,7 @@ export function bkWireSidebarToggle() {
 
 export function bkInitCodeCopy() {
 	document.querySelectorAll("pre > code").forEach((code) => {
+		if (code.closest(".bk-code-runner")) return;
 		const pre = code.parentElement;
 		if (!pre) return;
 		let container = pre.closest(".bk-code-block");

@@ -26,6 +26,10 @@ than marking untested behavior as complete.
 - Simplifications and unusual units are explained.
 - The caption or surrounding prose explains non-obvious gestures.
 
+For worlds, substitute the world-specific interface and viewport checks in
+[worlds.md](worlds.md) for fixed-canvas controls and containment below. For steps,
+also apply [steps.md](steps.md). Custom renderers own their loop lifecycle.
+
 ## mr-md integration
 
 - The lesson embeds the local `.js` or `.ts` source with descriptive text.
