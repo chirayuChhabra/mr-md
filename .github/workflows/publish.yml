@@ -11,6 +11,7 @@ on:
     branches:
       - main
       - develop
+      - immersive_simulation_world_view
 
 jobs:
   test:

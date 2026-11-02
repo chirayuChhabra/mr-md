@@ -1042,7 +1042,7 @@ export function bkInitCodeRunners(): void {
 				() => {
 					syncScroll(textarea, highlightPre, linesEl);
 					if (autocomplete.isOpen) {
-						autocomplete.close();
+						autocomplete.handleInput();
 					}
 				},
 				{ passive: true },

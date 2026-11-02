@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Keep autocomplete suggestions open and repositioned when typing scrolls the editor; make the browser regression start from a deterministic editor state.
+- Run CI for pull requests targeting `immersive_simulation_world_view`.
+
 ### Added
+- Modern simulation authoring skill with guided-step, host-managed 2D world, and custom 3D world starters; lifecycle, navigation, appearance, and validation references.
 - **CodeMirror 6 AST-Backed Code Editor & Autocomplete (`.bk-code-runner`)**:
   - Interactive CodeMirror 6 code editor engine with real-time Lezer AST parsing, custom syntax highlighting matching the mr-md theme, and line gutters.
   - Context-aware autocomplete for JavaScript, TypeScript, Python, C++, and Rust:
