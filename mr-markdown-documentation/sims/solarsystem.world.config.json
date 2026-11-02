@@ -1,7 +1,9 @@
 {
   "type": "world",
   "portal": "wormhole",
-  "dependencies": ["https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"],
+  "dependencies": [
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+  ],
   "label": "Solar System 3D Explorer",
-  "caption": "True 3D astronomical simulation with true-to-scale orbital distances (AU). Fly to any planet, toggle true scale vs compact view, peel open internal 3D core layers, and explore moons."
+  "caption": "Explore a photographic Milky Way sky, planets, dwarf planets and named stars. Search at the right with \u2318K / Ctrl+K or /. The opening solar glare is intentionally blinding, then gradually recedes as your eyes adjust."
 }
