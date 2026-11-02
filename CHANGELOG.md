@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- Keep autocomplete suggestions open and repositioned when typing scrolls the editor; make the browser regression start from a deterministic editor state.
-- Run CI for pull requests targeting `immersive_simulation_world_view`.
+## [4.0.0-alpha.2] - 2026-11-02
 
 ### Added
 - Show a light or dark coming-soon screen on mobile and tablet-sized displays, with a prompt to use desktop for now.
+- **Immersive Simulation Worlds (`type: "world"`)**:
+  - Full-screen explorable scenes with hold-to-enter portals (`minimal`, `wormhole`, and `pixel`), exit controls, Escape handling, and browser Back integration.
+  - Host-managed 2D worlds with pan, cursor-centered zoom, keyboard navigation, and coordinate conversion helpers; custom WebGL / Three.js renderers are also supported.
+  - Companion `.config.json` configuration and the `lesson.world()` builder API, with minimal, matrix, cosmos, and solar-system documentation examples.
 - Modern simulation authoring skill with guided-step, host-managed 2D world, and custom 3D world starters; lifecycle, navigation, appearance, and validation references.
 - **CodeMirror 6 AST-Backed Code Editor & Autocomplete (`.bk-code-runner`)**:
   - Interactive CodeMirror 6 code editor engine with real-time Lezer AST parsing, custom syntax highlighting matching the mr-md theme, and line gutters.
@@ -91,6 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dev server HTTP logging**: Static assets (`.css`, `.js`, images, fonts, etc.) are now silenced from terminal output by default. Use `--verbose` / `-v` to restore full logging.
 
 ### Fixed
+- Keep autocomplete suggestions open and repositioned when typing scrolls the editor; make the browser regression start from a deterministic editor state.
+- Run CI for pull requests targeting `immersive_simulation_world_view`.
 - **Cross-Engine Syntax Highlighting Parity**:
   - Resolved function call scope leakage in Shiki where arguments and base objects (`console`, `sample`, `col`, `matrix`, `row`) were incorrectly colored as functions by narrowing TextMate scope to `meta.function-call.generic`.
   - Aligned C++ template type argument angle brackets (`vector<int>`) to `punctuation` (`var(--faint)`) in Prism runner via a dedicated `generic-type` grammar matching Shiki's TextMate delimiter conventions.
