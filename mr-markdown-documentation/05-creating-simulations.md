@@ -222,12 +222,12 @@ A freestanding Einstein-Rosen bridge cutting directly through spacetime, with an
 
 ---
 
-### 3. Solar System Orrery & Core Cutaways (`portal: "wormhole"`)
+### 3. Solar System Explorer (`portal: "wormhole"`)
 
-An astronomical multi-body simulation featuring all 8 planets, the Sun, asteroid belt, and primary moons. Click any planet to fly to it, inspect real telemetry, toggle planetary core cross-sections, and explore satellites like Luna, Europa, and Titan:
+Start in the inner solar system and explore an atlas with planetary textures and a glowing Sun. Switch between **True Scale**, which preserves proportional planet sizes, orbital distances and the original orbital motion, and **Illustrated View**, which enlarges planets, compresses orbital spacing and accelerates outer planets for a readable moving overview. Illustrated View is a diagram: sizes, distances and orbital periods are exaggerated independently. Search for planets, moons, named stars, Halley’s comet and illustrative spacecraft.
 
 > [!TIP]
-> **Planetary Orrery & Anatomical Cutaways:** Hold down on the wormhole below to plunge into the Solar System. Click any planet to fly to it, press **"Inspect Layers"** to slice open its internal mantle and core, or click any moon to orbit it in close up!
+> Hold the portal to enter. Drag to orbit the selected object; two-finger scrolling or pinching zooms toward the pointer. Hold Shift while dragging or scrolling to pan. The corner controls offer rotation, panning and play/pause. Use the arrow keys to rotate and W/A/S/D and Q/E to move freely. Press **⌘K / Ctrl+K** or **/** to search for a destination. Planetary orbit guides start visible; the search panel lets you toggle them. Comet orbit guides stay hidden. Selecting a destination first turns the camera gently toward it, then starts a flight through the scene, with longer flights for more distant objects. Dragging or scrolling interrupts travel at the current position. The opening and close-star glare is illustrative. Each named star has one eye-adjustment transition per scene session; flight particles are subtle visual motion cues. Planet sizes and orbital distances use the same scale; modeled moons use JPL mean radii and approximate circular orbits, with generic surface maps. Spacecraft have schematic positions and are shown as enlarged illustrative models only when selected. Planets are rendered by reflected sunlight without enlarged navigation markers. At true scale, distant planets may be smaller than a pixel; use search to approach them and resolve surface textures and sunlit phases. Stellar positions and interstellar separations are schematic; the photographic background is not a live sky chart.
 
 ![Solar System Explorer](./sims/solarsystem.world.js)
 
