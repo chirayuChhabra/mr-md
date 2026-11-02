@@ -284,7 +284,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 			return (
 				status &&
 				(status.textContent?.includes("Ready") ||
-					status.textContent?.includes("Finished"))
+					status.textContent?.includes("Done"))
 			);
 		},
 		{ timeout: 15000 },
