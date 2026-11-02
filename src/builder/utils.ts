@@ -6,9 +6,6 @@ import type {
 	MediaBlock,
 	SimulationConfig,
 	SimulationOptions,
-	WorldConfig,
-	WorldOptions,
-	WorldPortalType,
 } from "../types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -153,45 +150,6 @@ export function normalizeSimulationOptions(
 	};
 }
 
-export function normalizeWorldOptions(
-	opts: WorldOptions | Record<string, unknown> = {},
-	legacyHeight = 480,
-	fileConfig: WorldConfig | null = null,
-): WorldOptions {
-	let inline: WorldOptions;
-	const optionKeys = [
-		"props",
-		"tunables",
-		"height",
-		"label",
-		"caption",
-		"accent",
-		"portal",
-	];
-	const looksLikeOptions = Object.keys(opts).every((key) =>
-		optionKeys.includes(key),
-	);
-
-	if (!looksLikeOptions) {
-		inline = { props: opts as Record<string, unknown> };
-	} else {
-		inline = opts as WorldOptions;
-	}
-
-	const portal: WorldPortalType =
-		inline.portal ?? fileConfig?.portal ?? "minimal";
-
-	return {
-		props: { ...(fileConfig?.props ?? {}), ...(inline.props ?? {}) },
-		tunables: inline.tunables ?? fileConfig?.tunables,
-		height: inline.height ?? fileConfig?.height ?? legacyHeight,
-		label: inline.label ?? fileConfig?.label,
-		caption: inline.caption ?? fileConfig?.caption,
-		accent: inline.accent ?? fileConfig?.accent ?? "blue",
-		portal,
-	};
-}
-
 export function inferMediaKind(src: string): MediaBlock["kind"] {
 	const ext = path.extname(src).toLowerCase();
 	if ([".mp4", ".webm", ".mov"].includes(ext)) return "video";
@@ -201,97 +159,18 @@ export function inferMediaKind(src: string): MediaBlock["kind"] {
 	);
 }
 
-const YOUTUBE_HOSTS = new Set([
-	"youtube.com",
-	"www.youtube.com",
-	"m.youtube.com",
-	"music.youtube.com",
-	"gaming.youtube.com",
-	"youtu.be",
-	"www.youtu.be",
-	"youtube-nocookie.com",
-	"www.youtube-nocookie.com",
-]);
-
-export function isYouTubeUrl(idOrUrl: string): boolean {
-	if (!idOrUrl) return false;
-	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");
-	try {
-		const parsed =
-			clean.startsWith("http://") || clean.startsWith("https://")
-				? new URL(clean)
-				: clean.startsWith("//")
-					? new URL(`https:${clean}`)
-					: new URL(`https://${clean}`);
-		const host = parsed.hostname.toLowerCase();
-		return (
-			YOUTUBE_HOSTS.has(host) ||
-			host.endsWith(".youtube.com") ||
-			host.endsWith(".youtube-nocookie.com")
-		);
-	} catch {
-		return false;
-	}
-}
-
 export function extractYouTubeId(idOrUrl: string): string {
-	if (!idOrUrl) return "";
-	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");
-
-	const watch = clean.match(/[?&]v=([^&?#/"'\s]+)/);
+	const watch = idOrUrl.match(/[?&]v=([^&]+)/);
 	if (watch) return watch[1];
 
-	const short = clean.match(/youtu\.be\/([^?&#/"'\s]+)/);
+	const short = idOrUrl.match(/youtu\.be\/([^?&/]+)/);
 	if (short) return short[1];
 
-	const embed = clean.match(
-		/(?:youtube\.com|youtube-nocookie\.com)\/embed\/([^?&#/"'\s]+)/,
-	);
+	const embed = idOrUrl.match(/youtube\.com\/embed\/([^?&/]+)/);
 	if (embed) return embed[1];
 
-	const shorts = clean.match(/youtube\.com\/shorts\/([^?&#/"'\s]+)/);
+	const shorts = idOrUrl.match(/youtube\.com\/shorts\/([^?&/]+)/);
 	if (shorts) return shorts[1];
 
-	const live = clean.match(/youtube\.com\/live\/([^?&#/"'\s]+)/);
-	if (live) return live[1];
-
-	const legacy = clean.match(/youtube\.com\/v\/([^?&#/"'\s]+)/);
-	if (legacy) return legacy[1];
-
-	return clean;
-}
-
-export function extractYouTubeStart(idOrUrl: string): number | undefined {
-	if (!idOrUrl) return undefined;
-	const clean = idOrUrl.trim().replace(/^["'<]+|["'>]+$/g, "");
-	const match = clean.match(/[?&#](?:t|start)=([^&#"'\s]+)/);
-	if (!match) return undefined;
-
-	const val = match[1];
-	if (/^\d+s?$/i.test(val)) {
-		return parseInt(val, 10);
-	}
-
-	let totalSeconds = 0;
-	let parsed = false;
-
-	const hours = val.match(/(\d+)h/i);
-	if (hours) {
-		totalSeconds += parseInt(hours[1], 10) * 3600;
-		parsed = true;
-	}
-
-	const minutes = val.match(/(\d+)m/i);
-	if (minutes) {
-		totalSeconds += parseInt(minutes[1], 10) * 60;
-		parsed = true;
-	}
-
-	const seconds = val.match(/(\d+)s/i);
-	if (seconds) {
-		totalSeconds += parseInt(seconds[1], 10);
-		parsed = true;
-	}
-
-	return parsed ? totalSeconds : undefined;
+	return idOrUrl;
 }

@@ -11,9 +11,7 @@ import { renderMedia } from "./media.js";
 import { renderQuiz } from "./quiz.js";
 import { renderSection } from "./section.js";
 import { renderSimulation } from "./simulation.js";
-import { renderSteps } from "./steps.js";
 import { escAttr, escHtml } from "./utils.js";
-import { renderWorld } from "./world.js";
 import { renderYouTube } from "./youtube.js";
 
 export { blockChrome } from "../markdown/index.js";
@@ -39,8 +37,6 @@ export function renderBlockInner(
 			return renderCallout(block, idx, options);
 		case "simulation":
 			return renderSimulation(block, idx, options);
-		case "world":
-			return renderWorld(block, idx, options);
 		case "animation":
 			return renderAnimation(block, idx, options);
 		case "media":
@@ -61,12 +57,6 @@ export function renderBlockInner(
 			);
 		case "quiz":
 			return renderQuiz(block, idx, options);
-		case "steps":
-			return renderSteps(
-				block as Extract<Block, { type: "steps" }>,
-				idx,
-				options,
-			);
 		default:
 			logger.warn(
 				`Unknown block type encountered: ${"type" in block ? (block as { type: string }).type : "unknown"}`,
@@ -86,12 +76,11 @@ export function renderBlock(
 			result.html &&
 			"src" in block &&
 			typeof block.src === "string" &&
-			!block.src.includes("\n") &&
 			block.src.includes(".")
 		) {
 			result.html = result.html.replace(
 				/^<([a-zA-Z0-9-]+)([^>]*)>/,
-				(_, tag, rest) => `<${tag} data-bk-src="${escAttr(block.src)}"${rest}>`,
+				`<$1 data-bk-src="${escAttr(block.src)}"$2>`,
 			);
 		}
 		return result;
