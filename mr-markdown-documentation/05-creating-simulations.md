@@ -1,5 +1,5 @@
 ---
-index: 5
+index: 6
 title: Creating Simulations
 slug: creating-simulations
 description: Build inline, guided, and immersive simulations for your lessons.

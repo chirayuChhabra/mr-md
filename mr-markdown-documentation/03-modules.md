@@ -9,14 +9,14 @@ tags: [syntax, math, katex, shiki, callouts]
 
 # Modules and Features
 
-`mr-md` leverages standard Markdown syntax to elegantly construct complex modules.
+Use familiar Markdown for the lesson, then add interactive elements where they help explain an idea. This guide shows the syntax for each feature.
 
 ## Simulations
 
 Embed interactive JavaScript/TypeScript sandboxes natively using a link to a `.js` or `.ts` file:
 
 > [!important]
-> If a `.config.json` file is placed next to your script, its properties will automatically be injected into your simulation as `window.__simProps`.
+> A sibling configuration file such as `orbit.config.json` supplies settings for `orbit.js`. Its `props` values are available to the simulation as `window.__simProps`.
 
 Learn how to build and interact with these sandboxes in the [Creating Simulations](./creating-simulations.html) guide.
 
@@ -72,13 +72,7 @@ When you need side-by-side layouts, use the `<columns>` tag. You can pass raw ma
 
 `mr-md` features a built-in, real-time theming engine. Click the **Settings Gear** in the corner of your screen to customize the visual presentation of your course.
 
-You can instantly:
-- **Toggle Light & Dark Modes**: Seamlessly switch between light, dark, and auto modes.
-- **Customize Color Palettes**: Swap out the core accent colors by choosing between **Ink**, **Field**, or **Ember**.
-- **Transform the UI Style**: Change the overall aesthetic profile of the components on the fly by selecting the **Standard**, **Neo Brutalist**, or **Playful** UI modes!
-
-> [!tip]
-> **Easter Egg:** Double-click on any of the color palette icons in the Settings panel to unlock secret "Pro" color palettes!
+Readers can choose light, dark, or automatic mode, a color palette, and a UI style in Settings.
 
 ---
 
@@ -198,87 +192,12 @@ Nested ordered and unordered lists are also perfectly formatted out of the box.
 
 ---
 
-## Interactive Runnable Code Blocks
+## Code
 
-Transform any standard Markdown code fence into an in-browser editable code runner with integrated console output by appending `run` or `runnable`.
+Show highlighted code, let learners run an example, or check their output in a challenge. The [code guide](./coding.html) covers languages, options, and complete examples.
 
-### Syntax Options
-
-| Flag / Option | Description | Default |
-|---|---|---|
-| `run` or `runnable` | Activates interactive runner mode | Required |
-| `challenge` or `quiz` | Activates coding challenge / quiz mode | Optional |
-| `readonly` or `editable=false` | Disallows student editing (run-only) | `editable=true` |
-| `autorun` | Automatically executes on page load | `false` |
-| `timeout=3000` | Maximum execution time in milliseconds | `3000` |
-| `title="Label"` | Displays a custom title in the runner header | Optional |
-| `stdin="input"` | Supplies standard input to the script | Optional |
-| `expected="..."` | Target output for challenge validation | Optional |
-| `match="exact|regex|contains"` | Evaluation strategy for challenges | `exact` |
-| `hint="..."` | Guidance shown in collapsible drawer | Optional |
-
-### Supported Languages
-- **JavaScript & TypeScript (`js`, `ts`)**: Runs in an isolated Web Worker sandbox with 0ms startup and zero server load.
-- **Python (`python`, `py`)**: Fast in-browser execution with execution limits preventing infinite loops.
-- **Compiled Languages (`cpp`, `c`, `rust`, `go`, `java`, `csharp`, `zig`, `swift`)**: Two-stage compilation flow: students click **Compile** to build and view diagnostics, followed by **Run Binary** for instant machine-speed execution.
-
-### Keyboard Shortcuts
-- `Ctrl + Enter` or `Cmd + Enter`: Run code or check answer.
-- `Cmd + /` or `Ctrl + /`: Toggle line comment on single line or selection.
-- `Tab`: Indent by 2 spaces (or multi-line indent).
-- `Shift + Tab`: Unindent by 2 spaces.
-- `Enter`: Smart auto-indentation matching previous line.
-
-### Interactive Coding Challenges (Quizzes)
-
-You can define coding challenges with clean YAML frontmatter at the top of the block. The frontmatter is automatically stripped from the student's starter code:
-
-```markdown
-```python challenge
----
-title: "Quiz: Even Squares"
-expected: "[4, 16, 36]"
-hint: "Use x % 2 == 0 and x**2"
-match: exact
----
-numbers = [1, 2, 3, 4, 5, 6]
-# Task: Calculate squares of even numbers
-even_squares = [x**2 for x in numbers if x % 2 == 0]
-print(even_squares)
+````markdown
+```javascript run
+console.log("Hello, learner!");
 ```
-```
-
-**Regex matching for dynamic outputs:**
-
-```markdown
-```python challenge
----
-title: "Quiz: Random Roll"
-match: regex
-expected: "^Rolled: [1-6]$"
-hint: "Use random.randint(1, 6)"
----
-import random
-print(f"Rolled: {random.randint(1, 6)}")
-```
-```
-
-**Example:**
-
-```markdown
-```javascript run title="Array Map & Filter"
-const numbers = [1, 2, 3, 4, 5, 6, 7, 8];
-const evens = numbers.filter(n => n % 2 === 0);
-console.log("Original:", numbers);
-console.log("Evens:", evens);
-```
-```
-
-**Result:**
-
-```javascript run title="Array Map & Filter"
-const numbers = [1, 2, 3, 4, 5, 6, 7, 8];
-const evens = numbers.filter(n => n % 2 === 0);
-console.log("Original:", numbers);
-console.log("Evens:", evens);
-```
+````
