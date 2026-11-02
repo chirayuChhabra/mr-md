@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Run CI for pull requests targeting `immersive_simulation_world_view`.
 
 ### Added
+- Show a light or dark coming-soon screen on mobile and tablet-sized displays, with a prompt to use desktop for now.
 - Modern simulation authoring skill with guided-step, host-managed 2D world, and custom 3D world starters; lifecycle, navigation, appearance, and validation references.
 - **CodeMirror 6 AST-Backed Code Editor & Autocomplete (`.bk-code-runner`)**:
   - Interactive CodeMirror 6 code editor engine with real-time Lezer AST parsing, custom syntax highlighting matching the mr-md theme, and line gutters.

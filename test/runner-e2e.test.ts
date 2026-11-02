@@ -25,6 +25,7 @@ beforeAll(async () => {
 		args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security"],
 	});
 	page = await browser.newPage();
+	await page.setViewport({ width: 1280, height: 800 });
 
 	// Intercept external Wandbox compilation requests to ensure deterministic and fast E2E tests
 	await page.setRequestInterception(true);
@@ -69,6 +70,22 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	if (browser) await browser.close();
+});
+
+test("E2E: small screens show the coming-soon page in light and dark modes", async () => {
+	const mobile = await browser.newPage();
+	try {
+		await mobile.setViewport({ width: 390, height: 844 });
+		await mobile.goto(pathToFileURL(join(process.cwd(), "mr-markdown-documentation", "out", "showcase.html")).href, { waitUntil: "domcontentloaded" });
+		for (const scheme of ["light", "dark"] as const) {
+			await mobile.emulateMediaFeatures([{ name: "prefers-color-scheme", value: scheme }]);
+			expect(await mobile.$eval(".bk-mobile-coming-soon", (el) => getComputedStyle(el).display)).toBe("flex");
+			expect(await mobile.$eval(".bk-shell", (el) => getComputedStyle(el).display)).toBe("none");
+			expect(await mobile.$eval(".bk-mobile-coming-soon", (el) => getComputedStyle(el).backgroundColor)).toBe(scheme === "dark" ? "rgb(28, 37, 33)" : "rgb(243, 239, 229)");
+		}
+	} finally {
+		await mobile.close();
+	}
 });
 
 test("E2E: Interactive Code Runner executes, updates output, resets, and clears", async () => {
