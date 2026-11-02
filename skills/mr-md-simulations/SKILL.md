@@ -91,8 +91,11 @@ as the source of truth. Inspect these files before changing the runtime:
 
 - `src/renderer/blocks/iframe.ts`
 - `src/renderer/blocks/simulation.ts`
+- `src/renderer/blocks/steps.ts`
+- `src/renderer/blocks/steps-iframe.ts`
 - `src/renderer/markdown/controls.ts`
 - `src/client/simulation.ts`
+- `src/client/steps.ts`
 - `src/client/interactive.ts`
 - `src/client/theme.ts`
 - `src/types.ts`

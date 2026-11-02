@@ -195,3 +195,90 @@ Nested ordered and unordered lists are also perfectly formatted out of the box.
 2. Second item
    - Nested unordered
    - Another one
+
+---
+
+## Interactive Runnable Code Blocks
+
+Transform any standard Markdown code fence into an in-browser editable code runner with integrated console output by appending `run` or `runnable`.
+
+### Syntax Options
+
+| Flag / Option | Description | Default |
+|---|---|---|
+| `run` or `runnable` | Activates interactive runner mode | Required |
+| `challenge` or `quiz` | Activates coding challenge / quiz mode | Optional |
+| `readonly` or `editable=false` | Disallows student editing (run-only) | `editable=true` |
+| `autorun` | Automatically executes on page load | `false` |
+| `timeout=3000` | Maximum execution time in milliseconds | `3000` |
+| `title="Label"` | Displays a custom title in the runner header | Optional |
+| `stdin="input"` | Supplies standard input to the script | Optional |
+| `expected="..."` | Target output for challenge validation | Optional |
+| `match="exact|regex|contains"` | Evaluation strategy for challenges | `exact` |
+| `hint="..."` | Guidance shown in collapsible drawer | Optional |
+
+### Supported Languages
+- **JavaScript & TypeScript (`js`, `ts`)**: Runs in an isolated Web Worker sandbox with 0ms startup and zero server load.
+- **Python (`python`, `py`)**: Fast in-browser execution with execution limits preventing infinite loops.
+- **Compiled Languages (`cpp`, `c`, `rust`, `go`, `java`, `csharp`, `zig`, `swift`)**: Two-stage compilation flow: students click **Compile** to build and view diagnostics, followed by **Run Binary** for instant machine-speed execution.
+
+### Keyboard Shortcuts
+- `Ctrl + Enter` or `Cmd + Enter`: Run code or check answer.
+- `Cmd + /` or `Ctrl + /`: Toggle line comment on single line or selection.
+- `Tab`: Indent by 2 spaces (or multi-line indent).
+- `Shift + Tab`: Unindent by 2 spaces.
+- `Enter`: Smart auto-indentation matching previous line.
+
+### Interactive Coding Challenges (Quizzes)
+
+You can define coding challenges with clean YAML frontmatter at the top of the block. The frontmatter is automatically stripped from the student's starter code:
+
+```markdown
+```python challenge
+---
+title: "Quiz: Even Squares"
+expected: "[4, 16, 36]"
+hint: "Use x % 2 == 0 and x**2"
+match: exact
+---
+numbers = [1, 2, 3, 4, 5, 6]
+# Task: Calculate squares of even numbers
+even_squares = [x**2 for x in numbers if x % 2 == 0]
+print(even_squares)
+```
+```
+
+**Regex matching for dynamic outputs:**
+
+```markdown
+```python challenge
+---
+title: "Quiz: Random Roll"
+match: regex
+expected: "^Rolled: [1-6]$"
+hint: "Use random.randint(1, 6)"
+---
+import random
+print(f"Rolled: {random.randint(1, 6)}")
+```
+```
+
+**Example:**
+
+```markdown
+```javascript run title="Array Map & Filter"
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8];
+const evens = numbers.filter(n => n % 2 === 0);
+console.log("Original:", numbers);
+console.log("Evens:", evens);
+```
+```
+
+**Result:**
+
+```javascript run title="Array Map & Filter"
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8];
+const evens = numbers.filter(n => n % 2 === 0);
+console.log("Original:", numbers);
+console.log("Evens:", evens);
+```

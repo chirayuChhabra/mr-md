@@ -19,6 +19,8 @@ import type {
 	SimulationBlock,
 	SimulationConfig,
 	SimulationOptions,
+	StepsBlock,
+	StepsOptions,
 	WorldBlock,
 	WorldConfig,
 	WorldOptions,
@@ -27,7 +29,9 @@ import type {
 } from "../types.js";
 import {
 	extractYouTubeId,
+	extractYouTubeStart,
 	inferMediaKind,
+	isYouTubeUrl,
 	normalizeSimulationOptions,
 	normalizeWorldOptions,
 } from "./utils.js";
@@ -72,8 +76,7 @@ export abstract class LessonBlocks {
 			return this.video(src, opts as Omit<MediaOptions, "kind">);
 		if (lower.match(/\.(mp3|wav|ogg|m4a)$/))
 			return this.audio(src, opts as Omit<MediaOptions, "kind">);
-		if (lower.includes("youtube.com") || lower.includes("youtu.be"))
-			return this.youtube(src, opts as YouTubeOptions);
+		if (isYouTubeUrl(src)) return this.youtube(src, opts as YouTubeOptions);
 
 		return this.markdown(src);
 	}
@@ -144,6 +147,26 @@ export abstract class LessonBlocks {
 		return null;
 	}
 
+	steps(src: string, opts: StepsOptions = {}): this {
+		const fileConfig = this.loadSimulationConfig(src);
+		this.blocks.push({
+			type: "steps",
+			src,
+			label: opts.label || fileConfig?.label,
+			caption: opts.caption || fileConfig?.caption,
+			steps: opts.steps || fileConfig?.steps || [],
+			props: opts.props || fileConfig?.props,
+			tunables: opts.tunables || fileConfig?.tunables,
+			height: opts.height ?? fileConfig?.height,
+			accent: opts.accent ?? fileConfig?.accent ?? "blue",
+			dependencies: fileConfig?.dependencies,
+			kicker: opts.kicker || fileConfig?.kicker,
+			voice: opts.voice ?? fileConfig?.voice,
+			audio: opts.audio ?? fileConfig?.audio,
+		} as StepsBlock);
+		return this;
+	}
+
 	simulation(
 		src: string,
 		opts: SimulationOptions | Record<string, unknown> = {},
@@ -163,7 +186,12 @@ export abstract class LessonBlocks {
 		return this;
 	}
 
-	lab(src: string, opts: SimulationOptions = {}): this {
+	lab(src: string, opts: SimulationOptions & StepsOptions = {}): this {
+		const fileConfig = this.loadSimulationConfig(src);
+		// Opinionated: exactly ONE way to identify a step-by-step simulation ("type": "steps")
+		if (fileConfig?.type === "steps") {
+			return this.steps(src, opts);
+		}
 		return this.simulation(src, { controls: "interactive", ...opts });
 	}
 
@@ -228,10 +256,11 @@ export abstract class LessonBlocks {
 	}
 
 	youtube(idOrUrl: string, opts: YouTubeOptions = {}): this {
+		const start = opts.start ?? extractYouTubeStart(idOrUrl);
 		this.blocks.push({
 			type: "youtube",
 			id: extractYouTubeId(idOrUrl),
-			start: opts.start,
+			...(start != null ? { start } : {}),
 			label: opts.label,
 			caption: opts.caption,
 		} as YouTubeBlock);

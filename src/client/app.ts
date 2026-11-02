@@ -1,11 +1,14 @@
 // @ts-nocheck
+
 import {
 	bkInitInteractiveFrames,
 	bkWireInteractiveFrames,
 } from "./interactive.js";
 import { bkWireQuizzes } from "./quiz.js";
 import { bkInitRouter } from "./router.js";
+import { bkInitCodeRunners, bkWireCodeRunners } from "./runner.js";
 import { bkInitSimControls, bkWireSimControls } from "./simulation.js";
+import { bkInitSteps, bkWireSteps } from "./steps.js";
 import { bkBroadcastTheme, bkWireThemeControls } from "./theme.js";
 import {
 	bkInitCodeCopy,
@@ -29,15 +32,19 @@ function wireOnce() {
 	bkWireSimControls();
 	bkWireInteractiveFrames();
 	bkWireCodeCopy();
+	bkWireCodeRunners();
 	bkWireQuizzes();
 	bkWireWorldPortals();
+	bkWireSteps();
 }
 
 function initOnPageLoad() {
 	bkInitCodeCopy();
+	bkInitCodeRunners();
 	bkInitSimControls();
 	bkInitInteractiveFrames();
 	bkInitWorldPortals();
+	bkInitSteps();
 	bkWireScrollSpy();
 	bkWireScrollProgress();
 	bkWireLastLessonTracking();

@@ -51,6 +51,25 @@ Check out this video:
 		expect((ytBlock as any).id).toBe("dQw4w9WgXcQ");
 	});
 
+	test("Extracts YouTube block with quoted URL and share link", () => {
+		const md = `
+# Title
+
+![Share link]("https://youtu.be/k791LJXh4aQ?si=62baoujd_Zv8ESPa")
+
+![Browser link]("https://www.youtube.com/watch?v=k791LJXh4aQ")
+
+![Timestamp link](https://www.youtube.com/watch?v=k791LJXh4aQ&t=90s)
+`;
+		const lesson = parseLesson(md, { contentBase: testDir });
+		const ytBlocks = lesson.blocks.filter(b => b.type === "youtube");
+		expect(ytBlocks.length).toBe(3);
+		expect((ytBlocks[0] as any).id).toBe("k791LJXh4aQ");
+		expect((ytBlocks[1] as any).id).toBe("k791LJXh4aQ");
+		expect((ytBlocks[2] as any).id).toBe("k791LJXh4aQ");
+		expect((ytBlocks[2] as any).start).toBe(90);
+	});
+
 	test("Extracts Media block for audio and video", () => {
 		const md = `
 # Title

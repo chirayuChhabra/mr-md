@@ -1,0 +1,44 @@
+{
+  "type": "steps",
+  "label": "Orbital Slingshot Maneuver",
+  "caption": "Interactive orbital mechanics lab: master orbital insertion, Jupiter gravity assists, and Martian atmospheric aerobraking.",
+  "accent": "blue",
+  "props": {
+    "sound": true
+  },
+  "tunables": {
+    "sound": {
+      "type": "boolean",
+      "label": "Sound Effects"
+    }
+  },
+  "steps": [
+    {
+      "id": "step-1-insertion",
+      "title": "Step 1: Orbital Insertion",
+      "target": "Target: Station Alpha",
+      "instruction": "Aim the initial velocity $v_0$ (drag the spacecraft or crosshair reticle) so Earth's gravity curves your trajectory to dock with **Station Alpha**.",
+      "voice": "Aim the launch vector from Earth so gravity curves the flight path directly to dock with Station Alpha.",
+      "feedback": "Orbital insertion achieved! Earth's gravitational pull curved the trajectory into an elliptical transfer arc, successfully docking with Station Alpha.",
+      "hint": "Angle the vector slightly downward so Earth's gravity curves your trajectory right into Station Alpha's docking port."
+    },
+    {
+      "id": "step-2-slingshot",
+      "title": "Step 2: Jupiter Gravity Assist",
+      "target": "Target: Deep Space Outpost",
+      "instruction": "Aim the spacecraft below **Jupiter** to execute a hyperbolic gravity assist slingshot into **Outpost Gamma**.",
+      "voice": "Aim the spacecraft below Jupiter to execute a gravity assist slingshot into Deep Space Outpost Gamma.",
+      "feedback": "Slingshot confirmed! By diving through Jupiter's deep gravity well and exiting along its orbital path, the spacecraft accelerated to deep space escape velocity.",
+      "hint": "Pass closely underneath Jupiter without hitting its surface. Exiting forward along its trajectory transfers maximum momentum."
+    },
+    {
+      "id": "step-3-aerobraking",
+      "title": "Step 3: Atmospheric Aerobraking",
+      "target": "Target: Low Mars Orbit",
+      "instruction": "Skim through **Mars's glowing upper atmosphere** to dissipate hyper-orbital kinetic energy into heat, capturing the spacecraft into a permanent **Low Mars Orbit**.",
+      "voice": "Skim through Mars's upper atmosphere to dissipate excess kinetic energy and capture the spacecraft into orbit.",
+      "feedback": "Aerobraking successful! Atmospheric friction safely converted excess hyper-orbital kinetic energy into heat, capturing the spacecraft into Low Mars Orbit.",
+      "hint": "Aim through the glowing red atmosphere ring without crashing into Mars. Atmospheric aerobraking will circularize the orbit."
+    }
+  ]
+}

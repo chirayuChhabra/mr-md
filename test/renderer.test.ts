@@ -115,8 +115,11 @@ describe("Renderer", () => {
 			const html = render(l, { strict: true });
 
 			expect(html).toContain('class="bk-code-block"');
-			expect(html).toContain('<span class="bk-code-lang">Cpp</span>');
-			expect(html).toContain('class="shiki');
+			expect(html).toContain('bk-code-lang">C++</span>');
+			expect(html).toContain('class="shiki mr-md"');
+			expect(html).toContain('color:var(--accent)');
+			expect(html).toContain('color:var(--amber');
+			expect(html).toContain('bk-copy-btn');
 			expect(html).toContain('int');
 			expect(html).toContain('34');
 		});
