@@ -366,8 +366,9 @@ export async function runDev(args: string[]) {
 										if (navEl) navEl.scrollTop = navScroll;
 										window.scrollTo(winScrollX, winScrollY);
 
-										const existingStyles = Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style'));
+										const existingStyles = window.__bkPageStyles || [];
 										const newStyles = Array.from(doc.head.querySelectorAll('link[rel="stylesheet"], style'));
+										window.__bkPageStyles = newStyles;
 										
 										newStyles.forEach(s => {
 											if (s.tagName === 'LINK') {
@@ -410,6 +411,11 @@ export async function runDev(args: string[]) {
 						};
 					</script>`;
 
+					// Capture only styles from the HTML, before runtime libraries inject their own.
+					const headEnd = text.toLowerCase().indexOf("</head>");
+					if (headEnd !== -1) {
+						text = text.slice(0, headEnd) + `<script>window.__bkPageStyles = Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style'));</script>` + text.slice(headEnd);
+					}
 					const lastBodyIndex = text.toLowerCase().lastIndexOf("</body>");
 					if (lastBodyIndex !== -1) {
 						text =
