@@ -3,7 +3,7 @@ index: 1
 title: Showcase
 slug: showcase
 description: A complete tour of Mr Markdown interactive components, simulations, quizzes, and modern layouts.
-author: Mr Markdown Core Team
+author: Mr-Md Team
 tags: [overview, simulations, quizzes, components]
 eyebrow: Tour & Modules
 ---

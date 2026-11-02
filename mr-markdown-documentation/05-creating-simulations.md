@@ -2,138 +2,79 @@
 index: 5
 title: Creating Simulations
 slug: creating-simulations
-description: Mount theme-aware 2D/3D JavaScript and TypeScript interactive canvas sandboxes with zero external dependencies.
-author: Graphics & Engine Team
+description: Build inline, guided, and immersive simulations for your lessons.
+author: Mr-Md Team
 tags: [canvas, simulations, graphics, theme-aware]
 ---
 
 # Creating Simulations
 
-`mr-md` embeds interactive JavaScript simulations natively within a secure, sandboxed `iframe`. These simulations can respond to user inputs, adapt to dark/light mode themes seamlessly, and are optimized for high-DPI displays.
-
-Check out this interactive pathfinding simulation built with the `mr-md` API:
-
-> [!TIP]
-> **Interactive:** Drag the **START** (Green) or **END** (Red) nodes to move them. Click and drag on empty space to draw **WALLS**.
+Try a simulation: drag the start and end points, or draw walls on the grid.
 
 ![Pathfinder Simulation](./sims/pathfinder.js)
 
----
+A simulation is a JavaScript or TypeScript file embedded in a lesson with Markdown.
 
-## 1. AI-Assisted Creation
+Choose the format that fits the lesson:
 
-The fastest and most robust way to build a simulation is to let an AI coding assistant (like **Claude Code**, **Cursor**, **Codex**, or **Antigravity**) do the heavy lifting.
+| Format | Use it for | Configuration |
+| --- | --- | --- |
+| Block | A sandbox or model alongside the text | `"type": "block"` (default) |
+| Steps | A sequence of goals with instructions and feedback | `"type": "steps"` |
+| World | An explorable scene entered through a portal | `"type": "world"` |
 
-`mr-md` provides an official Agent Skill that teaches AI exactly how to use the `mr-md` runtime API, handle `.config.json` properties, and match the framework's visual style.
+## Block simulations
 
-Just install the skill in your project:
-
-```bash
-bunx mr-md skill install
-```
-
-Once installed, simply ask your AI agent:
-> "Create a simulation of the A* pathfinding algorithm. Let the user click to toggle walls on the grid, and animate the search path when they press a start button."
-
-The AI will automatically write the script, wire up the interactive UI controls, hook into the live theming engine, and embed it using the correct Markdown syntax!
-
-See the [Agent Skills](./agent-skills.html) guide for full details on the skill system.
-
----
-
-## 2. Manual Creation
-
-If you prefer to write simulations by hand, it involves two pieces: a JavaScript file that contains your simulation logic, and a simple Markdown embed to display it.
-
-### Step 1: Write your Simulation Script
-Create a new file called `mysim.js` (or `.ts`) in your project. We'll use the `mr-md` global API to draw a simple rectangle:
+To make your own, create a script next to your lesson. `bkSetup` provides a canvas and calls your drawing function on each animation frame:
 
 ```javascript
 // mysim.js
-window.bkSetup(1280, 720, function(ctx, width, height) {
-  // Clear the canvas every frame
+window.bkSetup(800, 450, (ctx, width, height) => {
   ctx.clearRect(0, 0, width, height);
-  
-  // Use dynamically synced theme colors!
   ctx.fillStyle = window.bkColor("accent");
-  
-  // Draw something
-  ctx.fillRect(10, 10, 50, 50);
+  ctx.fillRect(40, 40, 80, 80);
 });
 ```
 
-### Step 2: Embed in Markdown
-Embed the simulation using the standard Markdown image syntax, pointing to your `.js` or `.ts` file:
+Embed it in your Markdown:
 
 ```markdown
-![My First Simulation](./mysim.js)
+![My simulation](./mysim.js)
 ```
 
-That's it! `mr-md` automatically wraps your script in a sandbox, provisions a high-DPI canvas, and runs your render loop.
+### Add controls
 
----
-
-## 3. Configuration & Interactive UI (`.config.json`)
-
-One of the most powerful features of `mr-md` simulations is the ability to expose **interactive controls** (sliders, toggles) directly to the reader without writing any UI code.
-
-If you place a JSON file next to your script with the same name (e.g., `mysim.config.json` for `mysim.js`), `mr-md` will parse it, generate a UI block above the simulation, and pass the properties to your script at runtime.
-
-### Example: `mysim.config.json`
+Place `mysim.config.json` beside `mysim.js`. Properties supply initial values; tunables describe the controls displayed to the reader.
 
 ```json
 {
-  "props": {
-    "mazeDensity": 25,
-    "diagonal": false,
-    "showStats": true
-  },
+  "type": "block",
+  "props": { "speed": 2, "showGrid": true },
   "tunables": {
-    "mazeDensity": { 
-      "label": "Maze Density (%)", 
-      "min": 0, 
-      "max": 50, 
-      "step": 1 
-    },
-    "diagonal": { 
-      "label": "Allow Diagonal", 
-      "type": "boolean" 
-    },
-    "showStats": {
-      "label": "Show Stats",
-      "type": "boolean"
-    }
+    "speed": { "label": "Speed", "min": 0, "max": 10, "step": 1 },
+    "showGrid": { "label": "Show grid", "type": "boolean" }
   }
 }
 ```
 
-- **`props`**: The default values that are passed to your simulation.
-- **`tunables`**: Describes how `mr-md` should render the UI. A range slider will be generated for `mazeDensity`, and toggle switches for `diagonal` and `showStats`.
-
-### Accessing Props in your Script
-
-Inside your simulation script, you can access these values—which update in real-time as the user interacts with the UI—via the `window.__simProps` object:
+Read `window.__simProps` while drawing or updating your model. Values change as the reader uses the controls:
 
 ```javascript
-window.bkSetup(1280, 720, function(ctx, width, height) {
-  const density = window.__simProps.mazeDensity;
-  const allowDiag = window.__simProps.diagonal;
-  
-  // Use 'density' and 'allowDiag' in your simulation logic!
+window.bkSetup(800, 450, (ctx, width, height) => {
+  const { speed, showGrid } = window.__simProps;
+  // Update and draw using speed and showGrid.
 });
 ```
 
----
+## Steps simulations
 
-## 4. Interactive Step-by-Step Simulations (`type: "steps"`)
-
-In addition to open sandboxes, `mr-md` supports **Step-by-Step Simulations**. These share the exact same 16:9 aspect ratio and design language as standard simulations (`.bk-object`), while guiding learners through multi-step milestones with goals, instructions, voiceover narration, hints, and instant milestone feedback:
+In addition to open sandboxes, `mr-md` supports **Step-by-Step Simulations**. Use steps when a learner should work through a sequence of goals. Each step can provide instructions, a hint, feedback, and optional narration:
 
 ![Orbital Slingshot Maneuver](./sims/orbital-slingshot.js)
 
 ### Creating a Step-by-Step Simulation
 
-A step-by-step simulation is defined in exactly one way: a standard simulation file (`mysim.js`) with a companion `mysim.config.json` declaring `"type": "steps"`:
+Add `"type": "steps"` and a `steps` array to the companion configuration:
 
 ```json
 {
@@ -163,17 +104,19 @@ A step-by-step simulation is defined in exactly one way: a standard simulation f
 }
 ```
 
-### Step Configuration Schema
+### Step configuration
 
-* `id` *(string)*: Unique identifier for the milestone.
-* `title` *(string)*: Step headline shown in the banner.
-* `target` *(string, Markdown supported)*: Target indicator badge (e.g. `Goal: Cancel Signal`).
-* `instruction` *(string, Markdown & LaTeX supported)*: Pedagogical instruction explaining what the student needs to do.
-* `audio` *(string, optional)*: Path to a custom recorded audio file (e.g. `./audio/step-1.mp3`, `.wav`, or external URL). `mr-md` bundles and fingerprints the asset automatically into `out/assets/`. This is the recommended first-class option for clean, natural voiceover.
-* `voice` *(string, optional)*: Opt-in text for browser speech synthesis (`window.speechSynthesis`). This is strictly opt-in and will never automatically speak unprompted; if neither `audio` nor `voice` is specified, the simulation is completely silent and the audio control is hidden.
-* `feedback` *(string, Markdown supported)*: Success toast shown upon milestone completion.
-* `hint` *(string, Markdown supported)*: Optional hint revealed when the learner clicks the 💡 hint button.
-* `initialProps` *(object)*: Step-specific parameters passed into `window.__simProps` when entering this step.
+| Field | Purpose |
+| --- | --- |
+| `id` | Unique step identifier. |
+| `title` | Step headline. |
+| `target` | Goal shown in the target badge; supports Markdown. |
+| `instruction` | Directions for the learner; supports Markdown and LaTeX. |
+| `hint` | Optional hint revealed on request; supports Markdown. |
+| `feedback` | Message shown on completion; supports Markdown. |
+| `initialProps` | Properties applied when the step starts. |
+| `audio` | Optional path or URL to recorded narration. Local files are bundled. |
+| `voice` | Optional text for browser speech synthesis. |
 
 ### Programmatic Builder API
 
@@ -231,163 +174,50 @@ window.bkSetup(800, 450, function(ctx, width, height) {
 
 ---
 
-## 5. The `bk` API Reference
+## Immersive worlds
 
-To ensure simulations scale perfectly and match the host's theme seamlessly, `mr-md` injects several `bk` (BlogKit) global functions into the iframe sandbox.
+A world starts as a portal in the lesson and expands into an immersive view. Hold the portal to enter; use the close button, Escape, or browser Back to return to the lesson.
 
-### `window.bkSetup(width, height, loopFn)`
-Bootstraps a 2D canvas simulation. 
-- It automatically creates an internal canvas.
-- It sets up DPI scaling for retina displays.
-- It handles window resizing dynamically.
-- It invokes your `loopFn(ctx, width, height)` on every animation frame.
+### Solar System Explorer
 
-> **Tip:** You don't need to write a `requestAnimationFrame` loop. `bkSetup` handles the run loop for you automatically!
+Hold the portal to explore the solar system. Drag to orbit, Shift-drag to pan,
+and scroll to zoom. Select a body to explore it, or use the search panel on the
+right (⌘K / Ctrl+K or `/`) to find one. The controls also let you show or hide
+orbits and adjust sound.
 
-### `window.bkOnStep(callback)`
-Registers a callback invoked whenever the user switches steps (via arrows, dot clicks, or initial mount).
-```javascript
-window.bkOnStep((stepIndex, stepData, props) => {
-  console.log("Current step:", stepIndex);
-});
-```
+> [!WARNING]
+> The opening scene contains an intense bright flash and glare.
 
-### `window.bkOnReset(callback)`
-Registers a callback invoked when the user resets the current step trial (via the reset button or pressing `R`).
-```javascript
-window.bkOnReset(() => {
-  resetSimulationState();
-});
-```
+![Solar System Explorer](./sims/solarsystem.world.js)
 
-### `window.bkCompleteStep(stepIndexOrMsg, feedbackMsg)`
-Notifies the parent lesson card that the current milestone has been achieved. Automatically triggers the celebration chime, success badge, and optional feedback toast.
-```javascript
-// Simple message for current step
-window.bkCompleteStep("Orbital insertion achieved!");
+### Create a world
 
-// Or explicit step index and message
-window.bkCompleteStep(currentStep, "Excellent trajectory!");
-```
-
-### `window.bkColor(name)`
-Fetches a dynamically synced color from the `mr-md` theme system. If the user toggles dark mode on your site, these colors update automatically!
-
-```javascript
-const accentColor = window.bkColor("accent");
-const bgColor = window.bkColor("bg");
-const textColor = window.bkColor("text");
-```
-
-### `window.bkCanvasPoint(event, canvas)`
-Translates raw DOM pointer coordinates (like `event.clientX`) into the logical coordinate space of the DPI-scaled canvas. Essential for handling mouse and touch interactions accurately.
-
-```javascript
-// Access the underlying canvas created by bkSetup
-const canvas = document.getElementById("c");
-
-canvas.addEventListener("pointermove", (e) => {
-  const pt = window.bkCanvasPoint(e, canvas);
-  console.log("Mouse X:", pt.x, "Mouse Y:", pt.y);
-});
-```
-
-### `window.bkFitCanvas(canvas, requestedW, requestedH, options)`
-If you are doing custom canvas rendering (like WebGL instead of the 2D context provided by `bkSetup`), call this manually to apply the CSS scaling transforms needed to make your canvas responsive inside the `mr-md` layout container.
-
----
-
-## 5. Explorable World Simulations
-
-While standard simulations act as inline parameter laboratories, **World Simulations** represent an entirely new medium in `mr-md`: **living, explorable realities**.
-
-Instead of a static box, readers encounter an unboxed physical portal cutting directly into the document. Holding the portal initiates a cinematic traversal that transports the reader seamlessly into full-viewport immersion.
-
-### Three Self-Contained World Styles (Config-Driven)
-
-Each simulation configures its portal aesthetic directly in its `.config.json` file:
-* **Minimalist** (`"portal": "minimal"`, default): A clean, modern framed container with subtle borders and sleek progress indicator. Smooth, professional geometric morph into the viewport.
-* **Cosmic Wormhole** (`"portal": "wormhole"`): A freestanding Einstein-Rosen spatial gateway with shimmering Einstein ring, exotic plasma vortex, 3D parallax destination starfield, and relativistic hyperspace transit.
-* **Retro Pixel Matrix** (`"portal": "pixel"`): Stepped retro 8-bit frame with arcade-style segmented energy bar, live de-pixelating mosaic resolution, and digital warp tunnel.
-* **Modular Extensibility (`bkRegisterWorldTransition`)**: Authors can register custom transition shaders or canvases cleanly at runtime without modifying engine code.
-
-### Integrated Top Bar Immersion UX
-
-* **Persistent Header & Breadcrumbs**: The top navigation bar remains cleanly pinned above the simulation. Breadcrumbs dynamically append the simulation's title (e.g. `Chapter / Lesson / Stellar Dynamics World`).
-* **Header Close Button**: An integrated `×` icon button sits right next to the dark/light mode toggle in the top bar. You can toggle color themes or exit immersion with a single click.
-* **Reverse Exit**: Clicking the close button or pressing `Escape` reverses the traversal smoothly back into the document at the exact scroll position.
-
-### Authoring a World Simulation
-
-Authors use standard Markdown image notation:
+Embed a simulation script:
 
 ```markdown
-![Stellar Dynamics World](./sims/cosmos.world.js)
+![Orbital world](./sims/orbit.js)
 ```
 
-In the sibling `cosmos.world.config.json`, simply specify `"type": "world"` and your chosen portal style:
+Add a sibling `orbit.config.json` with `"type": "world"` and a portal style:
 
 ```json
 {
   "type": "world",
-  "portal": "wormhole",
-  "dependencies": ["three"]
+  "portal": "minimal",
+  "label": "Orbital world"
 }
 ```
 
-### 1. Minimalist Standard (`portal: "minimal"`)
+The configuration selects the world experience; a `.world.js` filename alone
+does not. Available portal styles are `minimal`, `wormhole`, and `pixel`.
 
-A sleek, architectural card matching the reading column with an interactive aperture and smooth geometric expansion:
-
-![Orbital Mechanics](./sims/minimal.world.js)
-
----
-
-### 2. Cosmic Wormhole (`portal: "wormhole"`)
-
-A freestanding Einstein-Rosen bridge cutting directly through spacetime, with an iridescent Einstein ring caustic, exotic matter stabilization vortex, and volumetric 3D hyperspace traversal:
-
-> [!TIP]
-> **Cosmic Wormhole World:** Hold down anywhere on the wormhole below to initiate the relativistic traversal and plunge through hyperspace into the explorable universe!
-
-![Stellar Dynamics World](./sims/cosmos.world.js)
-
----
-
-### 3. Solar System Explorer (`portal: "wormhole"`)
-
-Start in the inner solar system and explore an atlas with planetary textures and a glowing Sun. Switch between **True Scale**, which preserves proportional planet sizes, orbital distances and the original orbital motion, and **Illustrated View**, which enlarges planets, compresses orbital spacing and accelerates outer planets for a readable moving overview. Illustrated View is a diagram: sizes, distances and orbital periods are exaggerated independently. Search for planets, moons, named stars, Halley’s comet and illustrative spacecraft.
-
-> [!TIP]
-> Hold the portal to enter. Drag to orbit the selected object; two-finger scrolling or pinching zooms toward the pointer. Hold Shift while dragging or scrolling to pan. The corner controls offer rotation, panning and play/pause. Use the arrow keys to rotate and W/A/S/D and Q/E to move freely. Press **⌘K / Ctrl+K** or **/** to search for a destination. Planetary orbit guides start visible; the search panel lets you toggle them. Comet orbit guides stay hidden. Selecting a destination first turns the camera gently toward it, then starts a flight through the scene, with longer flights for more distant objects. Dragging or scrolling interrupts travel at the current position. The opening and close-star glare is illustrative. Each named star has one eye-adjustment transition per scene session; flight particles are subtle visual motion cues. Planet sizes and orbital distances use the same scale; modeled moons use JPL mean radii and approximate circular orbits, with generic surface maps. Spacecraft have schematic positions and are shown as enlarged illustrative models only when selected. Planets are rendered by reflected sunlight without enlarged navigation markers. At true scale, distant planets may be smaller than a pixel; use search to approach them and resolve surface textures and sunlit phases. Stellar positions and interstellar separations are schematic; the photographic background is not a live sky chart.
-
-![Solar System Explorer](./sims/solarsystem.world.js)
-
----
-
-### 4. Retro Pixel Matrix (`portal: "pixel"`)
-
-A stepped retro 8-bit matrix frame with de-pixelating mosaic resolution and cyber warp tunnel:
-
-> [!TIP]
-> **Pixel Matrix World:** Hold anywhere on the cyber frame below to charge the matrix and enter the quantum realm!
-
-![Quantum Pixel Matrix](./sims/matrix.world.js)
-
-### World Script Example
+For a 2D world, use `bkSetupWorld` instead of `bkSetup`. The callback receives the canvas context and world state, including the camera and live props:
 
 ```javascript
-// cosmos.world.js
-window.bkSetupWorld(function(ctx, world) {
-  // world.camera has { x, y, zoom }
-  // world.props has live configuration props
-  // world.isWorld is true when expanded into full-view immersion
-  
-  // Clear canvas
+// orbit.js
+window.bkSetupWorld((ctx, world) => {
   ctx.fillStyle = window.bkColor("bg");
   ctx.fillRect(-2000, -2000, 4000, 4000);
-
-  // Draw your world at (0, 0)
   ctx.fillStyle = window.bkColor("accent");
   ctx.beginPath();
   ctx.arc(0, 0, 40, 0, Math.PI * 2);
@@ -395,3 +225,30 @@ window.bkSetupWorld(function(ctx, world) {
 });
 ```
 
+The solar-system example uses Three.js and external resources; it requires a network connection for its configured library. For a smaller 2D example, explore the minimal portal:
+
+![Orbital Mechanics](./sims/minimal.world.js)
+
+## Runtime reference
+
+| API | Purpose |
+| --- | --- |
+| `bkSetup(width, height, draw)` | Set up a responsive 2D canvas and animation loop. |
+| `bkSetupWorld(draw)` | Set up a 2D world; the callback receives the context and world state. |
+| `bkColor(name)` | Read a theme color such as `accent`, `bg`, or `text`. |
+| `bkCanvasPoint(event, canvas)` | Convert pointer coordinates to canvas coordinates. |
+| `bkFitCanvas(canvas, width, height, options)` | Fit a custom canvas to its container. |
+| `__simProps` | Read current properties; listen for `bk:props` to react to changes. |
+| `bkOnStep`, `bkOnReset`, `bkCompleteStep` | Handle the steps lifecycle, as shown above. |
+
+These APIs are available on `window` inside the simulation iframe.
+
+## AI-assisted authoring
+
+The optional mr-md Agent Skill provides an assistant with simulation authoring guidance. Install it with:
+
+```bash
+bunx mr-md skill install
+```
+
+See [Agent Skills](./agent-skills.html) for details. Review and test generated simulations in the lesson just as you would code written by hand.

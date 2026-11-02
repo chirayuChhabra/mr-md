@@ -5,11 +5,17 @@ import { tmpdir } from "node:os";
 import {
 	buildSkillsCliArgs,
 	readSkillVersion,
+	runSkill,
 	SIMULATION_SKILL_NAME,
 	SIMULATION_SKILL_SOURCE,
 } from "../src/cli/skill.js";
 
 describe("skill CLI", () => {
+	test("rejects obsolete management commands", async () => {
+		for (const action of ["update", "remove", "version"]) {
+			await expect(runSkill([action])).rejects.toThrow(`Unknown skill command: ${action}`);
+		}
+	});
 	test("builds the global install command", () => {
 		expect(buildSkillsCliArgs("install")).toEqual([
 			"x",
@@ -22,24 +28,6 @@ describe("skill CLI", () => {
 		]);
 	});
 
-	test("builds update and remove commands", () => {
-		expect(buildSkillsCliArgs("update")).toEqual([
-			"x",
-			"skills",
-			"add",
-			SIMULATION_SKILL_SOURCE,
-			"--skill",
-			SIMULATION_SKILL_NAME,
-			"--global",
-		]);
-		expect(buildSkillsCliArgs("remove")).toEqual([
-			"x",
-			"skills",
-			"remove",
-			SIMULATION_SKILL_NAME,
-			"--global",
-		]);
-	});
 
 	test("forwards Agent Skills CLI options", () => {
 		expect(buildSkillsCliArgs("install", ["--agent", "codex", "--yes"])).toEqual([

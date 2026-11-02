@@ -169,10 +169,7 @@ export function parseLesson(
 						);
 					}
 
-					const isWorld =
-						src.endsWith(".world.js") ||
-						src.endsWith(".world.ts") ||
-						fileConfig?.type === "world";
+					const isWorld = fileConfig?.type === "world";
 
 					if (isWorld) {
 						const normalized = normalizeWorldOptions(
