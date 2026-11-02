@@ -47,7 +47,9 @@ async function buildFile(filePath: string) {
 			);
 			buildLesson(lesson, { outDir, contentBase });
 		}
-		logger.succeedSpinner(`Build successful for ${filePath}.`);
+		logger.succeedSpinner(
+			`Build successful for ${path.relative(process.cwd(), filePath) || path.basename(filePath)}.`,
+		);
 	} catch (err: unknown) {
 		logger.failSpinner(`Build failed for ${filePath}`);
 		logger.error(
@@ -97,7 +99,9 @@ export async function runBuild(args: string[]) {
 			);
 			buildChapter(chapter, { outDir, contentBase });
 
-			logger.succeedSpinner(`Build successful for directory ${targetPath}.`);
+			logger.succeedSpinner(
+				`Build successful for directory ${path.relative(process.cwd(), targetPath) || path.basename(targetPath)}.`,
+			);
 		} catch (err: unknown) {
 			logger.error(err instanceof Error ? err.message : String(err));
 			process.exit(1);

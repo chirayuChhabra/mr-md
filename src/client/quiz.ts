@@ -15,9 +15,9 @@ export function bkWireQuizzes() {
 		let answers = [];
 		if (dataEl) {
 			try {
-				let raw = dataEl.textContent || "";
+				let raw = (dataEl.textContent || "").trim();
 				if (raw.startsWith('"') && raw.endsWith('"')) {
-					raw = raw.slice(1, -1);
+					raw = raw.slice(1, -1).trim();
 				}
 				const decoded = atob(raw);
 				answers = JSON.parse(decoded);

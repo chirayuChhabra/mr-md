@@ -2,10 +2,14 @@ import matter from "@11ty/gray-matter";
 import * as fs from "fs";
 import { marked, type Tokens } from "marked";
 import * as path from "path";
+import pc from "picocolors";
 import { z } from "zod";
 import {
 	extractYouTubeId,
+	extractYouTubeStart,
+	isYouTubeUrl,
 	normalizeSimulationOptions,
+	normalizeWorldOptions,
 } from "../builder/utils.js";
 import { logger } from "../cli/logger.js";
 import type {
@@ -26,8 +30,10 @@ const LessonFrontmatterSchema = z
 		description: z.string().optional(),
 		tags: z.array(z.string()).optional(),
 		author: z.string().optional(),
+		eyebrow: z.union([z.string(), z.boolean()]).optional(),
 		status: z.enum(["read", "unread", "locked"]).optional(),
 		parentSlug: z.string().optional(),
+		parentTitle: z.string().optional(),
 		prevSlug: z.string().optional(),
 		prevTitle: z.string().optional(),
 		nextSlug: z.string().optional(),
@@ -121,19 +127,23 @@ export function parseLesson(
 		}
 
 		if (token.type === "paragraph") {
-			const tokens = token.tokens || [];
+			const tokens = (token.tokens || []).filter(
+				(t) => t.type !== "space" && (t.type !== "text" || t.raw.trim() !== ""),
+			);
 			if (tokens.length === 1 && tokens[0].type === "image") {
 				const img = tokens[0] as Tokens.Image;
-				const src = img.href;
+				const src = (img.href || "").trim().replace(/^["'<]+|["'>]+$/g, "");
 				const caption = img.text;
 
 				flushMarkdown();
 
 				// YouTube
-				if (src.includes("youtube.com") || src.includes("youtu.be")) {
+				if (isYouTubeUrl(src)) {
+					const start = extractYouTubeStart(src);
 					blocks.push({
 						type: "youtube",
 						id: extractYouTubeId(src),
+						...(start != null ? { start } : {}),
 						caption,
 					});
 					continue;
@@ -141,7 +151,7 @@ export function parseLesson(
 
 				const ext = path.extname(src).toLowerCase();
 
-				// Simulation
+				// Simulation or Step-by-Step Simulation
 				if (ext === ".ts" || ext === ".js") {
 					let fileConfig = null;
 					try {
@@ -149,14 +159,54 @@ export function parseLesson(
 							options.contentBase || callerDir,
 							src,
 						);
-						const configPath = `${ext.length > 0 ? resolved.slice(0, -ext.length) : resolved}.config.json`;
+						const configPath = `${resolved.slice(0, -ext.length)}.config.json`;
 						if (fs.existsSync(configPath)) {
 							fileConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 						}
 					} catch (e: unknown) {
 						logger.warn(
-							`Failed to load simulation config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
+							`Failed to load config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
 						);
+					}
+
+					const isWorld =
+						src.endsWith(".world.js") ||
+						src.endsWith(".world.ts") ||
+						fileConfig?.type === "world";
+
+					if (isWorld) {
+						const normalized = normalizeWorldOptions(
+							{ caption },
+							480,
+							fileConfig,
+						);
+						blocks.push({
+							type: "world",
+							src,
+							dependencies: fileConfig?.dependencies,
+							...normalized,
+						} as Extract<Block, { type: "world" }>);
+						continue;
+					}
+
+					// Opinionated: exactly ONE way to define a step-by-step simulation ("type": "steps")
+					if (fileConfig?.type === "steps") {
+						blocks.push({
+							type: "steps",
+							src,
+							label: fileConfig?.label || caption,
+							caption: fileConfig?.caption,
+							steps: fileConfig?.steps || [],
+							props: fileConfig?.props,
+							tunables: fileConfig?.tunables,
+							height: fileConfig?.height,
+							accent: fileConfig?.accent ?? "blue",
+							dependencies: fileConfig?.dependencies,
+							kicker: fileConfig?.kicker,
+							voice: fileConfig?.voice,
+							audio: fileConfig?.audio,
+						});
+						continue;
 					}
 
 					const normalized = normalizeSimulationOptions(
@@ -296,6 +346,7 @@ const ChapterFrontmatterSchema = z
 		title: z.string().optional(),
 		slug: z.string().optional(),
 		description: z.string().optional(),
+		eyebrow: z.union([z.string(), z.boolean()]).optional(),
 		status: z.enum(["completed", "active", "locked"]).optional(),
 		chapter: z.boolean().optional(),
 		type: z.string().optional(),
@@ -361,7 +412,8 @@ export function parseChapter(
 						title,
 						path.basename(fullPath),
 					);
-					lesson.meta.parentSlug = meta.slug;
+					lesson.meta.parentSlug = lesson.meta.parentSlug || meta.slug;
+					lesson.meta.parentTitle = lesson.meta.parentTitle || meta.title;
 					lessons.push(lesson);
 				} else {
 					logger.warn(`[Chapter] Warning: Lesson file not found: ${fullPath}`);
@@ -418,7 +470,9 @@ export function buildLesson(
 		copyAssets(outDir);
 	}
 	const relPath = path.relative(process.cwd(), outPath);
-	logger.success(`Built lesson (${lesson.blocks.length} blocks) → ${relPath}`);
+	logger.log(
+		`  ${pc.gray("├─")} ${pc.green(relPath)} ${pc.gray(`(${lesson.blocks.length} blocks)`)}`,
+	);
 	return outPath;
 }
 
@@ -436,12 +490,16 @@ export function buildChapter(
 	const outPathDir = path.dirname(outPath);
 	if (!fs.existsSync(outPathDir)) fs.mkdirSync(outPathDir, { recursive: true });
 	fs.writeFileSync(outPath, html, "utf-8");
+	if (chapter.meta.slug && chapter.meta.slug !== "index") {
+		const aliasPath = path.join(outDir, `${chapter.meta.slug}.html`);
+		fs.writeFileSync(aliasPath, html, "utf-8");
+	}
 	if (options.standalone === false) {
 		copyAssets(outDir);
 	}
 	const relPath = path.relative(process.cwd(), outPath);
-	logger.success(
-		`Built chapter (${chapter.lessons.length} lessons) → ${relPath}`,
+	logger.log(
+		`  ${pc.gray("├─")} ${pc.green(relPath)} ${pc.gray(`(${chapter.lessons.length} lessons)`)}`,
 	);
 	return outPath;
 }

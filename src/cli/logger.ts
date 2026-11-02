@@ -1,8 +1,8 @@
 import boxen from "boxen";
-import clipboardy from "clipboardy";
 import { createConsola } from "consola";
 import ora from "ora";
 import pc from "picocolors";
+import { writeText } from "tinyclip";
 
 export const consola = createConsola({
 	level: 4,
@@ -45,6 +45,7 @@ export const logger = {
 		safeLog(`${badge("ERROR", pc.bgRed)} ${msg}`);
 		if (err) console.error(err);
 	},
+	log: (msg: string) => safeLog(msg),
 	dev: (msg: string) => safeLog(`${badge("DEV", pc.bgMagenta)} ${msg}`),
 	watch: (msg: string) => safeLog(`${badge("WATCH", pc.bgYellow)} ${msg}`),
 	startSpinner: (msg: string) => {
@@ -70,16 +71,22 @@ export const logger = {
 		safeLog(`${badge("BUILD", pc.bgRed)} ${pc.red(msg)}`);
 	},
 	box: (msg: string) => consola.box(msg),
-	httpReq: (ip: string, method: string, path: string) => {
-		const date = new Date().toLocaleString("en-US");
+	http: (
+		_ip: string,
+		method: string,
+		path: string,
+		status: number,
+		ms: number,
+	) => {
+		const time = new Date().toLocaleTimeString("en-US", { hour12: false });
+		const colorStatus =
+			status >= 400
+				? pc.red(status)
+				: status >= 300
+					? pc.yellow(status)
+					: pc.green(status);
 		safeLog(
-			`${pc.bgCyan(pc.black(pc.bold(" HTTP ")))} ${pc.gray(date)} ${pc.yellow(ip)} ${pc.greenBright(method)} ${pc.greenBright(path)}`,
-		);
-	},
-	httpRes: (ip: string, status: number, ms: number) => {
-		const date = new Date().toLocaleString("en-US");
-		safeLog(
-			`${pc.bgCyan(pc.black(pc.bold(" HTTP ")))} ${pc.gray(date)} ${pc.yellow(ip)} ${pc.greenBright(`Returned ${status} in ${ms} ms`)}`,
+			`${pc.bgCyan(pc.black(pc.bold(" HTTP ")))} ${pc.gray(time)} ${pc.greenBright(method)} ${pc.cyan(path)} → ${colorStatus} ${pc.gray(`(${ms}ms)`)}`,
 		);
 	},
 	serveBox: (
@@ -87,27 +94,57 @@ export const logger = {
 		networkUrl: string | null,
 		basePort?: number,
 		currentPort?: number,
+		shortcuts = true,
 	) => {
-		let text = `${pc.greenBright("Serving!")}\n\n`;
-		text += `- ${pc.bold("Local:")}    ${localUrl}\n`;
-		if (networkUrl) {
-			text += `- ${pc.bold("Network:")}  ${networkUrl}\n`;
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip ANSI escape codes for column alignment
+		const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, "");
+		const pad = (str: string, width: number) =>
+			str + " ".repeat(Math.max(0, width - stripAnsi(str).length));
+
+		const col1Line1 = `${pc.bold("Local:")}    ${pc.cyan(localUrl)}`;
+		const col1Line2 = networkUrl
+			? `${pc.bold("Network:")}  ${pc.cyan(networkUrl)}`
+			: "";
+		const col1Line3 = `${pc.green("✔")} ${pc.gray("Copied local address to clipboard!")}`;
+
+		let text = "";
+
+		if (shortcuts) {
+			const col2Line1 = `${pc.bold("u")} ${pc.gray("url")}    ${pc.bold("o")} ${pc.gray("open")}`;
+			const col2Line2 = `${pc.bold("c")} ${pc.gray("clear")}  ${pc.bold("q")} ${pc.gray("quit")}`;
+
+			const colWidth = Math.max(
+				33,
+				stripAnsi(col1Line1).length + 2,
+				stripAnsi(col1Line2).length + 2,
+			);
+			const sep = pc.gray("  │  ");
+
+			text += `${pad(col1Line1, colWidth)}${sep}${col2Line1}\n`;
+			text += `${pad(col1Line2, colWidth)}${sep}${col2Line2}\n`;
+			text += `${col1Line3}`;
+		} else {
+			text += `${col1Line1}\n`;
+			if (col1Line2) text += `${col1Line2}\n`;
+			text += `${col1Line3}`;
 		}
 
 		if (basePort && currentPort && basePort !== currentPort) {
-			text += `\n${pc.red(`This port was picked because ${pc.underline(basePort.toString())} is in use.`)}\n`;
+			text += `\n${pc.red(`Port ${basePort} was in use, switched to ${currentPort}`)}`;
 		}
 
-		text += `\nCopied local address to clipboard!`;
-
-		try {
-			clipboardy.writeSync(localUrl);
-		} catch (err: unknown) {
+		writeText(localUrl).catch((err: unknown) => {
 			logger.warn(
 				`Failed to copy address to clipboard (may be headless environment): ${err instanceof Error ? err.message : String(err)}`,
 			);
-		}
+		});
 
-		safeLog(boxen(text, { padding: 1, margin: 1, borderColor: "green" }));
+		safeLog(
+			boxen(text, {
+				padding: { top: 0, bottom: 0, left: 1, right: 1 },
+				margin: { top: 1, bottom: 1 },
+				borderColor: "green",
+			}),
+		);
 	},
 };

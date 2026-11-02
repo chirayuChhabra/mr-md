@@ -9,12 +9,14 @@ export type BlockType =
 	| "warning"
 	| "tip"
 	| "simulation"
+	| "world"
 	| "animation"
 	| "media"
 	| "youtube"
 	| "image"
 	| "columns"
 	| "quiz"
+	| "steps"
 	| "caution";
 
 export interface BaseBlock {
@@ -69,6 +71,19 @@ export interface SimulationBlock extends BaseBlock, CaptionedBlock {
 	accent?: BlockAccent;
 }
 
+export type WorldPortalType = "minimal" | "wormhole" | "pixel";
+
+export interface WorldBlock extends BaseBlock, CaptionedBlock {
+	type: "world";
+	src: string; // path to .js or .ts file or inline JS
+	props?: Record<string, unknown>; // passed to the world as window.__simProps
+	tunables?: Record<string, SimulationControl>;
+	dependencies?: string[]; // external CDN scripts loaded before the simulation
+	height?: number; // portal preview height, default 480
+	accent?: BlockAccent;
+	portal?: WorldPortalType;
+}
+
 export interface AnimationBlock extends BaseBlock, CaptionedBlock {
 	type: "animation";
 	src: string; // path to .js file or inline JS
@@ -117,18 +132,49 @@ export interface QuizBlock extends BaseBlock, CaptionedBlock {
 	src: string; // path to .json file or inline json
 }
 
+export interface SimulationStep {
+	id?: string;
+	title?: string;
+	target?: string;
+	badge?: string;
+	instruction?: string;
+	prompt?: string;
+	voice?: string;
+	feedback?: string;
+	hint?: string;
+	audio?: string;
+	initialProps?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+}
+
+export interface StepsBlock extends BaseBlock, CaptionedBlock {
+	type: "steps";
+	src: string;
+	steps?: SimulationStep[];
+	props?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+	height?: number;
+	accent?: BlockAccent;
+	dependencies?: string[];
+	kicker?: string;
+	voice?: boolean | string;
+	audio?: boolean | string;
+}
+
 export type Block =
 	| HeadingBlock
 	| MarkdownBlock
 	| SectionBlock
 	| CalloutBlock
 	| SimulationBlock
+	| WorldBlock
 	| AnimationBlock
 	| MediaBlock
 	| YouTubeBlock
 	| ImageBlock
 	| ColumnsBlock
-	| QuizBlock;
+	| QuizBlock
+	| StepsBlock;
 
 // ─── Lesson Schema ────────────────────────────────────────────────────────────
 
@@ -138,8 +184,10 @@ export interface LessonMeta {
 	description?: string;
 	tags?: string[];
 	author?: string;
+	eyebrow?: string | boolean;
 	status?: "read" | "unread" | "locked";
 	parentSlug?: string;
+	parentTitle?: string;
 	prevSlug?: string;
 	prevTitle?: string;
 	nextSlug?: string;
@@ -218,8 +266,52 @@ export interface SimulationOptions {
 	accent?: BlockAccent;
 }
 
+/** Supported simulation presentation types in .config.json */
+export type SimulationType = "block" | "steps" | "world" | string;
+
 export interface SimulationConfig extends SimulationOptions {
+	type?: SimulationType;
+	portal?: WorldPortalType;
+	steps?: SimulationStep[];
+	kicker?: string;
 	dependencies?: string[];
+	voice?: boolean | string;
+	audio?: boolean | string;
+}
+
+export interface StepsOptions {
+	steps?: SimulationStep[];
+	props?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+	height?: number;
+	label?: string;
+	caption?: string;
+	accent?: BlockAccent;
+	kicker?: string;
+	voice?: boolean | string;
+	audio?: boolean | string;
+}
+
+export interface StepsConfig extends StepsOptions {
+	type?: SimulationType;
+	dependencies?: string[];
+}
+
+/** Configuration for world blocks */
+export interface WorldOptions {
+	props?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+	height?: number;
+	label?: string;
+	caption?: string;
+	accent?: BlockAccent;
+	portal?: WorldPortalType;
+}
+
+export interface WorldConfig extends WorldOptions {
+	dependencies?: string[];
+	type?: "world";
+	portal?: WorldPortalType;
 }
 
 /** Represents a single interactive control in a simulation (e.g., a slider) */
@@ -269,6 +361,7 @@ export interface ChapterMeta {
 	title: string;
 	slug: string;
 	description?: string;
+	eyebrow?: string | boolean;
 	status?: "completed" | "active" | "locked";
 }
 

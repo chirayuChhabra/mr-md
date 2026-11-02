@@ -24,17 +24,7 @@ export function renderYouTube(
               loading="lazy"
               style="width:100%;height:100%;border:none;display:block;">
             </iframe>
-          </div>
-          <script>
-            if (!window._bkYtBlurSetup) {
-              window._bkYtBlurSetup = true;
-              window.addEventListener('mousemove', function() {
-                if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
-                  document.activeElement.blur();
-                }
-              }, { passive: true });
-            }
-          </script>`,
+          </div>`,
 			"neutral",
 		),
 	};

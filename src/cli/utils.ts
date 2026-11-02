@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+
 /**
  * Resolves the original current working directory when the CLI is executed.
  *
@@ -16,4 +18,34 @@ export function getOriginalCwd(): string {
 	return (
 		process.env.INIT_CWD || process.env.npm_config_local_prefix || process.cwd()
 	);
+}
+
+/**
+ * Opens a URL in the user's default web browser cross-platform.
+ */
+export function openBrowser(url: string): void {
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+			return;
+		}
+	} catch {
+		return;
+	}
+
+	const platform = process.platform;
+	try {
+		if (platform === "darwin") {
+			spawn("open", [url], { stdio: "ignore", detached: true }).unref();
+		} else if (platform === "win32") {
+			spawn("rundll32", ["url.dll,FileProtocolHandler", url], {
+				stdio: "ignore",
+				detached: true,
+			}).unref();
+		} else {
+			spawn("xdg-open", [url], { stdio: "ignore", detached: true }).unref();
+		}
+	} catch {
+		// Ignore errors if running in headless or unsupported environment
+	}
 }

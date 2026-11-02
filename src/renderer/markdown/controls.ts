@@ -2,7 +2,7 @@ import type { Block } from "../../types.js";
 import { escAttr, escHtml } from "../blocks.js";
 
 export function renderSimulationControls(
-	block: Extract<Block, { type: "simulation" }>,
+	block: Extract<Block, { type: "simulation" } | { type: "world" }>,
 ): string {
 	const props = block.props ?? {};
 	const keys = Object.keys(block.tunables ?? props).filter((key) => {
@@ -14,7 +14,11 @@ export function renderSimulationControls(
 		);
 	});
 
-	if (!keys.length || block.controls === "observe") return "";
+	if (
+		!keys.length ||
+		(block.type === "simulation" && block.controls === "observe")
+	)
+		return "";
 
 	const controls = keys.map((key) => {
 		const value = props[key];
