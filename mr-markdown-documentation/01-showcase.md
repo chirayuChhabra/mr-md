@@ -8,204 +8,76 @@ tags: [overview, simulations, quizzes, components]
 eyebrow: Tour & Modules
 ---
 
-# Showcase
+# Learn with Mr Markdown
 
-Welcome to `mr-md` version 4! This page is a kitchen sink of all the features and modules available in the framework.
+A lesson can bring an explanation, a model, and a quick check together on the same page. Explore the examples below, then follow the [Quickstart](./quickstart.html) to make a lesson of your own.
 
-## Interactive Runnable Code
+## Explain an idea
 
-Students can tweak, edit, and run code right in their browser with instant console output on the bottom!
+Markdown handles the words; math and callouts give you room to make a point clear. For example, speed is distance divided by time:
 
-### JavaScript & TypeScript (Instant Client-Side Sandbox)
+$$v = \frac{d}{t}$$
 
-```javascript run title="Fibonacci Sequence"
-function fib(n) {
-  if (n <= 1) return n;
-  return fib(n - 1) + fib(n - 2);
-}
+> [!tip]
+> Keep units consistent: metres divided by seconds gives metres per second.
 
-const terms = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-console.log("Fibonacci numbers:", terms.map(fib));
-```
+## Explore a model
 
----
-
-### Python (Fast In-Browser Engine)
-
-```python run title="Python List Comprehension"
-numbers = [1, 2, 3, 4, 5, 6]
-squares = [x**2 for x in numbers if x % 2 == 0]
-print(f"Even squares: {squares}")
-```
-
----
-
-### Compiled Languages (Two-Stage Compile & Fast Binary Run)
-
-```cpp run title="Modern C++ Output"
-#include <iostream>
-#include <vector>
-#include <numeric>
-
-int main() {
-    std::vector<int> nums = {10, 20, 30, 40};
-    int sum = std::accumulate(nums.begin(), nums.end(), 0);
-    std::cout << "Sum from compiled C++: " << sum << std::endl;
-    return 0;
-}
-```
-
----
-
-### Interactive Coding Quizzes & Challenges
-
-Test students' problem-solving skills with automatic validation, hints, regex matching, and mismatch diffs:
-
-```python challenge
----
-title: "Even Squares"
-expected: "[4, 16, 36]"
-hint: "Use a list comprehension with 'if x % 2 == 0' and 'x**2'"
----
-numbers = [1, 2, 3, 4, 5, 6]
-
-# Task: Filter even numbers and calculate their squares
-even_squares = [x**2 for x in numbers if x % 2 == 0]
-
-print(even_squares)
-```
-
----
-
-### Dynamic Challenge with Regex Matching
-
-Challenge students to produce randomized outputs (e.g. dice rolls, UUIDs, or patterns):
-
-```python challenge
----
-title: "Dice Roll"
-match: regex
-expected: "^Rolled: [1-6]$"
-hint: "Use random.randint(1, 6) to roll a 6-sided die"
----
-import random
-
-# Task: Roll a 6-sided die and print 'Rolled: <number>'
-roll = random.randint(1, 6)
-print(f"Rolled: {roll}")
-```
-
----
-
-### Compiled Language Challenge (C++ Algorithm)
-
-Students can also solve algorithmic challenges in compiled languages with automated evaluation:
-
-```cpp challenge
----
-title: "Sum of Multiples"
-expected: "Sum: 233168"
-hint: "Iterate from 1 to 999 and check if i % 3 == 0 || i % 5 == 0"
----
-#include <iostream>
-
-// Task: Find the sum of all multiples of 3 or 5 below 1000
-int main() {
-    int sum = 0;
-    for (int i = 1; i < 1000; ++i) {
-        if (i % 3 == 0 || i % 5 == 0) {
-            sum += i;
-        }
-    }
-    std::cout << "Sum: " << sum << std::endl;
-    return 0;
-}
-```
-
-## Simulations
-
-Embed interactive JavaScript/TypeScript sandboxes natively. Simulations are theme-aware and fully responsive:
+A simulation lets a learner change something and see what happens. This example is embedded from a JavaScript file; the [simulation guide](./creating-simulations.html) shows how to create your own.
 
 ![QCD Simulation](./sims/qcd.js)
 
-## Quizzes
+## Check understanding
 
-Inject interactive multiple-choice quizzes using a modular markdown file:
+A short question can give immediate feedback while the idea is still fresh. The [quiz guide](./creating-quizzes.html) explains how to write one.
 
 ![Test your knowledge](./quizzes/sample.quiz.md)
 
-## Columns Layout
+## Try some code
 
-Structure your content side-by-side with responsive column components:
+When code is part of the subject, learners can edit and run it inside the lesson:
 
-<columns label="Compare">
-  <column markdown="**Left Side**: This text is rendered in the left column." />
-  <column markdown="**Right Side**: And this text goes on the right." />
+```javascript run title="Calculate speed"
+const distance = 100; // metres
+const time = 20; // seconds
+console.log(distance / time, "m/s");
+```
+
+JavaScript and TypeScript run in a browser worker. Python loads Skulpt from a CDN, and languages such as C++ use the remote Wandbox service. Remote execution sends code and input to that service and requires a connection. See [Code in Lessons](./coding.html) for authoring syntax, challenges, and options.
+
+## Put a lesson together
+
+Add images, audio, video, columns, and links wherever they help the explanation. The [feature guide](./modules.html) covers the syntax; [Quickstart](./quickstart.html) takes you from a Markdown file to a built chapter.
+
+
+## Compare ideas side by side
+
+Columns help place two perspectives together:
+
+<columns label="Two ways to learn">
+  <column markdown="**Observe**\n\nChange one variable and describe what happens." />
+  <column markdown="**Explain**\n\nUse the model to explain why it happens." />
 </columns>
 
-## Media
+## Bring in media
 
-### Images
-Embed images natively using Markdown syntax:
+A picture can give a lesson context, while video and audio can demonstrate things that are hard to describe in words.
 
-![Nature](./media/nature.jpg)
+![A landscape](./media/nature.jpg)
 
----
+![Big Buck Bunny video — © Blender Foundation](https://www.w3schools.com/html/mov_bbb.mp4)
 
-### Video and Audio
-Embed audio or video files directly by using their extensions:
+## Organize the essentials
 
-![Demo Video: Big Buck Bunny - © Blender Foundation](https://www.w3schools.com/html/mov_bbb.mp4)
+Use tables, lists, and callouts to make an explanation easier to scan.
 
----
-
-### YouTube
-Embed YouTube videos instantly:
-
-![Mr Markdown Tutorial](https://youtube.com/watch?v=dQw4w9WgXcQ)
-
-## Math
-
-KaTeX is built-in. Inline math looks like this: $E = mc^2$.
-Block math looks like this:
-
-$$
-f(x) = \int_{-\infty}^\infty \hat f(\xi)\,e^{2 \pi i \xi x} \,d\xi
-$$
-
-## Callouts
-
-Use native GitHub-flavored blockquotes to highlight important information:
+| Quantity | Symbol | Unit |
+| --- | --- | --- |
+| Distance | $d$ | metre (m) |
+| Time | $t$ | second (s) |
+| Speed | $v$ | metres per second (m/s) |
 
 > [!note]
-> This is a standard note callout.
+> A model is useful when its assumptions are clear. Ask learners what it includes and what it leaves out.
 
-> [!tip]
-> Pro tip: You can use these to highlight shortcuts!
-
-> [!warning]
-> Be careful, this is a warning callout.
-
-> [!important]
-> Critical alerts use the important format.
-
-> [!caution]
-> Proceed with caution when performing irreversible actions.
-
-## Rich Prose and Typography
-
-Standard Markdown is fully supported, including **bold**, *italics*, and inline code like `const x = 42;`.
-
-### Lists
-
-1. Ordered item
-2. Another ordered item
-   - Nested unordered
-   - Nested unordered
-
-### Tables
-
-| Syntax      | Description |
-| ----------- | ----------- |
-| Header      | Title       |
-| Paragraph   | Text        |
+Readers can also open Settings to choose a theme, palette, and interface style.

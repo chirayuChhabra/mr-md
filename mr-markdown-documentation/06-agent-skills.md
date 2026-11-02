@@ -1,5 +1,5 @@
 ---
-index: 6
+index: 7
 title: Agent Skills
 slug: agent-skills
 description: Give coding agents the context and tools to build mr-md simulations.

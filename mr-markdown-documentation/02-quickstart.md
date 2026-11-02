@@ -28,7 +28,7 @@ Then, start the development server:
 bunx mr-md dev lesson.md
 ```
 
-Your lesson will be available in the browser with hot-module reloading on edits.
+Open the URL printed by the server. Edits trigger a rebuild and browser reload; pass `--open` to open the page automatically.
 
 ## 2. Multi-Page Chapter
 
@@ -49,7 +49,7 @@ bunx mr-md generate intro
 > [!tip]
 > You can use the `g` alias instead of `generate`. For example: `bunx mr-md g intro`.
 
-This command automatically calculates the next available numeric index in the directory, generating a file such as `01-intro.md`. It pre-populates the correct YAML frontmatter and title heading, so you do not need to manually append numeric prefixes.
+This command automatically calculates the next available numeric index in the directory, generating a file such as `01-intro.md`. It pre-populates YAML frontmatter with the index and a title heading, so you do not need to manually append numeric prefixes.
 
 Finally, start the development server for the entire folder:
 
@@ -57,7 +57,16 @@ Finally, start the development server for the entire folder:
 bunx mr-md dev .
 ```
 
-`mr-md` will map your files to routes and generate navigation for the chapter based on your file structure.
+Each top-level lesson must have a positive `index` in its YAML frontmatter. Indexes must be unique and consecutive, starting at 1. The generated files already include an index; for a hand-written lesson, add:
+
+```yaml
+---
+index: 1
+title: Introduction
+---
+```
+
+`mr-md` orders the chapter by these indexes and generates navigation. Keep quiz files in a subdirectory such as `quizzes/`, since top-level Markdown files are treated as lessons.
 
 ## AI-Assisted Simulations
 
@@ -69,7 +78,7 @@ bunx mr-md skill install
 
 Once installed, your AI coding agent can create context-aware simulations that integrate with the `mr-md` theme system, canvas API, and host-controlled UI — out of the box.
 
-See the [Agent Skills](./agent-skills) guide for details.
+See the [Agent Skills](./agent-skills.html) guide for details.
 
 ---
 
@@ -81,4 +90,6 @@ When the content is ready to be published, you can compile the Markdown files in
 bunx mr-md build .
 ```
 
-The output will be prepared for deployment to a static hosting provider (e.g., Vercel, Netlify, or GitHub Pages).
+The generated site is written to `out/` inside the target directory (or next to a single input file). Deploy the contents of `out/` to a static host. Some interactive features need a network connection; see [Modules and Features](./modules.html).
+
+For a background preview use `bunx mr-md dev . -d`, then `bunx mr-md stop .` to stop it.
