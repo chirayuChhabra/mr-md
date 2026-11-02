@@ -8,6 +8,15 @@ metadata:
 
 # Build mr-md simulations
 
+**Preserve the author's content.** When asked to add a simulation, only add the
+simulation and the minimal embed needed to place it. Do not rewrite, remove,
+reorder, correct, or otherwise change the user's existing lesson content,
+including prose, examples, equations, and formatting, unless the user explicitly
+asks for those changes. Flag potentially incorrect information to the user,
+but leave it unchanged unless explicitly asked to correct it. If a content
+change seems necessary, ask first. This rule does not prevent explicitly
+requested simulation or runtime changes.
+
 Requires an mr-md lesson project. Bun compiles TypeScript simulation sources
 and runs repository build and test commands.
 
