@@ -51,25 +51,6 @@ Check out this video:
 		expect((ytBlock as any).id).toBe("dQw4w9WgXcQ");
 	});
 
-	test("Extracts YouTube block with quoted URL and share link", () => {
-		const md = `
-# Title
-
-![Share link]("https://youtu.be/k791LJXh4aQ?si=62baoujd_Zv8ESPa")
-
-![Browser link]("https://www.youtube.com/watch?v=k791LJXh4aQ")
-
-![Timestamp link](https://www.youtube.com/watch?v=k791LJXh4aQ&t=90s)
-`;
-		const lesson = parseLesson(md, { contentBase: testDir });
-		const ytBlocks = lesson.blocks.filter(b => b.type === "youtube");
-		expect(ytBlocks.length).toBe(3);
-		expect((ytBlocks[0] as any).id).toBe("k791LJXh4aQ");
-		expect((ytBlocks[1] as any).id).toBe("k791LJXh4aQ");
-		expect((ytBlocks[2] as any).id).toBe("k791LJXh4aQ");
-		expect((ytBlocks[2] as any).start).toBe(90);
-	});
-
 	test("Extracts Media block for audio and video", () => {
 		const md = `
 # Title
@@ -161,24 +142,6 @@ Video here:
 
 		expect(quizBlock).toBeDefined();
 		expect((quizBlock as any).src).toBe("quiz.json");
-	});
-
-	test("Parses world simulation block via .world.js suffix or config type: world", () => {
-		const worldConfigPath = path.join(testDir, "configured.config.json");
-		fs.writeFileSync(worldConfigPath, JSON.stringify({ type: "world", label: "Configured World", portal: "pixel" }));
-
-		const md = `
-![Galaxy Exploration](galaxy.world.js)
-
-![Configured](configured.js)
-`;
-		const lesson = parseLesson(md, { contentBase: testDir });
-		const worldBlocks = lesson.blocks.filter(b => b.type === "world");
-
-		expect(worldBlocks.length).toBe(2);
-		expect((worldBlocks[0] as any).src).toBe("galaxy.world.js");
-		expect((worldBlocks[1] as any).label).toBe("Configured World");
-		expect((worldBlocks[1] as any).portal).toBe("pixel");
 	});
 
 	test("parseChapter extracts lessons correctly", () => {

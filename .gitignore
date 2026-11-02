@@ -22,7 +22,6 @@ chapters/
 lessons/
 update-*.py
 
-playground*
+playground/
 
 .idea/
-.agents/

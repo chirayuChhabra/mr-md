@@ -2,10 +2,6 @@
 index: 2
 title: Quickstart
 slug: quickstart
-description: Get up and running in seconds. From single-file markdown notes to production-ready multi-page chapters.
-author: DevEx Working Group
-tags: [getting-started, cli, workflow, setup]
-eyebrow: Fast Track
 ---
 
 # Quickstart
@@ -58,20 +54,6 @@ bunx mr-md dev .
 ```
 
 `mr-md` will map your files to routes and generate navigation for the chapter based on your file structure.
-
-## AI-Assisted Simulations
-
-`mr-md` ships with a built-in agent skill that lets AI coding assistants generate interactive simulations for your lessons. To install the skill globally:
-
-```bash
-bunx mr-md skill install
-```
-
-Once installed, your AI coding agent can create context-aware simulations that integrate with the `mr-md` theme system, canvas API, and host-controlled UI — out of the box.
-
-See the [Agent Skills](./agent-skills) guide for details.
-
----
 
 ## Building for Production
 

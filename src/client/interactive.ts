@@ -15,12 +15,6 @@ export function bkInitInteractiveFrames() {
 						if (iframe?.contentWindow) {
 							iframe.contentWindow.postMessage({ type: "bk:pause" }, "*");
 						}
-						const stepsCard = frame.closest?.(".bk-steps-object");
-						if (stepsCard) {
-							stepsCard.dispatchEvent(
-								new CustomEvent("bk:steps-deactivate", { bubbles: true }),
-							);
-						}
 					} else {
 						if (frame.dataset.isAnimation === "true") {
 							if (iframe?.contentWindow) {
@@ -30,7 +24,7 @@ export function bkInitInteractiveFrames() {
 					}
 				});
 			},
-			{ threshold: 0, rootMargin: "0px" },
+			{ threshold: 0, rootMargin: "50% 0px 50% 0px" },
 		);
 	}
 
@@ -42,8 +36,7 @@ export function bkInitInteractiveFrames() {
 
 export function bkWireInteractiveFrames() {
 	const interactiveHandler = (e: Event) => {
-		const target = e.target as HTMLElement;
-		const obj = target.closest?.(".bk-object");
+		const obj = (e.target as HTMLElement).closest?.(".bk-object");
 		const activateFrame = obj
 			? obj.querySelector(".bk-embed-interactive")
 			: null;
@@ -57,49 +50,14 @@ export function bkWireInteractiveFrames() {
 					if (iframe?.contentWindow) {
 						iframe.contentWindow.postMessage({ type: "bk:pause" }, "*");
 					}
-					const stepsCard = frame.closest?.(".bk-steps-object");
-					if (stepsCard) {
-						stepsCard.dispatchEvent(
-							new CustomEvent("bk:steps-deactivate", { bubbles: true }),
-						);
-					}
 				}
 			});
 
-		if (activateFrame) {
-			const isSteps = obj?.classList.contains("bk-steps-object");
-
-			// For step-by-step simulations, reading banner text, toggling hints, audio,
-			// or previewing step dots while not yet interactive should NOT prematurely
-			// dismiss the "Click to interact" canvas shield.
-			if (isSteps && !activateFrame.classList.contains("is-interactive")) {
-				const isCanvasClick = !!target.closest(
-					".bk-embed-interactive, .bk-embed-overlay",
-				);
-				const isPlayOrReset = !!target.closest(
-					".bk-steps-btn--play, .bk-steps-btn--reset, .bk-steps-feedback-restart",
-				);
-				if (!isCanvasClick && !isPlayOrReset) {
-					// User is interacting with outer banner, hints, or step browser; leave canvas shield intact
-					return;
-				}
-			}
-
-			if (!activateFrame.classList.contains("is-interactive")) {
-				activateFrame.classList.add("is-interactive");
-				const isPaused =
-					isSteps && !obj?.querySelector(".bk-steps-btn--play.is-active");
-				if (!isPaused) {
-					const iframe = activateFrame.querySelector("iframe");
-					if (iframe?.contentWindow) {
-						iframe.contentWindow.postMessage({ type: "bk:play" }, "*");
-					}
-				}
-				if (isSteps && obj) {
-					obj.dispatchEvent(
-						new CustomEvent("bk:steps-activate", { bubbles: true }),
-					);
-				}
+		if (activateFrame && !activateFrame.classList.contains("is-interactive")) {
+			activateFrame.classList.add("is-interactive");
+			const iframe = activateFrame.querySelector("iframe");
+			if (iframe?.contentWindow) {
+				iframe.contentWindow.postMessage({ type: "bk:play" }, "*");
 			}
 		}
 	};
@@ -109,7 +67,7 @@ export function bkWireInteractiveFrames() {
 	document.addEventListener("focusin", interactiveHandler, { passive: true });
 
 	let scrollTimeout: ReturnType<typeof setTimeout> | undefined;
-	window.addEventListener(
+	document.addEventListener(
 		"scroll",
 		() => {
 			if (!document.body.classList.contains("bk-is-scrolling")) {
@@ -120,7 +78,7 @@ export function bkWireInteractiveFrames() {
 				document.body.classList.remove("bk-is-scrolling");
 			}, 150);
 		},
-		{ capture: true, passive: true },
+		{ passive: true },
 	);
 
 	bkInitInteractiveFrames();

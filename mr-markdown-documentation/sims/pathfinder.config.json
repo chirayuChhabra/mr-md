@@ -1,8 +1,7 @@
 {
-  "props": { "mazeDensity": 25, "diagonal": false, "showStats": true },
+  "props": { "mazeDensity": 25, "diagonal": false },
   "tunables": {
     "mazeDensity": { "label": "Maze Density (%)", "min": 0, "max": 50, "step": 1 },
-    "diagonal": { "label": "Allow Diagonal", "type": "boolean" },
-    "showStats": { "label": "Show Stats", "type": "boolean" }
+    "diagonal": { "label": "Allow Diagonal", "type": "boolean" }
   }
 }
