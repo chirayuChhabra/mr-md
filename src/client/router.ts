@@ -177,6 +177,18 @@ export function bkInitRouter() {
 	});
 
 	window.addEventListener("popstate", () => {
+		if (typeof window !== "undefined" && window.__bk_suppress_router_popstate) {
+			window.__bk_suppress_router_popstate = false;
+			return;
+		}
+		if (
+			document.body.classList.contains("bk-world-immersive") ||
+			document.querySelector(
+				".bk-world-fullscreen.bk-world--active, .bk-world-fullscreen.bk-world--flying, .bk-world-fullscreen.bk-world--exiting",
+			)
+		) {
+			return;
+		}
 		const targetUrl = new URL(window.location.href);
 		if (targetUrl.pathname === currentPathname) {
 			const hash = targetUrl.hash;

@@ -1,5 +1,11 @@
 # Simulation visual-language contract
 
+Scope: fixed logical bounds, safe-rectangle containment, and generated-control
+requirements here apply to block/steps diagrams. For camera-space worlds and
+custom 3D renderers, use [worlds.md](worlds.md). Preserve semantic geometry and
+readable screen-space navigation; do not flatten a spatial world into a diagram.
+
+
 An mr-md simulation is part of the page's UI. It must react to a UI-mode change
 as thoroughly as cards, controls, callouts, and navigation do.
 

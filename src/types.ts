@@ -9,6 +9,7 @@ export type BlockType =
 	| "warning"
 	| "tip"
 	| "simulation"
+	| "world"
 	| "animation"
 	| "media"
 	| "youtube"
@@ -68,6 +69,19 @@ export interface SimulationBlock extends BaseBlock, CaptionedBlock {
 	height?: number; // iframe height, default 400
 	controls?: "interactive" | "observe";
 	accent?: BlockAccent;
+}
+
+export type WorldPortalType = "minimal" | "wormhole" | "pixel";
+
+export interface WorldBlock extends BaseBlock, CaptionedBlock {
+	type: "world";
+	src: string; // path to .js or .ts file or inline JS
+	props?: Record<string, unknown>; // passed to the world as window.__simProps
+	tunables?: Record<string, SimulationControl>;
+	dependencies?: string[]; // external CDN scripts loaded before the simulation
+	height?: number; // portal preview height, default 480
+	accent?: BlockAccent;
+	portal?: WorldPortalType;
 }
 
 export interface AnimationBlock extends BaseBlock, CaptionedBlock {
@@ -153,6 +167,7 @@ export type Block =
 	| SectionBlock
 	| CalloutBlock
 	| SimulationBlock
+	| WorldBlock
 	| AnimationBlock
 	| MediaBlock
 	| YouTubeBlock
@@ -256,6 +271,7 @@ export type SimulationType = "block" | "steps" | "world" | string;
 
 export interface SimulationConfig extends SimulationOptions {
 	type?: SimulationType;
+	portal?: WorldPortalType;
 	steps?: SimulationStep[];
 	kicker?: string;
 	dependencies?: string[];
@@ -279,6 +295,23 @@ export interface StepsOptions {
 export interface StepsConfig extends StepsOptions {
 	type?: SimulationType;
 	dependencies?: string[];
+}
+
+/** Configuration for world blocks */
+export interface WorldOptions {
+	props?: Record<string, unknown>;
+	tunables?: Record<string, SimulationControl>;
+	height?: number;
+	label?: string;
+	caption?: string;
+	accent?: BlockAccent;
+	portal?: WorldPortalType;
+}
+
+export interface WorldConfig extends WorldOptions {
+	dependencies?: string[];
+	type?: "world";
+	portal?: WorldPortalType;
 }
 
 /** Represents a single interactive control in a simulation (e.g., a slider) */

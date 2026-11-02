@@ -3,7 +3,7 @@ index: 4
 title: Creating Quizzes
 slug: creating-quizzes
 description: How to construct accessible, multi-step interactive quizzes with markdown-first question definitions.
-author: Pedagogy Team
+author: Mr-Md Team
 tags: [assessment, interactive, quizzes, education]
 ---
 

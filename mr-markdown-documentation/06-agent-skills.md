@@ -2,58 +2,50 @@
 index: 6
 title: Agent Skills
 slug: agent-skills
-description: Teach AI coding assistants to generate mathematically grounded simulations and structured lessons for mr-md.
-author: Antigravity Agentic Systems
-tags: [ai-agents, llm, prompt-engineering, automation]
+description: Give coding agents the context and tools to build mr-md simulations.
+author: Mr-Md Team
+tags: [ai-agents, llm, simulations, automation]
 ---
 
 # Agent Skills
 
-`mr-md` includes a skill system that enables AI coding agents to generate high-quality, context-aware interactive simulations for your lessons.
-
-## What is an Agent Skill?
-
-An agent skill is a structured set of instructions, references, and templates that AI coding assistants (like **Claude Code**, **Cursor**, **Codex**, or **Antigravity**) can use to understand how to work with a framework. The `mr-md` simulation skill teaches agents about the runtime API, theme system, canvas lifecycle, and visual quality standards.
-
-## Installing the Skill
-
-Use the `mr-md` CLI to install the simulation skill globally for your coding agents:
+Create a simulation for your lesson with the mr-md simulation skill. Start by installing it for your coding agent:
 
 ```bash
 bunx mr-md skill install
 ```
 
-The CLI will prompt you to select which coding agents to configure.
+Select your agent when prompted, then ask it to create a simulation. For example:
 
-## Managing the Skill
+> “Create an interactive simulation for this lesson that lets learners explore how changing the initial velocity affects a trajectory.”
 
-| Command | Description |
-|---------|-------------|
-| `bunx mr-md skill install` | Install the simulation skill globally |
-| `bunx mr-md skill update` | Update to the latest version of the skill |
-| `bunx mr-md skill status` | Show installation info, version, and configured agents |
-| `bunx mr-md skill remove` | Uninstall the skill |
+Point your agent to the lesson and any relevant course material. The skill provides the instructions, references, and starting points it needs to build simulations in all three formats: **blocks**, **steps**, and immersive **worlds**. It guides the agent to match the lesson's content and review the result.
 
-## What the Skill Teaches Agents
+## The details
 
-Once installed, AI agents understand how to:
+The install command delegates to the Agent Skills CLI, which prompts you to select agents. You do not need to clone mr-md or add it as a project dependency to install the skill.
 
-- Use `bkSetup()`, `bkColor()`, `bkCanvasPoint()`, and `bkFitCanvas()` correctly
-- Read and respond to `window.__simProps` from `.config.json` controls
-- Respect the host theme system and sync colors via `bk:theme-sync` messages
-- Scale canvases properly with DPI-aware rendering
-- Ground simulation content (labels, notation, units) in the lesson material being taught
-- Avoid common quality issues: clipping, unreadable contrast, duplicated controls
+| Command | Purpose |
+| --- | --- |
+| `bunx mr-md skill install` | Install for selected agents. |
+| `bunx mr-md skill status` | Show the installed skill and its source and targets. |
 
-## Quality Gates
+Install selects the source tag matching the mr-md package version running the command. When you change mr-md versions, run install with that version to select its matching skill. For testing an unreleased version, set `MR_MD_SKILL_REF` to the source ref.
 
-The skill includes built-in quality gates that agents check before considering a simulation complete:
+## What the skill covers
 
-1. **No clipping** — the simulation must be fully visible without overflow
-2. **Readable contrast** — all text must be legible in both light and dark themes
-3. **No duplicated UI** — controls defined in `.config.json` must not be recreated inside the canvas
-4. **Context grounding** — labels, units, and notation must match the surrounding lesson
-5. **Responsive sizing** — the canvas must fit within the `mr-md` layout container
+The skill guides an agent through choosing a presentation and renderer before implementation:
 
-> [!tip]
-> After installing the skill, try asking your AI agent: "Create an interactive simulation for this lesson that visualizes [concept]." The agent will use the skill to produce a simulation that integrates seamlessly with your `mr-md` project.
+- **Block simulations:** bounded experiments and diagrams with host-managed controls.
+- **Steps simulations:** guided goals, instructions, hints, resets, and completion feedback.
+- **Worlds:** immersive scenes in 2D with `bkSetupWorld`, or 3D with a custom renderer such as Three.js.
+
+It includes starter files and references for each format, the runtime and UI, visual quality, context grounding, and review. The agent should check the installed framework's implementation when the runtime contract is in doubt.
+
+## How it works with your lesson
+
+The skill asks the agent to read the lesson and surrounding course material, identify the learning objective, and preserve the lesson's terminology, notation, formulas, units, and teaching sequence. It guides the agent to use the appropriate configuration, theme tokens, canvas helpers, and lifecycle APIs.
+
+It also asks for visual and interactive review: check containment, contrast, responsive sizing, controls, and the simulation's behavior in the lesson. A successful build alone does not establish visual quality or scientific correctness. Review the result yourself, especially the model and its assumptions.
+
+See [Creating Simulations](./creating-simulations.html) for the authoring formats and runtime examples.

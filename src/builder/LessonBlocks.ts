@@ -21,6 +21,9 @@ import type {
 	SimulationOptions,
 	StepsBlock,
 	StepsOptions,
+	WorldBlock,
+	WorldConfig,
+	WorldOptions,
 	YouTubeBlock,
 	YouTubeOptions,
 } from "../types.js";
@@ -30,6 +33,7 @@ import {
 	inferMediaKind,
 	isYouTubeUrl,
 	normalizeSimulationOptions,
+	normalizeWorldOptions,
 } from "./utils.js";
 
 export const DEFAULT_SIMULATION_HEIGHT = 420;
@@ -169,6 +173,9 @@ export abstract class LessonBlocks {
 		height = DEFAULT_SIMULATION_HEIGHT,
 	): this {
 		const fileConfig = this.loadSimulationConfig(src);
+		if (fileConfig?.type === "world") {
+			return this.world(src, opts as WorldOptions, height);
+		}
 		const normalized = normalizeSimulationOptions(opts, height, fileConfig);
 		this.blocks.push({
 			type: "simulation",
@@ -186,6 +193,22 @@ export abstract class LessonBlocks {
 			return this.steps(src, opts);
 		}
 		return this.simulation(src, { controls: "interactive", ...opts });
+	}
+
+	world(
+		src: string,
+		opts: WorldOptions | Record<string, unknown> = {},
+		height = 480,
+	): this {
+		const fileConfig = this.loadSimulationConfig(src) as WorldConfig | null;
+		const normalized = normalizeWorldOptions(opts, height, fileConfig);
+		this.blocks.push({
+			type: "world",
+			src,
+			dependencies: fileConfig?.dependencies,
+			...normalized,
+		} as WorldBlock);
+		return this;
 	}
 
 	animation(src: string, opts: AnimationOptions = {}): this {

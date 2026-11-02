@@ -163,6 +163,24 @@ Video here:
 		expect((quizBlock as any).src).toBe("quiz.json");
 	});
 
+	test("Requires config type world to parse a world simulation", () => {
+		const worldConfigPath = path.join(testDir, "configured.config.json");
+		fs.writeFileSync(worldConfigPath, JSON.stringify({ type: "world", label: "Configured World", portal: "pixel" }));
+
+		const md = `
+![Galaxy Exploration](galaxy.world.js)
+
+![Configured](configured.js)
+`;
+		const lesson = parseLesson(md, { contentBase: testDir });
+		const worldBlocks = lesson.blocks.filter(b => b.type === "world");
+
+		expect(worldBlocks.length).toBe(1);
+		expect(lesson.blocks.some(b => b.type === "simulation" && b.src === "galaxy.world.js")).toBe(true);
+		expect((worldBlocks[0] as any).label).toBe("Configured World");
+		expect((worldBlocks[0] as any).portal).toBe("pixel");
+	});
+
 	test("parseChapter extracts lessons correctly", () => {
 		const l1Path = path.join(testDir, "lesson1.md");
 		const l2Path = path.join(testDir, "lesson2.md");

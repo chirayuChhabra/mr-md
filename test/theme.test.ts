@@ -79,5 +79,11 @@ describe("simulation theme colors", () => {
 		// Neo & Playful overrides for topbar and hero
 		expect(css).toContain('html[data-ui="neo"] .bk-topbar');
 		expect(css).toContain('html[data-ui="playful"] .bk-hero-start-btn');
+
+		// World immersive exit button is prominent red by default and fills red on hover
+		expect(css).toContain('.bk-topbar-btn.bk-world-exit-topbar-btn');
+		expect(css).toContain('color: #ef4444;');
+		expect(css).toContain('color: #ffffff !important;');
+		expect(css).toContain('background: #ef4444 !important;');
 	});
 });

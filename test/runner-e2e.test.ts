@@ -356,8 +356,14 @@ test("E2E: Autocomplete displays popup on typing, allows keyboard navigation, an
 	const editorSelector = ".bk-code-runner .bk-runner-editor";
 
 	// 1. Focus editor and type a prefix 'con'
+	await page.$eval(editorSelector, (el) => el.scrollIntoView({ block: "center" }));
 	await page.focus(editorSelector);
-	await page.keyboard.press("End");
+	await page.$eval(editorSelector, (element) => {
+		const editor = element as HTMLTextAreaElement;
+		editor.value = "";
+		editor.setSelectionRange(0, 0);
+		editor.dispatchEvent(new Event("input", { bubbles: true }));
+	});
 	await page.keyboard.press("Enter");
 	await page.keyboard.type("con", { delay: 30 });
 

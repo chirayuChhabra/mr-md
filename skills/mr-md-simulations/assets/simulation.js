@@ -17,7 +17,7 @@ let previousTime = performance.now();
 
 const LOGICAL_WIDTH = 1280;
 const LOGICAL_HEIGHT = 720;
-const SAFE_INSET = 48;
+const SAFE_INSET = 80;
 const MARKER_RADIUS = 26;
 const MAX_MARKER_EXTENT = 36;
 

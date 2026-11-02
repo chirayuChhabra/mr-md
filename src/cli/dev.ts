@@ -421,7 +421,9 @@ export async function runDev(args: string[]) {
 						headers: { "Content-Type": "text/html" },
 					});
 				}
-				return new Response(Bun.file(outFilePath));
+				return new Response(Bun.file(outFilePath), {
+					headers: { "Access-Control-Allow-Origin": "*" },
+				});
 			}
 
 			return new Response("Not found", { status: 404 });

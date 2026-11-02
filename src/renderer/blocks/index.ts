@@ -13,6 +13,7 @@ import { renderSection } from "./section.js";
 import { renderSimulation } from "./simulation.js";
 import { renderSteps } from "./steps.js";
 import { escAttr, escHtml } from "./utils.js";
+import { renderWorld } from "./world.js";
 import { renderYouTube } from "./youtube.js";
 
 export { blockChrome } from "../markdown/index.js";
@@ -38,6 +39,8 @@ export function renderBlockInner(
 			return renderCallout(block, idx, options);
 		case "simulation":
 			return renderSimulation(block, idx, options);
+		case "world":
+			return renderWorld(block, idx, options);
 		case "animation":
 			return renderAnimation(block, idx, options);
 		case "media":

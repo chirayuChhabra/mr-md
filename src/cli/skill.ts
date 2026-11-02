@@ -16,17 +16,13 @@ const HELP = `Usage: mr-md skill <command>
 
 Commands:
   install    Install the skill globally into selected coding agents
-  update     Update the globally installed skill
   status     Show installation, version, source, and target agents
-  version    Alias for status
-  remove     Remove the globally installed skill
 
 Examples:
   bunx mr-md skill install
-  bunx mr-md skill status
-  bunx mr-md skill update`;
+  bunx mr-md skill status`;
 
-type ManagedAction = "install" | "update" | "remove";
+type ManagedAction = "install";
 
 export interface InstalledSkill {
 	name: string;
@@ -42,37 +38,16 @@ export function buildSkillsCliArgs(
 	action: ManagedAction,
 	extraArgs: string[] = [],
 ): string[] {
-	switch (action) {
-		case "install":
-			return [
-				"x",
-				"skills",
-				"add",
-				SIMULATION_SKILL_SOURCE,
-				"--skill",
-				SIMULATION_SKILL_NAME,
-				"--global",
-				...extraArgs,
-			];
-		case "update":
-			return [
-				"x",
-				"skills",
-				"update",
-				SIMULATION_SKILL_NAME,
-				"--global",
-				...extraArgs,
-			];
-		case "remove":
-			return [
-				"x",
-				"skills",
-				"remove",
-				SIMULATION_SKILL_NAME,
-				"--global",
-				...extraArgs,
-			];
-	}
+	return [
+		"x",
+		"skills",
+		"add",
+		SIMULATION_SKILL_SOURCE,
+		"--skill",
+		SIMULATION_SKILL_NAME,
+		"--global",
+		...extraArgs,
+	];
 }
 
 export async function readSkillVersion(
@@ -174,23 +149,18 @@ export async function runSkill(args: string[]): Promise<void> {
 		return;
 	}
 
-	if (action === "status" || action === "version") {
+	if (action === "status") {
 		await showStatus();
 		return;
 	}
 
-	if (action !== "install" && action !== "update" && action !== "remove") {
+	if (action !== "install") {
 		throw new Error(`Unknown skill command: ${action}\n\n${HELP}`);
 	}
 
 	const command = buildSkillsCliArgs(action, extraArgs);
-	const verbs: Record<ManagedAction, string> = {
-		install: "Installing",
-		update: "Updating",
-		remove: "Removing",
-	};
 	logger.info(
-		`${verbs[action]} ${SIMULATION_SKILL_NAME} through the Agent Skills CLI.\nRunning: ${printableCommand(command)}`,
+		`Installing ${SIMULATION_SKILL_NAME} through the Agent Skills CLI.\nRunning: ${printableCommand(command)}`,
 	);
 	await runSkillsCli(command);
 }

@@ -9,6 +9,7 @@ import {
 	extractYouTubeStart,
 	isYouTubeUrl,
 	normalizeSimulationOptions,
+	normalizeWorldOptions,
 } from "../builder/utils.js";
 import { logger } from "../cli/logger.js";
 import type {
@@ -166,6 +167,23 @@ export function parseLesson(
 						logger.warn(
 							`Failed to load config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
 						);
+					}
+
+					const isWorld = fileConfig?.type === "world";
+
+					if (isWorld) {
+						const normalized = normalizeWorldOptions(
+							{ caption },
+							480,
+							fileConfig,
+						);
+						blocks.push({
+							type: "world",
+							src,
+							dependencies: fileConfig?.dependencies,
+							...normalized,
+						} as Extract<Block, { type: "world" }>);
+						continue;
 					}
 
 					// Opinionated: exactly ONE way to define a step-by-step simulation ("type": "steps")
