@@ -44,21 +44,13 @@ export function buildSkillsCliArgs(
 ): string[] {
 	switch (action) {
 		case "install":
+		case "update":
 			return [
 				"x",
 				"skills",
 				"add",
 				SIMULATION_SKILL_SOURCE,
 				"--skill",
-				SIMULATION_SKILL_NAME,
-				"--global",
-				...extraArgs,
-			];
-		case "update":
-			return [
-				"x",
-				"skills",
-				"update",
 				SIMULATION_SKILL_NAME,
 				"--global",
 				...extraArgs,

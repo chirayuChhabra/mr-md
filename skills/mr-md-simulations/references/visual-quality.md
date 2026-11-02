@@ -1,5 +1,11 @@
 # Simulation visual-quality gates
 
+Scope: fixed logical bounds, safe-rectangle containment, and generated-control
+requirements here apply to block/steps diagrams. For camera-space worlds and
+custom 3D renderers, use [worlds.md](worlds.md). Preserve semantic geometry and
+readable screen-space navigation; do not flatten a spatial world into a diagram.
+
+
 Use these gates before considering an mr-md simulation complete. They are
 requirements, not optional polish.
 

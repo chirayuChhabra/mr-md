@@ -26,7 +26,9 @@ describe("skill CLI", () => {
 		expect(buildSkillsCliArgs("update")).toEqual([
 			"x",
 			"skills",
-			"update",
+			"add",
+			SIMULATION_SKILL_SOURCE,
+			"--skill",
 			SIMULATION_SKILL_NAME,
 			"--global",
 		]);
