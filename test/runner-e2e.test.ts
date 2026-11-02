@@ -13,7 +13,7 @@ beforeAll(async () => {
 		process.cwd(),
 		"mr-markdown-documentation",
 		"out",
-		"showcase.html",
+		"coding.html",
 	);
 
 	if (!existsSync(htmlPath)) {
@@ -43,9 +43,9 @@ beforeAll(async () => {
 				return;
 			}
 			const postData = req.postData() || "";
-			let programOutput = "Sum from compiled C++: 100\n";
-			if (postData.includes("233168") || postData.includes("multiples") || postData.includes("Multiples")) {
-				programOutput = "Sum: 233168\n";
+			let programOutput = "Sum: 60\n";
+			if (postData.includes("first five numbers") || postData.includes("numbers 1 through 5")) {
+				programOutput = "15\n";
 			}
 			// Simulate realistic compilation latency so double-click debounce is tested
 			await new Promise((r) => setTimeout(r, 120));
@@ -93,7 +93,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 		process.cwd(),
 		"mr-markdown-documentation",
 		"out",
-		"showcase.html",
+		"coding.html",
 	);
 
 	await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "domcontentloaded" });
@@ -120,7 +120,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 	);
 	expect(linesText).toContain("1");
 
-	// 2. Click the Run button on the first runner (Fibonacci JS runner)
+	// 2. Click the Run button on the first runner (JavaScript speed example)
 	const firstRunBtn = await page.waitForSelector(
 		".bk-code-runner .bk-run-btn",
 	);
@@ -138,9 +138,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 		".bk-code-runner .bk-runner-logs",
 		(el) => el.textContent || "",
 	);
-	expect(logsText).toContain("Fibonacci numbers:");
-	expect(logsText).toContain("13");
-	expect(logsText).toContain("21");
+	expect(logsText).toContain("5 m/s");
 
 	// 5. Test Cmd + / line commenting
 	await page.focus(".bk-code-runner .bk-runner-editor");
@@ -158,7 +156,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 		".bk-code-runner .bk-runner-editor",
 		(el: any) => el.value,
 	);
-	expect(commentedVal).toMatch(/^\/\/\s*function fib/);
+	expect(commentedVal).toMatch(/^\/\/\s*const distance/);
 
 	// Press Cmd + / again to uncomment
 	await page.evaluate(() => {
@@ -175,7 +173,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 		".bk-code-runner .bk-runner-editor",
 		(el: any) => el.value,
 	);
-	expect(uncommentedVal).toMatch(/^function fib/);
+	expect(uncommentedVal).toMatch(/^const distance/);
 
 	// 6. Test Editing code: Change code to compute 7 * 6
 	await page.$eval(".bk-code-runner .bk-runner-editor", (el: any) => {
@@ -201,7 +199,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 	);
 	expect(updatedLogs).toContain("Result is: 42");
 
-	// 7. Test Reset button: should restore Fibonacci code
+	// 7. Test Reset button: should restore the speed example
 	const resetBtn = await page.waitForSelector(
 		".bk-code-runner .bk-reset-btn",
 	);
@@ -212,7 +210,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 		".bk-code-runner .bk-runner-editor",
 		(el: any) => el.value,
 	);
-	expect(restoredVal).toContain("function fib(n)");
+	expect(restoredVal).toContain("const distance = 100");
 
 	// 8. Test Clear button: should clear logs
 	const clearBtn = await page.waitForSelector(
@@ -306,7 +304,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 			const logs = document.querySelector(
 				'.bk-code-runner[data-mode="two-step"] .bk-runner-logs',
 			);
-			return logs && logs.textContent?.includes("Sum from compiled C++: 100");
+			return logs && logs.textContent?.includes("Sum: 60");
 		},
 		{ timeout: 10000 },
 	);
@@ -316,7 +314,7 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 		(el: any) => el.textContent || "",
 	);
 	expect(cppLogs).toContain("$ ./a.out");
-	expect(cppLogs).toContain("Sum from compiled C++: 100");
+	expect(cppLogs).toContain("Sum: 60");
 
 	// 12. Verify Compiled Language Challenge (C++ Challenge evaluates with Check Answer)
 	const cppChallengeRunner = await page.$(
@@ -364,7 +362,7 @@ test("E2E: Autocomplete displays popup on typing, allows keyboard navigation, an
 		process.cwd(),
 		"mr-markdown-documentation",
 		"out",
-		"showcase.html",
+		"coding.html",
 	);
 
 	await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "domcontentloaded" });
@@ -444,7 +442,7 @@ test("E2E: QOL Features - Auto-closing brackets/quotes, skip-over, smart backspa
 		process.cwd(),
 		"mr-markdown-documentation",
 		"out",
-		"showcase.html",
+		"coding.html",
 	);
 
 	await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "domcontentloaded" });

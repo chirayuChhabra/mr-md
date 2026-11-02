@@ -1,5 +1,5 @@
 ---
-index: 4
+index: 5
 title: Creating Quizzes
 slug: creating-quizzes
 description: How to construct accessible, multi-step interactive quizzes with markdown-first question definitions.
@@ -9,7 +9,7 @@ tags: [assessment, interactive, quizzes, education]
 
 # Creating Quizzes
 
-Mr Markdown supports interactive multiple-choice quizzes out of the box. Quizzes are defined entirely in Markdown, making them easy to write and extremely robust.
+Mr Markdown supports interactive multiple-choice quizzes out of the box. A quiz can be written in Markdown or JSON and embedded in a lesson.
 
 ## The Quiz Syntax
 
@@ -24,23 +24,14 @@ To create a quiz, create a `.quiz.md` file. Inside, you write questions using a 
 Here is an example `checkup.quiz.md`:
 
 ```markdown
-## How do you mount an interactive sandboxed JavaScript simulation in Mr Markdown?
+## A cyclist travels 100 metres in 20 seconds. What is their average speed?
 
--- By using an `<iframe>` tag
-++ By linking to a `.js` or `.ts` file using standard Markdown image syntax
--- By using the `<script>` tag
--- By using the `<columns>` tag
+-- 2 m/s
+++ 5 m/s
+-- 20 m/s
 
-> In `mr-md`, you can embed interactive JavaScript sandboxes natively using a link to a script file, e.g. `![Simulation](./sim.js)`.
+> Average speed is distance divided by time: 100 ÷ 20 = 5 m/s.
 
-## How do you add a red callout box for critical information?
-
--- `> [!tip]`
--- `> [!warning]`
-++ `> [!important]`
--- `> [!note]`
-
-> The `> [!important]` callout creates a red/accented box for critical information using standard GitHub-flavored blockquotes.
 ```
 
 *Note: All question text, options, and explanations fully support Markdown and KaTeX math formatting!*
@@ -52,3 +43,24 @@ Once your `.quiz.md` file is ready, you can embed it in any lesson using standar
 ```markdown
 ![Test your knowledge](./quizzes/checkup.quiz.md)
 ```
+
+Each question needs at least two options and exactly one `++` answer. The learner can select one option per question; selecting it immediately reveals the correct answer and explanation and disables further choices. Reload the page to try again. Answers are included in the generated page, so this is a practice activity, not a secure exam.
+
+## JSON alternative
+
+A `.json` quiz uses a zero-based answer index:
+
+```json
+{
+  "questions": [
+    {
+      "q": "What is 2 + 2?",
+      "options": ["3", "4"],
+      "answer": 1,
+      "explanation": "Two pairs make four."
+    }
+  ]
+}
+```
+
+Embed it with `![Practice](./quizzes/checkup.json)`. Keep quiz files under a subdirectory when building a chapter.

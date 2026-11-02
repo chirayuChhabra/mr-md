@@ -8,7 +8,7 @@ The official documentation, guides, and showcase are available online at [mrmark
 
 ## Quick Start (CLI)
 
-The easiest way to get started is by using the CLI on a single file.
+Install [Bun](https://bun.sh) first. The CLI can build a single file or a chapter of lessons.
 
 **1. Create a lesson file**
 ```bash
@@ -25,7 +25,7 @@ bunx mr-md dev lesson.md
 bunx mr-md build lesson.md
 ```
 
-> **Tip:** You can also pass a directory instead of a single file to process an entire folder at once. For example, you can `cd` into a directory and run `bunx mr-md dev .` or `bunx mr-md build .`.
+Build output goes into `out/` next to the input file. For a chapter, run `bunx mr-md generate intro` in a directory, then `bunx mr-md dev .` or `bunx mr-md build .`. Top-level Markdown lessons need consecutive, unique `index` values in frontmatter, starting at 1. Place quiz files in a subdirectory.
 
 ## CLI Commands
 
@@ -33,11 +33,12 @@ bunx mr-md build lesson.md
 |---------|-------------|
 | `mr-md build <path>` | Build all chapters or a specific file |
 | `mr-md dev <path>` | Start local dev server with hot reloading |
+| `mr-md stop [path]` | Stop a detached development server |
 | `mr-md generate <name>` | Generate a new markdown file (alias: `g`) |
 | `mr-md skill install` | Install the simulation agent skill globally |
-| `mr-md skill update` | Update the installed skill |
 | `mr-md skill status` | Show skill installation info |
-| `mr-md skill remove` | Uninstall the skill |
+
+For runnable examples, challenges, and language support, see the [Code in Lessons guide](https://mrmarkdown.com/coding.html).
 
 ## Agent Skills
 
@@ -52,13 +53,18 @@ See the [Agent Skills documentation](https://mrmarkdown.com/agent-skills) for de
 ## Features
 
 - **Interactive Simulations** — embed JavaScript/TypeScript sandboxes with theme-aware rendering
-- **Quizzes** — multiple-choice quizzes from simple `.quiz.md` files
+- **Quizzes** — multiple-choice practice from `.quiz.md` or JSON files
+- **Runnable code** — editable examples and output-matching challenges
 - **Math** — built-in KaTeX for inline and block LaTeX
 - **Media** — images, video, audio, and YouTube embeds via Markdown syntax
 - **Theming** — light/dark modes, color palettes, and UI style variants
 - **Callouts** — GitHub-flavored alert blockquotes
 - **Columns** — responsive side-by-side layouts
 - **Hot Reloading** — instant feedback during development
+
+Python runners load Skulpt from a CDN. Other languages such as C++ and Rust use Wandbox and send code and input to that service; those runners require network access. JavaScript and TypeScript run in a browser worker. Quiz answers are included in the page and are intended for practice, not secure assessment.
+
+For local development of this repository, run `bun install`, `bun run build`, then `bun run dev:docs`. `bun run build:docs` builds the documentation site and `bun test` runs the tests.
 
 ---
 
