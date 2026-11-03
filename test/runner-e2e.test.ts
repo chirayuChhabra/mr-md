@@ -272,8 +272,10 @@ test("E2E: Interactive Code Runner executes, updates output, resets, and clears"
 	expect(compileBtnText).toBe("Compile");
 
 	// Click compile button (simulating quick double-click: should not abort)
-	await compileBtn!.click();
-	await compileBtn!.click();
+	await compileBtn!.evaluate((button: HTMLElement) => {
+		button.click();
+		button.click();
+	});
 
 	// Wait for compilation to finish (button switches to Run Binary or runs binary)
 	await page.waitForFunction(
