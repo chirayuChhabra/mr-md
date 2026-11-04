@@ -56,7 +56,7 @@ export const mrMdHighlightStyle = HighlightStyle.define([
 	},
 	{
 		tag: [tags.lineComment, tags.blockComment],
-		color: "var(--faint, #71717a)",
+		color: "var(--code-secondary, #52525b)",
 		fontStyle: "italic",
 	},
 	{
@@ -81,7 +81,7 @@ export const mrMdHighlightStyle = HighlightStyle.define([
 	},
 	{
 		tag: tags.punctuation,
-		color: "var(--faint, #94a3b8)",
+		color: "var(--code-secondary, #52525b)",
 	},
 ]);
 
@@ -117,7 +117,7 @@ export const mrMdEditorTheme = EditorView.theme({
 	},
 	".cm-gutters": {
 		backgroundColor: "transparent",
-		color: "var(--faint, #71717a)",
+		color: "var(--code-secondary, #52525b)",
 		border: "none",
 		fontFamily: "inherit",
 		fontSize: "13.5px",
@@ -125,7 +125,6 @@ export const mrMdEditorTheme = EditorView.theme({
 		padding: "0 8px 0 0",
 		minWidth: "44px",
 		userSelect: "none",
-		opacity: "0.7",
 	},
 	".cm-gutterElement[style*='hidden'], .cm-gutterElement[style*='visibility: hidden']":
 		{

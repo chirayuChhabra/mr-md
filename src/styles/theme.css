@@ -19,6 +19,14 @@
 	--line-strong: #cbd5e1;
 	--code-bg: color-mix(in srgb, var(--accent) 3%, #e2e8f0);
 	--text-code: var(--ink);
+	--code-keyword: #7e22ce;
+	--code-string: #166534;
+	--code-number: #92400e;
+	--code-function: #1d4ed8;
+	--code-operator: #9d174d;
+	--code-property: #075985;
+	--code-class: #047857;
+	--code-secondary: #52525b;
 	--blue: #2563eb;
 	--teal: #0d9488;
 	--amber: #d97706;
@@ -80,6 +88,14 @@ html[data-palette="lava"], .bk-shell[data-palette="lava"] {
 
 :root[data-theme="dark"], .bk-shell[data-theme="dark"] {
 	color-scheme: dark;
+	--code-keyword: #c084fc;
+	--code-string: #a7f3d0;
+	--code-number: #fde047;
+	--code-function: #60a5fa;
+	--code-operator: #f472b6;
+	--code-property: #38bdf8;
+	--code-class: #34d399;
+	--code-secondary: #a1a1aa;
 	--bg: #07090c;
 	--paper: #121212;
 	--panel: #1a1a1a;
@@ -153,6 +169,14 @@ html[data-palette="lava"][data-theme="dark"], .bk-shell[data-palette="lava"][dat
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme="light"]), .bk-shell:not([data-theme="light"]) {
 		color-scheme: dark;
+		--code-keyword: #c084fc;
+		--code-string: #a7f3d0;
+		--code-number: #fde047;
+		--code-function: #60a5fa;
+		--code-operator: #f472b6;
+		--code-property: #38bdf8;
+		--code-class: #34d399;
+		--code-secondary: #a1a1aa;
 		--bg: #07090c;
 		--paper: #121212;
 		--panel: #1a1a1a;

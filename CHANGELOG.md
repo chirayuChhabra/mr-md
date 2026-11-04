@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Improve syntax highlighting and line number contrast in light-mode code editors.
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
