@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Preserve CodeMirror editor styles across dev server live reloads.
+
 ### Changed
 - Instruct the simulation skill to preserve existing lesson content and flag potential inaccuracies without editing them unless asked.
 
