@@ -51,6 +51,14 @@ window.addEventListener("bk:props", (event) => {
   }
 });
 
+window.addEventListener("bk:action", (event) => {
+  const action = event.detail?.action;
+  if (action === "reset") {
+    state.x = 400;
+    state.y = 250;
+  }
+});
+
 function initialize(canvas) {
   if (initialized) return;
 

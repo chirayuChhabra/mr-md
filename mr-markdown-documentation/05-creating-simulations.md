@@ -66,6 +66,142 @@ window.bkSetup(800, 450, (ctx, width, height) => {
 });
 ```
 
+### Expanded controls, presets, and actions
+
+Simulations can offer rich, expressive host controls beyond basic sliders and toggles. mr-md supports:
+
+- **Segmented choices** (`"type": "segmented"`): inline button group for mutually exclusive options (`options: [{ label, value }]`).
+- **Dropdown menus** (`"type": "select"`): compact picker for selecting among larger option sets (`options: [{ label, value }]`).
+- **Engineering units** (`unit?: string`): suffix units displayed on numeric controls (`range` and `number`), such as `unit: "N/m"`, `"kg"`, or `"N·s/m"`.
+- **Organizing controls with `advancedControls`**: secondary tunables are tucked into a native `<details>`/`<summary>` "More controls" disclosure, closed initially. Author them cleanly with top-level `advancedControls?: string[]`:
+  - **Preferred collective syntax**: `advancedControls: ["medium", "stiffness", "mass"]` lists keys that belong under "More controls".
+  - **All unlisted controls remain primary by default**: keep controls central to prediction and manipulation in the primary visible row.
+  - **Exact precedence**: `control.advanced ?? advancedControls.includes(key)`. An explicit per-control `advanced: false` overrides the list to keep a control visible, while `advanced: true` works standalone for single-control compatibility.
+  - **Learning-goal selection guidance**: choose visible controls deliberately based on what teaches the core concept. Do not automatically hide controls merely by count or type, or infer importance from variable names. Setup parameters, secondary environment variations, and auxiliary visual overlays belong under secondary controls.
+  - **Preserved state while closed**: controls inside the closed disclosure are part of the DOM; they initialize on page load, update synchronously when presets change, and preserve their values in `window.__simProps`.
+- **Top-level presets** (`presets?: Record<string, { label: string, props: Record<string, ...> }>`): rendered as a labeled native dropdown (`<select>`) with an initial neutral "Choose preset" option. Choosing a preset atomically batch-updates all defined properties (including advanced controls) via `bk:props`. Manual adjustments to any control clear the preset selection.
+- **Top-level actions** (`actions?: Record<string, { label: string }>`): restrained outlined push-buttons displayed inline with primary controls for discrete or repeatable events (e.g. impulse kick, reset) that dispatch `bk:action` window events to the sandbox.
+
+Here is a complete, coherent experiment demonstrating these capabilities in a damped harmonic oscillator:
+
+![Damped Harmonic Oscillator](./sims/oscillator.js)
+
+#### Control contract example
+
+A companion `.config.json` defines presets, actions, and typed tunables using collective `advancedControls`:
+
+```json
+{
+  "type": "block",
+  "props": {
+    "damping": 1.5,
+    "dampingMode": "viscous",
+    "medium": "air",
+    "stiffness": 25,
+    "mass": 1.0,
+    "showTrace": true,
+    "showPhase": true
+  },
+  "advancedControls": [
+    "dampingMode",
+    "medium",
+    "stiffness",
+    "mass",
+    "showTrace",
+    "showPhase"
+  ],
+  "tunables": {
+    "damping": {
+      "label": "Damping (c)",
+      "type": "range",
+      "min": 0,
+      "max": 25,
+      "step": 0.5,
+      "unit": "N·s/m"
+    },
+    "dampingMode": {
+      "label": "Damping model",
+      "type": "segmented",
+      "options": [
+        { "label": "Viscous", "value": "viscous" },
+        { "label": "Quadratic Drag", "value": "quadratic" },
+        { "label": "Dry Friction", "value": "friction" }
+      ]
+    },
+    "medium": {
+      "label": "Medium",
+      "type": "select",
+      "options": [
+        { "label": "Vacuum (0.0×, c = 0)", "value": "vacuum" },
+        { "label": "Air (1.0× drag)", "value": "air" },
+        { "label": "Water / Light Oil (2.5×)", "value": "water" },
+        { "label": "Viscous Glycerin (5.0×)", "value": "glycerin" }
+      ]
+    },
+    "stiffness": {
+      "label": "Spring Stiffness (k)",
+      "type": "range",
+      "min": 5,
+      "max": 60,
+      "step": 1,
+      "unit": "N/m"
+    },
+    "mass": {
+      "label": "Cart Mass (m)",
+      "type": "number",
+      "min": 0.5,
+      "max": 5.0,
+      "step": 0.5,
+      "unit": "kg"
+    },
+    "showTrace": {
+      "label": "Displacement Graph x(t)",
+      "type": "boolean"
+    },
+    "showPhase": {
+      "label": "Phase Space (x vs v)",
+      "type": "boolean"
+    }
+  },
+  "actions": {
+    "impulse": { "label": "Apply Impulse (+Δv)" },
+    "zero": { "label": "Reset to Rest" }
+  },
+  "presets": {
+    "underdamped": {
+      "label": "Underdamped",
+      "props": { "dampingMode": "viscous", "medium": "air", "stiffness": 25, "damping": 1.5, "mass": 1.0 }
+    },
+    "critical": {
+      "label": "Critical Damping",
+      "props": { "dampingMode": "viscous", "medium": "water", "stiffness": 25, "damping": 4.0, "mass": 1.0 }
+    },
+    "overdamped": {
+      "label": "Overdamped",
+      "props": { "dampingMode": "viscous", "medium": "glycerin", "stiffness": 25, "damping": 5.0, "mass": 1.0 }
+    }
+  }
+}
+```
+
+#### Responding to actions in simulation code
+
+In your simulation script, listen for the `bk:action` event to execute discrete or repeatable actions:
+
+```javascript
+window.addEventListener("bk:action", (event) => {
+  if (event.detail.action === "impulse") {
+    // Deliver velocity kick to mass
+    state.velocity += 2.0;
+  } else if (event.detail.action === "zero") {
+    state.x = 0;
+    state.velocity = 0;
+  }
+});
+```
+
+When a user selects a preset, the host updates the active controls and dispatches `bk:props` with all bundled values, identical to standard tunable updates.
+
 ## Steps simulations
 
 In addition to open sandboxes, `mr-md` supports **Step-by-Step Simulations**. Use steps when a learner should work through a sequence of goals. Each step can provide instructions, a hint, feedback, and optional narration:
@@ -239,6 +375,7 @@ The solar-system example uses Three.js and external resources; it requires a net
 | `bkCanvasPoint(event, canvas)` | Convert pointer coordinates to canvas coordinates. |
 | `bkFitCanvas(canvas, width, height, options)` | Fit a custom canvas to its container. |
 | `__simProps` | Read current properties; listen for `bk:props` to react to changes. |
+| `bk:action` event | Listen on `window` for action button events (`event.detail.action`). |
 | `bkOnStep`, `bkOnReset`, `bkCompleteStep` | Handle the steps lifecycle, as shown above. |
 
 These APIs are available on `window` inside the simulation iframe.
@@ -252,3 +389,5 @@ bunx mr-md skill install
 ```
 
 See [Agent Skills](./agent-skills.html) for details. Review and test generated simulations in the lesson just as you would code written by hand.
+
+Action buttons accept an optional `color`: `accent` (default), `neutral`, `red`, `green`, or `amber`. For example, `"impulse": { "label": "Apply impulse", "color": "green" }`. Use color to reinforce the action’s meaning and keep the label explicit. Use a `select` for longer choices that would crowd a segmented control.

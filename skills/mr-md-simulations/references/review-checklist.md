@@ -35,9 +35,9 @@ also apply [steps.md](steps.md). Custom renderers own their loop lifecycle.
 - The lesson embeds the local `.js` or `.ts` source with descriptive text.
 - The sibling config basename matches the simulation basename.
 - Every tunable has a correctly typed default prop.
-- Every tunable uses the lesson's exact terminology, notation, and unit.
-- Generated host controls are used for settings and modes.
-- Text and numeric input use generated host controls too.
+- Every tunable uses the lesson's exact terminology, notation, and unit (using `unit?: string` on numeric controls where applicable).
+- Generated host controls (`range`, `number`, `text`, `boolean`, `segmented`, `select`) are used for settings and modes, with collective `advancedControls?: string[]` (or per-control `advanced: true`) moving secondary parameters into "More controls" to keep primary controls compact.
+- Top-level `actions` sit inline with primary controls for discrete operations via `bk:action` events; `presets` provide a dropdown for parameter sets via `bk:props`.
 - No form fields, toggles, selects, ordinary buttons, toolbars, or fake inputs
   are drawn or mounted inside the simulation frame.
 - Spatial interactions remain inside the canvas.

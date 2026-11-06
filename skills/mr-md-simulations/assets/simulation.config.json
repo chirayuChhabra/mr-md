@@ -4,19 +4,41 @@
   "height": 420,
   "props": {
     "speed": 1,
+    "mode": "standard",
     "showGuide": true
   },
+  "advancedControls": [
+    "mode"
+  ],
   "tunables": {
     "speed": {
-      "label": "Replace with the lesson's term and unit",
+      "label": "Speed",
       "type": "range",
       "min": 0.1,
       "max": 3,
-      "step": 0.1
+      "step": 0.1,
+      "unit": "m/s"
+    },
+    "mode": {
+      "label": "Mode",
+      "type": "segmented",
+      "options": [
+        { "label": "Standard", "value": "standard" },
+        { "label": "Alternative", "value": "alternative" }
+      ]
     },
     "showGuide": {
-      "label": "Replace with the lesson's terminology",
+      "label": "Show Guide",
       "type": "boolean"
+    }
+  },
+  "actions": {
+    "reset": { "label": "Reset Position" }
+  },
+  "presets": {
+    "default": {
+      "label": "Default Setup",
+      "props": { "speed": 1, "mode": "standard" }
     }
   }
 }
