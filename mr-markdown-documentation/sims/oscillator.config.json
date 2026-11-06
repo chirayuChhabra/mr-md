@@ -1,0 +1,149 @@
+{
+  "type": "block",
+  "label": "Damped Harmonic Oscillator",
+  "caption": "Investigate spring-mass oscillations under viscous damping, presets, and impulse excitation. Damping ratio ζ = c_eff / (2√(km)) determines whether motion is underdamped, critically damped, or overdamped.",
+  "height": 520,
+  "props": {
+    "damping": 1.5,
+    "dampingMode": "viscous",
+    "medium": "air",
+    "stiffness": 25,
+    "mass": 1.0,
+    "showTrace": true,
+    "showPhase": true
+  },
+  "advancedControls": [
+    "dampingMode",
+    "medium",
+    "stiffness",
+    "mass",
+    "showTrace",
+    "showPhase"
+  ],
+  "tunables": {
+    "damping": {
+      "label": "Damping (c)",
+      "type": "range",
+      "min": 0,
+      "max": 25,
+      "step": 0.5,
+      "unit": "N·s/m"
+    },
+    "dampingMode": {
+      "label": "Damping model",
+      "type": "select",
+      "options": [
+        {
+          "label": "Viscous",
+          "value": "viscous"
+        },
+        {
+          "label": "Quadratic Drag",
+          "value": "quadratic"
+        },
+        {
+          "label": "Dry Friction",
+          "value": "friction"
+        }
+      ]
+    },
+    "medium": {
+      "label": "Medium",
+      "type": "select",
+      "options": [
+        {
+          "label": "Vacuum (0.0×, c = 0)",
+          "value": "vacuum"
+        },
+        {
+          "label": "Air (1.0× drag)",
+          "value": "air"
+        },
+        {
+          "label": "Water / Light Oil (2.5×)",
+          "value": "water"
+        },
+        {
+          "label": "Viscous Glycerin (5.0×)",
+          "value": "glycerin"
+        }
+      ]
+    },
+    "stiffness": {
+      "label": "Spring Stiffness (k)",
+      "type": "range",
+      "min": 5,
+      "max": 60,
+      "step": 1,
+      "unit": "N/m"
+    },
+    "mass": {
+      "label": "Cart Mass (m)",
+      "type": "number",
+      "min": 0.5,
+      "max": 5.0,
+      "step": 0.5,
+      "unit": "kg"
+    },
+    "showTrace": {
+      "label": "Displacement Graph x(t)",
+      "type": "boolean"
+    },
+    "showPhase": {
+      "label": "Phase Space (x vs v)",
+      "type": "boolean"
+    }
+  },
+  "actions": {
+    "impulse": {
+      "label": "Apply Impulse (+Δv)",
+      "color": "green"
+    },
+    "zero": {
+      "label": "Reset to Rest",
+      "color": "neutral"
+    }
+  },
+  "presets": {
+    "underdamped": {
+      "label": "Underdamped",
+      "props": {
+        "dampingMode": "viscous",
+        "medium": "air",
+        "stiffness": 25,
+        "damping": 1.5,
+        "mass": 1.0
+      }
+    },
+    "critical": {
+      "label": "Critical Damping",
+      "props": {
+        "dampingMode": "viscous",
+        "medium": "water",
+        "stiffness": 25,
+        "damping": 4.0,
+        "mass": 1.0
+      }
+    },
+    "overdamped": {
+      "label": "Overdamped",
+      "props": {
+        "dampingMode": "viscous",
+        "medium": "glycerin",
+        "stiffness": 25,
+        "damping": 5.0,
+        "mass": 1.0
+      }
+    },
+    "undamped": {
+      "label": "Pure Undamped",
+      "props": {
+        "dampingMode": "viscous",
+        "medium": "vacuum",
+        "stiffness": 25,
+        "damping": 0.0,
+        "mass": 1.0
+      }
+    }
+  }
+}

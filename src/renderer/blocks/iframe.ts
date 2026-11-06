@@ -397,6 +397,8 @@ window.addEventListener("message", (event) => {
   if (event.data.type === "bk:set-props") {
     window.__simProps = { ...window.__simProps, ...event.data.props };
     window.dispatchEvent(new CustomEvent("bk:props", { detail: window.__simProps }));
+  } else if (event.data.type === "bk:action") {
+    window.dispatchEvent(new CustomEvent("bk:action", { detail: { action: event.data.action } }));
   } else if (event.data.type === "bk:world-enter") {
     if (window.bkWorld) {
       window.bkWorld.active = true;

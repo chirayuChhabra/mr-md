@@ -12,13 +12,13 @@ sibling .config.json
         v
 Markdown parser or builder
         |
-        +--> generated host controls
+        +--> generated host controls (tunables, presets, actions)
         |
         v
 sandboxed iframe --> window.__simProps
         ^                    |
         |                    v
-        +---- bk:set-props / bk:props
+        +---- bk:props / bk:action
 ```
 
 The host owns the controls. The iframe owns simulation state and drawing.
@@ -45,6 +45,9 @@ Supported config fields correspond to `SimulationConfig`:
 {
   "props": {},
   "tunables": {},
+  "advancedControls": [],
+  "actions": {},
+  "presets": {},
   "height": 420,
   "label": "Interactive Lab",
   "caption": "Instructions for the learner.",
@@ -54,10 +57,26 @@ Supported config fields correspond to `SimulationConfig`:
 }
 ```
 
-Control types are `range`, `number`, `text`, and `boolean`. A numeric prop
-defaults to a range, a string to text, and a boolean to a toggle. Explicit
-`tunables` are preferred because their labels and bounds define the intended
-experience.
+Generated host controls support:
+- `range`: numeric slider (`min`, `max`, `step`, optional `unit?: string`);
+- `number`: numeric input field (`min`, `max`, `step`, optional `unit?: string`);
+- `text`: single-line string input;
+- `boolean`: toggle switch;
+- `segmented`: inline segmented choices (`options: Array<{ label: string, value: string | number | boolean }>`);
+- `select`: compact dropdown picker (`options: Array<{ label: string, value: string | number | boolean }>`).
+
+Organize primary vs secondary controls with `advancedControls`:
+- **Preferred authoring syntax**: top-level `advancedControls?: string[]` lists tunable keys to place under the native `<details>`/`<summary>` "More controls" disclosure (closed by default).
+- **Default visibility**: all unlisted controls remain primary and visible by default alongside presets and actions.
+- **Precedence**: `control.advanced ?? advancedControls.includes(key)`. Setting `advanced: false` on an individual control explicitly overrides the list to keep it visible; `advanced: true` works standalone for backwards compatibility.
+- **Learning-goal selection guidance**: select visible controls deliberately based on what teaches the core learning objective. Keep parameters central to prediction and manipulation visible as primary; place auxiliary overlays, fine-tuning constants, and environment setups in `advancedControls`. Do not automatically hide controls by count or type, or infer importance from variable names.
+- **Closed state lifecycle**: controls inside the closed disclosure are fully mounted in the DOM; they initialize on page load, update synchronously when presets change, and preserve their values in `window.__simProps`.
+
+Top-level configuration options:
+- `actions?: Record<string, { label: string }>`: push-button actions rendered inline with primary controls. Outlined restrained buttons dispatch `bk:action` events to the iframe (`event.detail.action`). Useful for repeatable impulses, triggers, or resets.
+- `presets?: Record<string, { label: string, props: Record<string, string | number | boolean> }>`: named parameter bundles rendered as a labeled native select with an initial neutral "Choose preset". Selecting a preset updates active controls (including hidden advanced controls) and applies properties via `bk:props`. Manual adjustments clear the preset selection.
+
+Do not add playback controls (play/pause/step) to block simulations; steps simulations already own playback.
 
 For block/steps, these generated controls are the non-spatial input UI. Keep form fields,
 toggles, selects, ordinary action buttons, and control panels out of the iframe.
@@ -93,6 +112,18 @@ window.addEventListener("bk:props", (event) => {
 
 Treat values defensively. Keep the previous valid value when an update is
 missing or invalid.
+
+### `bk:action` window event
+
+Dispatched when the learner clicks an action button defined in `actions`:
+
+```js
+window.addEventListener("bk:action", (event) => {
+  if (event.detail.action === "impulse") {
+    applyVelocityKick();
+  }
+});
+```
 
 ### `window.bkSetup(width, height, draw)`
 
@@ -250,3 +281,5 @@ and world lifecycle. The fixed-canvas signature of `bkFitCanvas` above does not
 apply to worlds: their helper is `bkFitCanvas(canvas)` and fits the viewport.
 World rendering does not generate the standard tunable control panel; do not
 assume a field present in a shared type guarantees visible controls.
+
+Action buttons accept an optional `color`: `accent` (default), `neutral`, `red`, `green`, or `amber`. For example, `"impulse": { "label": "Apply impulse", "color": "green" }`. Use color to reinforce the action’s meaning and keep the label explicit. Use a `select` for longer choices that would crowd a segmented control.

@@ -60,11 +60,24 @@ export interface CaptionedBlock {
 }
 
 // Interactive blocks
+export interface SimulationAction {
+	label: string;
+	color?: "accent" | "neutral" | "red" | "green" | "amber";
+}
+
+export interface SimulationPreset {
+	label: string;
+	props: Record<string, string | number | boolean>;
+}
+
 export interface SimulationBlock extends BaseBlock, CaptionedBlock {
 	type: "simulation";
 	src: string; // path to .js file or inline JS
 	props?: Record<string, unknown>; // passed to the sim as window.__simProps
 	tunables?: Record<string, SimulationControl>;
+	actions?: Record<string, SimulationAction>;
+	presets?: Record<string, SimulationPreset>;
+	advancedControls?: string[];
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // iframe height, default 400
 	controls?: "interactive" | "observe";
@@ -78,6 +91,9 @@ export interface WorldBlock extends BaseBlock, CaptionedBlock {
 	src: string; // path to .js or .ts file or inline JS
 	props?: Record<string, unknown>; // passed to the world as window.__simProps
 	tunables?: Record<string, SimulationControl>;
+	actions?: Record<string, SimulationAction>;
+	presets?: Record<string, SimulationPreset>;
+	advancedControls?: string[];
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // portal preview height, default 480
 	accent?: BlockAccent;
@@ -153,6 +169,9 @@ export interface StepsBlock extends BaseBlock, CaptionedBlock {
 	steps?: SimulationStep[];
 	props?: Record<string, unknown>;
 	tunables?: Record<string, SimulationControl>;
+	actions?: Record<string, SimulationAction>;
+	presets?: Record<string, SimulationPreset>;
+	advancedControls?: string[];
 	height?: number;
 	accent?: BlockAccent;
 	dependencies?: string[];
@@ -259,6 +278,9 @@ export interface BuildOptions {
 export interface SimulationOptions {
 	props?: Record<string, unknown>;
 	tunables?: Record<string, SimulationControl>;
+	actions?: Record<string, SimulationAction>;
+	presets?: Record<string, SimulationPreset>;
+	advancedControls?: string[];
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -283,6 +305,9 @@ export interface StepsOptions {
 	steps?: SimulationStep[];
 	props?: Record<string, unknown>;
 	tunables?: Record<string, SimulationControl>;
+	actions?: Record<string, SimulationAction>;
+	presets?: Record<string, SimulationPreset>;
+	advancedControls?: string[];
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -301,6 +326,9 @@ export interface StepsConfig extends StepsOptions {
 export interface WorldOptions {
 	props?: Record<string, unknown>;
 	tunables?: Record<string, SimulationControl>;
+	actions?: Record<string, SimulationAction>;
+	presets?: Record<string, SimulationPreset>;
+	advancedControls?: string[];
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -314,13 +342,21 @@ export interface WorldConfig extends WorldOptions {
 	portal?: WorldPortalType;
 }
 
+export interface SimulationControlOption {
+	label: string;
+	value: string | number | boolean;
+}
+
 /** Represents a single interactive control in a simulation (e.g., a slider) */
 export interface SimulationControl {
-	type?: "range" | "number" | "text" | "boolean";
+	type?: "range" | "number" | "text" | "boolean" | "select" | "segmented";
 	label?: string;
 	min?: number;
 	max?: number;
 	step?: number;
+	unit?: string;
+	options?: Array<SimulationControlOption>;
+	advanced?: boolean;
 }
 
 export interface AnimationOptions {

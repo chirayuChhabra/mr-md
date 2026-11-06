@@ -56,10 +56,15 @@ Use sibling-config tunables for every non-spatial input:
 
 | Need | Host control |
 | --- | --- |
-| Continuous value | `range` |
-| Exact numeric value | `number` |
+| Continuous value (optional `unit`) | `range` |
+| Exact numeric value (optional `unit`) | `number` |
 | Text, formula, query, or comma-separated values | `text` |
 | On/off mode | `boolean` |
+| Discrete option group (compact choices) | `segmented` |
+| Dropdown choice from multiple options | `select` |
+| Discrete impulse, trigger, or reset | `actions` (`bk:action`) |
+| Parameter bundles / regimes | `presets` (`bk:props`) |
+| Secondary or deep configuration | `advanced: true` ("More controls" disclosure) |
 
 Do not add DOM or canvas-drawn form fields, toggles, selects, toolbars, or
 ordinary action buttons inside the frame. Do not visually imitate an input.

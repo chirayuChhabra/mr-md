@@ -169,33 +169,85 @@ Read `references/runtime-and-ui.md` for the host contract and
 
 ## Connect controls to behavior
 
-Put author-facing defaults and controls in the sibling config:
+Put author-facing defaults, tunables, actions, and presets in the sibling config:
 
 ```json
 {
   "props": {
-    "speed": 1,
+    "damping": 1.5,
+    "mode": "viscous",
+    "medium": "air",
     "showVectors": true
   },
+  "advancedControls": [
+    "medium",
+    "showVectors"
+  ],
   "tunables": {
-    "speed": {
-      "label": "Speed",
+    "damping": {
+      "label": "Damping (c)",
       "type": "range",
-      "min": 0.1,
-      "max": 3,
-      "step": 0.1
+      "min": 0,
+      "max": 10,
+      "step": 0.5,
+      "unit": "N·s/m"
+    },
+    "mode": {
+      "label": "Model",
+      "type": "segmented",
+      "options": [
+        { "label": "Viscous", "value": "viscous" },
+        { "label": "Quadratic", "value": "quadratic" }
+      ]
+    },
+    "medium": {
+      "label": "Medium",
+      "type": "select",
+      "options": [
+        { "label": "Air", "value": "air" },
+        { "label": "Water", "value": "water" }
+      ]
     },
     "showVectors": {
       "label": "Show Vectors",
       "type": "boolean"
     }
+  },
+  "actions": {
+    "impulse": { "label": "Apply Impulse" }
+  },
+  "presets": {
+    "underdamped": {
+      "label": "Underdamped",
+      "props": { "damping": 1.0, "mode": "viscous", "medium": "air" }
+    },
+    "critical": {
+      "label": "Critical Damping",
+      "props": { "damping": 8.0, "mode": "viscous", "medium": "water" }
+    }
   }
 }
 ```
 
-Use generated controls for all non-spatial input, including `range`, `number`,
-`text`, and `boolean` values. Reserve direct canvas interaction for spatial
-actions such as dragging a body, drawing a ray, or selecting a cell.
+Use generated host controls for all non-spatial input:
+- `range` and `number`: numeric sliders and inputs with optional `unit?: string` (e.g. `unit: "kg"`, `"N/m"`);
+- `text`: single-line string input;
+- `boolean`: toggle switch;
+- `segmented`: inline segmented buttons for discrete mutually exclusive choices (`options: Array<{ label, value }>`);
+- `select`: compact dropdown picker (`options: Array<{ label, value }>`).
+
+Organize primary vs secondary controls with `advancedControls`:
+- **Preferred syntax**: `advancedControls?: string[]` lists keys moved to the native `<details>`/`<summary>` "More controls" disclosure, closed by default.
+- **Default visibility**: all unlisted controls remain primary by default.
+- **Precedence**: `control.advanced ?? advancedControls.includes(key)`. Setting `advanced: false` on an individual control explicitly overrides the list to keep it visible; `advanced: true` works standalone for single-control compatibility.
+- **Deliberate selection for learning goals**: choose visible controls deliberately based on what teaches the core learning objective. Keep parameters central to prediction and manipulation visible as primary; place auxiliary overlays, fine-tuning constants, and environment setups in `advancedControls`. Do not automatically hide controls by count or type, or infer importance from variable names.
+- **Preserved state while closed**: controls inside the closed disclosure are part of the DOM; they initialize on page load, update synchronously when presets change, and preserve their values in `window.__simProps`.
+
+Top-level configuration also supports:
+- `actions?: Record<string, { label: string }>`: restrained outlined push-buttons displayed inline with primary controls that dispatch `bk:action` window events (`event.detail.action`) for discrete or repeatable operations (such as impulse kicks or resets).
+- `presets?: Record<string, { label: string, props: Record<string, string | number | boolean> }>`: labeled native `<select>` dropdown with an initial neutral "Choose preset". Choosing a preset batch-updates multiple properties at once (including hidden advanced controls) via `bk:props`. Manual edits clear the preset selection.
+
+Do not add playback controls (play/pause/step) to block simulations; steps simulations already own playback. Reserve direct canvas interaction for spatial actions such as dragging a body, drawing a ray, or selecting a cell.
 
 Every tunable must:
 
@@ -208,16 +260,8 @@ Every tunable must:
 
 For block/steps, do not build a second form or toolbar inside the iframe. This prohibition
 includes sliders, toggles, text fields, number fields, selects, ordinary action
-buttons, and control cards. Reshape the interaction around host props when
-possible. For example, represent a set editor with a host text prop such as
-`Set members` and a membership query with `Test element`, then visualize the
-result on canvas. Do not draw fake input boxes on the canvas.
-
-For block/steps, if the learning objective genuinely requires a control the current config
-cannot express, stop and ask whether to simplify the interaction or extend
-mr-md's host-control contract. Do not silently create a parallel UI system in
-the simulation. The iframe is sandboxed and cannot directly manipulate the
-host lesson DOM.
+buttons, and control cards. Reshape the interaction around host props and actions when
+possible. Do not draw fake input boxes or toolbars on the canvas.
 
 ## Plan and contain the viewport
 
