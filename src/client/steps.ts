@@ -1,5 +1,6 @@
 // @ts-nocheck
 import DOMPurify from "isomorphic-dompurify";
+import { bkApplyPropsToControls, bkGetCurrentProps } from "./simulation.js";
 import { bkThemeColors } from "./theme.js";
 
 const DOMPURIFY_CONFIG = {
@@ -328,32 +329,14 @@ function getHostThemeState() {
 
 function syncHostControls(card: HTMLElement, props?: Record<string, unknown>) {
 	if (!props || typeof props !== "object") return;
-	for (const [key, val] of Object.entries(props)) {
-		card.querySelectorAll(`[data-bk-prop="${key}"]`).forEach((el) => {
-			const input = el as HTMLInputElement;
-			if (input.type === "checkbox") {
-				input.checked = Boolean(val);
-			} else if (input.type === "range" || input.type === "number") {
-				input.value = String(val);
-				if (input.type === "range") {
-					const min = parseFloat(input.min) || 0;
-					const max = parseFloat(input.max) || 100;
-					const numVal = parseFloat(String(val)) || 0;
-					const pct = Math.max(
-						0,
-						Math.min(100, ((numVal - min) / (max - min)) * 100),
-					);
-					input.style.setProperty("--bk-track-fill", `${pct}%`);
-				}
-				const sync = input.parentElement?.querySelector(
-					`[data-bk-sync="${key}"]`,
-				) as HTMLInputElement | null;
-				if (sync) sync.value = String(val);
-			} else {
-				input.value = String(val);
-			}
-		});
-	}
+	card.__bkCurrentProps = { ...bkGetCurrentProps(card), ...props };
+	bkApplyPropsToControls(card, props);
+	card.querySelectorAll("[data-bk-preset].is-active").forEach((button) => {
+		button.classList.remove("is-active");
+	});
+	card.querySelectorAll("select[data-bk-preset-select]").forEach((sel) => {
+		(sel as HTMLSelectElement).value = "";
+	});
 }
 
 function updateStepsStep(

@@ -26,7 +26,7 @@ export function renderSimulation(
 			block.controls === "observe" ? "Simulation" : "Interactive Lab",
 			block.label,
 			block.caption,
-			`${renderSimulationControls(block as Extract<Block, { type: "simulation" }>)}
+			`${renderSimulationControls(block as Extract<Block, { type: "simulation" }>, id)}
           <div class="bk-embed-frame bk-embed-interactive">
             <div class="bk-embed-overlay" tabindex="0" role="button" aria-label="Activate interactive simulation">
               <span class="bk-embed-overlay-text">Click to interact</span>

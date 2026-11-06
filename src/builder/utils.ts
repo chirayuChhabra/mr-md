@@ -126,6 +126,9 @@ export function normalizeSimulationOptions(
 	const optionKeys = [
 		"props",
 		"tunables",
+		"actions",
+		"presets",
+		"advancedControls",
 		"height",
 		"label",
 		"caption",
@@ -145,6 +148,9 @@ export function normalizeSimulationOptions(
 	return {
 		props: { ...(fileConfig?.props ?? {}), ...(inline.props ?? {}) },
 		tunables: inline.tunables ?? fileConfig?.tunables,
+		actions: inline.actions ?? fileConfig?.actions,
+		presets: inline.presets ?? fileConfig?.presets,
+		advancedControls: inline.advancedControls ?? fileConfig?.advancedControls,
 		height: inline.height ?? fileConfig?.height ?? legacyHeight,
 		label: inline.label ?? fileConfig?.label,
 		caption: inline.caption ?? fileConfig?.caption,
@@ -162,6 +168,9 @@ export function normalizeWorldOptions(
 	const optionKeys = [
 		"props",
 		"tunables",
+		"actions",
+		"presets",
+		"advancedControls",
 		"height",
 		"label",
 		"caption",
@@ -184,6 +193,9 @@ export function normalizeWorldOptions(
 	return {
 		props: { ...(fileConfig?.props ?? {}), ...(inline.props ?? {}) },
 		tunables: inline.tunables ?? fileConfig?.tunables,
+		actions: inline.actions ?? fileConfig?.actions,
+		presets: inline.presets ?? fileConfig?.presets,
+		advancedControls: inline.advancedControls ?? fileConfig?.advancedControls,
 		height: inline.height ?? fileConfig?.height ?? legacyHeight,
 		label: inline.label ?? fileConfig?.label,
 		caption: inline.caption ?? fileConfig?.caption,

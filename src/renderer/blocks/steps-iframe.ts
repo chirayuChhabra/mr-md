@@ -148,6 +148,11 @@ window.addEventListener("message", function(e) {
     } else if (typeof window.__renderFrame === "function") {
       window.__renderFrame();
     }
+  } else if (e.data.type === "bk:action") {
+    window.dispatchEvent(new CustomEvent("bk:action", { detail: { action: e.data.action } }));
+    if (!window.__loop && typeof window.__renderFrame === "function") {
+      window.__renderFrame();
+    }
   } else if (e.data.type === "bk:sim-play-state") {
     if (e.data.playing) {
       if (typeof window.__startLoop === "function") window.__startLoop();

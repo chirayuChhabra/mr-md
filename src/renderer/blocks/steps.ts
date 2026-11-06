@@ -110,14 +110,20 @@ export function renderSteps(
 		renderedSteps.some((s) => !!s.audio || !!s.voice);
 
 	const controlsHtml =
-		block.tunables || block.props
-			? renderSimulationControls({
-					type: "simulation",
-					src: block.src,
-					props: block.props,
-					tunables: block.tunables,
-					controls: "interactive",
-				} as SimulationBlock)
+		block.tunables || block.props || block.actions || block.presets
+			? renderSimulationControls(
+					{
+						type: "simulation",
+						src: block.src,
+						props: block.props,
+						tunables: block.tunables,
+						actions: block.actions,
+						presets: block.presets,
+						advancedControls: block.advancedControls,
+						controls: "interactive",
+					} as SimulationBlock,
+					id,
+				)
 			: "";
 
 	const frameHeightAttr = block.height
