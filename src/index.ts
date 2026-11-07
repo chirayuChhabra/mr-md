@@ -1,3 +1,9 @@
+export type {
+	MeasurementDataPoint,
+	MeasurementPlot,
+	MeasurementPlotSeries,
+	MeasurementsConfig,
+} from "./measurement-types.js";
 export {
 	buildChapter,
 	buildLesson,
@@ -15,7 +21,6 @@ export type {
 	SimulationConfigIssue,
 	ValidatedSimulationConfig,
 } from "./simulation-config.js";
-
 export {
 	SimulationConfigError,
 	simulationConfigJsonSchema,

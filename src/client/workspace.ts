@@ -440,6 +440,12 @@ export function bkSelectInspectorTab(
 		}
 	});
 
+	try {
+		figure.dispatchEvent(
+			new CustomEvent("bk:tab-selected", { detail: { tabKey } }),
+		);
+	} catch (_) {}
+
 	if (shouldFocusTab && typeof targetTab.focus === "function") {
 		targetTab.focus();
 	}

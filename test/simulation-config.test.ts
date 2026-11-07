@@ -122,3 +122,93 @@ test("inline builder options are validated after merging defaults", () => {
 		}),
 	).toThrow("Default 10 exceeds maximum 5");
 });
+
+test("validates measurements config, plot bounds, unique ids, and bindings", () => {
+	// Valid measurements
+	const config = validateSimulationConfig({
+		props: {},
+		measurements: {
+			badge: "count",
+			plots: [
+				{
+					id: "p1",
+					title: "Line Plot",
+					type: "line",
+					x: "t",
+					y: "val",
+					xMin: 0,
+					xMax: 10,
+					yMin: -5,
+					yMax: 5,
+					maxPoints: 300,
+					sampleMs: 16,
+				},
+				{
+					id: "p2",
+					type: "bar",
+					data: "histogram",
+				},
+				{
+					id: "p3",
+					type: "vector-field",
+					data: "flow",
+				},
+			],
+		},
+	});
+	expect(config.measurements?.badge).toBe("count");
+	expect(config.measurements?.plots?.length).toBe(3);
+
+	// Duplicate plot ID
+	expect(() =>
+		validateSimulationConfig({
+			measurements: {
+				plots: [
+					{ id: "duplicate-id", type: "line", y: "a" },
+					{ id: "duplicate-id", type: "scatter", y: "b" },
+				],
+			},
+		}),
+	).toThrow("Duplicate plot id");
+
+	// Invalid xMin >= xMax
+	expect(() =>
+		validateSimulationConfig({
+			measurements: {
+				plots: [{ id: "bad-bounds", type: "line", y: "a", xMin: 10, xMax: 5 }],
+			},
+		}),
+	).toThrow("xMin (10) must be strictly less than xMax (5)");
+
+	// Invalid yMin >= yMax
+	expect(() =>
+		validateSimulationConfig({
+			measurements: {
+				plots: [{ id: "bad-y", type: "line", y: "a", yMin: 20, yMax: 20 }],
+			},
+		}),
+	).toThrow("yMin (20) must be strictly less than yMax (20)");
+
+	// Missing data binding on vector-field
+	expect(() =>
+		validateSimulationConfig({
+			measurements: {
+				plots: [{ id: "vf-bad", type: "vector-field" }],
+			},
+		}),
+	).toThrow("vector-field plot requires a data dataset binding");
+
+	// Telemetry range rule: min >= max
+	expect(() =>
+		validateSimulationConfig({
+			telemetry: {
+				rpm: {
+					ranges: [{ min: 5000, max: 4000, tone: "danger" }],
+				},
+			},
+		}),
+	).toThrow("Minimum 5000 must be strictly less than maximum 4000");
+
+	// Schema contains measurements
+	expect(simulationConfigJsonSchema.properties).toHaveProperty("measurements");
+});

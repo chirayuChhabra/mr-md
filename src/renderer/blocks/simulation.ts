@@ -3,6 +3,7 @@ import { escAttr } from "../blocks.js";
 import {
 	blockChrome,
 	escapeScriptJson,
+	hasTelemetry,
 	renderInspectorTabs,
 	renderSimulationControls,
 	renderSimulationTelemetry,
@@ -22,14 +23,16 @@ export function renderSimulation(
 		props: block.props ?? {},
 		loop: false,
 		dependencies: block.dependencies,
+		measurements: block.measurements,
 	};
 	const id = `sim-${idx}`;
 	const label = block.label || "Interactive Simulation";
-	const hasTel = Boolean(
-		block.telemetry && Object.keys(block.telemetry).length > 0,
-	);
+	const hasTel = hasTelemetry(block.telemetry, block.measurements);
+	const telemetrySchemaData = block.measurements
+		? { telemetry: block.telemetry ?? {}, measurements: block.measurements }
+		: block.telemetry;
 	const telemetrySchemaScript = hasTel
-		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry)}</script>`
+		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(telemetrySchemaData)}</script>`
 		: "";
 
 	const controlsHtml = renderSimulationControls(
@@ -37,10 +40,15 @@ export function renderSimulation(
 		id,
 	);
 	const telemetryHtml = hasTel
-		? renderSimulationTelemetry(id, block.telemetry!)
+		? renderSimulationTelemetry(id, block.telemetry, block.measurements)
 		: "";
 
-	const inspectorContent = renderInspectorTabs(id, controlsHtml, telemetryHtml);
+	const inspectorContent = renderInspectorTabs(
+		id,
+		controlsHtml,
+		telemetryHtml,
+		block.measurements,
+	);
 
 	const inspectorHtml = inspectorContent
 		? `<aside class="bk-sim-inspector" aria-label="Simulation inspector">

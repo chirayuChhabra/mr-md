@@ -9,6 +9,7 @@ import type {
 } from "../../types.js";
 import {
 	escapeScriptJson,
+	hasTelemetry,
 	renderInspectorTabs,
 	renderSimulationControls,
 	renderSimulationTelemetry,
@@ -133,15 +134,21 @@ export function renderSteps(
 		? `style="height:${block.height}px;"`
 		: "";
 
-	const hasTel = Boolean(
-		block.telemetry && Object.keys(block.telemetry).length > 0,
-	);
+	const hasTel = hasTelemetry(block.telemetry, block.measurements);
 	const telemetryHtml = hasTel
-		? renderSimulationTelemetry(id, block.telemetry!)
+		? renderSimulationTelemetry(id, block.telemetry, block.measurements)
 		: "";
-	const inspectorContent = renderInspectorTabs(id, controlsHtml, telemetryHtml);
+	const inspectorContent = renderInspectorTabs(
+		id,
+		controlsHtml,
+		telemetryHtml,
+		block.measurements,
+	);
+	const telemetrySchemaData = block.measurements
+		? { telemetry: block.telemetry ?? {}, measurements: block.measurements }
+		: block.telemetry;
 	const telemetrySchemaScript = hasTel
-		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry)}</script>`
+		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(telemetrySchemaData)}</script>`
 		: "";
 
 	const html = `

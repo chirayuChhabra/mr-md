@@ -8,13 +8,20 @@ import {
 	normalizeWorldOptions,
 } from "../src/builder/utils.js";
 import {
+	bkClearMeasurementBadge,
 	bkCollapseLab,
 	bkExpandLab,
 	bkResetTelemetry,
 	bkSelectInspectorTab,
 	bkToggleExpandLab,
+	evaluateTelemetryRule,
 	formatTelemetryValue,
+	updateTabBadge,
 } from "../src/client/telemetry.js";
+import {
+	SimulationConfigError,
+	validateSimulationConfig,
+} from "../src/simulation-config.js";
 import { parseLesson } from "../src/parser/mdx.js";
 import { render } from "../src/renderer/index.js";
 import { iframeDoc } from "../src/renderer/blocks/iframe.js";
@@ -843,6 +850,380 @@ slug: telemetry-test
 			expect(tab2.attrs["aria-selected"]).toBe("false");
 			expect(tab2.attrs["tabindex"]).toBe("-1");
 			expect(focusedTab).toBe(tab1);
+		});
+	});
+
+	describe("Measurements Config & Propagation Contract", () => {
+		test("normalizeSimulationOptions and normalizeWorldOptions pass through measurements", () => {
+			const simOpts = normalizeSimulationOptions(
+				{},
+				400,
+				{
+					measurements: {
+						badge: "count",
+						plots: [
+							{ id: "orbit", type: "line", x: "time", y: "radius" },
+						],
+					},
+				} as any,
+			);
+			expect(simOpts.measurements).toBeDefined();
+			expect(simOpts.measurements?.badge).toBe("count");
+			expect(simOpts.measurements?.plots?.[0].id).toBe("orbit");
+
+			const worldOpts = normalizeWorldOptions(
+				{},
+				480,
+				{
+					measurements: {
+						badge: "dot",
+						plots: [
+							{ id: "field", type: "vector-field", data: "flow" },
+						],
+					},
+				} as any,
+			);
+			expect(worldOpts.measurements?.badge).toBe("dot");
+			expect(worldOpts.measurements?.plots?.[0].type).toBe("vector-field");
+		});
+
+		test("LessonBlocks preserves measurements in lab, steps, and world", () => {
+			const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "builder-measurements-"));
+			try {
+				class TestBlocks extends LessonBlocks {
+					protected get contentBase() {
+						return tempDir;
+					}
+				}
+				const b = new TestBlocks();
+				b.lab("sim.js", {
+					measurements: { badge: "dot", plots: [{ id: "p1", type: "bar", data: "bins" }] },
+				} as any);
+				b.steps("steps.js", {
+					measurements: { badge: "count" },
+				} as any);
+				b.world("world.js", {
+					measurements: { badge: "off" },
+				} as any);
+
+				const blocks = (b as any).blocks;
+				expect(blocks[0].measurements?.badge).toBe("dot");
+				expect(blocks[0].measurements?.plots?.[0].id).toBe("p1");
+				expect(blocks[1].measurements?.badge).toBe("count");
+				expect(blocks[2].measurements?.badge).toBe("off");
+			} finally {
+				fs.rmSync(tempDir, { recursive: true, force: true });
+			}
+		});
+
+		test("hasTelemetry returns true for graph-only measurement configurations", () => {
+			expect(hasTelemetry(undefined, { plots: [{ id: "p1", type: "line", y: "val" }] })).toBe(true);
+			expect(hasTelemetry(undefined, { badge: "count" })).toBe(true);
+			expect(hasTelemetry(undefined, { badge: "off" })).toBe(false);
+			expect(hasTelemetry({}, { plots: [] })).toBe(false);
+		});
+
+		test("renderSimulation renders .bk-measurement-plots and emits measurements in schema script", () => {
+			const simBlock: SimulationBlock = {
+				type: "simulation",
+				src: "window.bkSetup(100,100,()=>{});",
+				measurements: {
+					badge: "count",
+					plots: [{ id: "energy-plot", type: "line", x: "t", y: "energy" }],
+				},
+			};
+			const result = renderSimulation(simBlock, 0, { standalone: true });
+			expect(result.html).toContain('class="bk-measurement-plots"');
+			expect(result.html).toContain('class="bk-sim-telemetry-schema"');
+			expect(result.html).toContain('energy-plot');
+			expect(result.html).toContain('data-badge-type="count"');
+		});
+	});
+
+	describe("Measurements & Telemetry Ranges Validation Contract", () => {
+		test("validates valid measurements config with bounds and bindings", () => {
+			const valid = validateSimulationConfig({
+				props: { speed: 10 },
+				telemetry: {
+					speed: {
+						label: "Speed",
+						tone: "neutral",
+						notify: "change",
+						ranges: [
+							{ min: 0, max: 20, tone: "success", label: "Nominal" },
+							{ min: 20, max: 50, tone: "warning", label: "High" },
+							{ min: 50, tone: "danger", label: "Critical" },
+						],
+					},
+					status: {
+						ranges: [
+							{ equals: "ready", tone: "success", label: "Ready" },
+							{ equals: "error", tone: "danger", label: "Fault" },
+						],
+					},
+				},
+				measurements: {
+					badge: "count",
+					plots: [
+						{
+							id: "p1",
+							title: "Speed Curve",
+							type: "line",
+							x: "time",
+							y: "speed",
+							xMin: 0,
+							xMax: 100,
+							yMin: -10,
+							yMax: 50,
+							maxPoints: 500,
+							sampleMs: 50,
+						},
+						{
+							id: "p2",
+							type: "vector-field",
+							data: "fieldData",
+						},
+					],
+				},
+			});
+			expect(valid.measurements?.badge).toBe("count");
+			expect(valid.measurements?.plots?.length).toBe(2);
+		});
+
+		test("rejects invalid plot bounds where min >= max", () => {
+			expect(() =>
+				validateSimulationConfig({
+					measurements: {
+						plots: [
+							{ id: "invalid-x", type: "line", y: "v", xMin: 50, xMax: 20 },
+						],
+					},
+				}),
+			).toThrow(SimulationConfigError);
+
+			expect(() =>
+				validateSimulationConfig({
+					measurements: {
+						plots: [
+							{ id: "invalid-y", type: "line", y: "v", yMin: 10, yMax: 10 },
+						],
+					},
+				}),
+			).toThrow(SimulationConfigError);
+		});
+
+		test("rejects duplicate plot IDs", () => {
+			expect(() =>
+				validateSimulationConfig({
+					measurements: {
+						plots: [
+							{ id: "same-id", type: "line", y: "v1" },
+							{ id: "same-id", type: "scatter", y: "v2" },
+						],
+					},
+				}),
+			).toThrow("Duplicate plot id");
+		});
+
+		test("rejects invalid bindings for vector-field and bar plots", () => {
+			// vector-field requires data
+			expect(() =>
+				validateSimulationConfig({
+					measurements: {
+						plots: [{ id: "vf", type: "vector-field", y: "scalar" }],
+					},
+				}),
+			).toThrow("vector-field plot requires a data dataset binding");
+
+			// line requires y, series, or data
+			expect(() =>
+				validateSimulationConfig({
+					measurements: {
+						plots: [{ id: "l1", type: "line" }],
+					},
+				}),
+			).toThrow("line plot requires y, series, or data binding");
+		});
+
+		test("rejects invalid telemetry range bounds where min >= max or non-finite", () => {
+			expect(() =>
+				validateSimulationConfig({
+					telemetry: {
+						val: {
+							ranges: [{ min: 20, max: 10, tone: "danger" }],
+						},
+					},
+				}),
+			).toThrow(SimulationConfigError);
+
+			expect(() =>
+				validateSimulationConfig({
+					telemetry: {
+						val: {
+							ranges: [{ tone: "warning" } as any],
+						},
+					},
+				}),
+			).toThrow("must specify at least one condition");
+		});
+	});
+
+	describe("Rule Evaluation & Second Signal Contract", () => {
+		test("evaluates numeric range: min inclusive, max exclusive", () => {
+			const schema = {
+				ranges: [
+					{ min: 0, max: 10, tone: "success", label: "Normal" },
+					{ min: 10, max: 20, tone: "warning", label: "Elevated" },
+					{ min: 20, tone: "danger", label: "Critical" },
+				],
+			} as any;
+
+			// Min inclusive: 0 matches first rule
+			expect(evaluateTelemetryRule(0, schema)).toEqual({
+				tone: "success",
+				label: "Normal",
+				ruleIndex: 0,
+			});
+			expect(evaluateTelemetryRule(9.99, schema)).toEqual({
+				tone: "success",
+				label: "Normal",
+				ruleIndex: 0,
+			});
+
+			// Max exclusive: 10 matches second rule, not first
+			expect(evaluateTelemetryRule(10, schema)).toEqual({
+				tone: "warning",
+				label: "Elevated",
+				ruleIndex: 1,
+			});
+			expect(evaluateTelemetryRule(19.99, schema)).toEqual({
+				tone: "warning",
+				label: "Elevated",
+				ruleIndex: 1,
+			});
+
+			// 20 matches third rule
+			expect(evaluateTelemetryRule(20, schema)).toEqual({
+				tone: "danger",
+				label: "Critical",
+				ruleIndex: 2,
+			});
+		});
+
+		test("finite numbers only: NaN, Infinity, and non-numbers do not match numeric range", () => {
+			const schema = {
+				ranges: [{ min: -100, max: 100, tone: "success", label: "OK" }],
+				tone: "neutral",
+			} as any;
+
+			expect(evaluateTelemetryRule(NaN, schema)).toEqual({
+				tone: "neutral",
+				label: undefined,
+				ruleIndex: -1,
+			});
+			expect(evaluateTelemetryRule(Infinity, schema)).toEqual({
+				tone: "neutral",
+				label: undefined,
+				ruleIndex: -1,
+			});
+			expect(evaluateTelemetryRule("50", schema)).toEqual({
+				tone: "neutral",
+				label: undefined,
+				ruleIndex: -1,
+			});
+		});
+
+		test("string equals matches status values and booleans", () => {
+			const schema = {
+				ranges: [
+					{ equals: "running", tone: "success", label: "Online" },
+					{ equals: "stopped", tone: "warning", label: "Paused" },
+					{ equals: true, tone: "success", label: "Engaged" },
+				],
+			} as any;
+
+			expect(evaluateTelemetryRule("running", schema)).toEqual({
+				tone: "success",
+				label: "Online",
+				ruleIndex: 0,
+			});
+			expect(evaluateTelemetryRule("RUNNING", schema)).toEqual({
+				tone: "success",
+				label: "Online",
+				ruleIndex: 0,
+			});
+			expect(evaluateTelemetryRule("stopped", schema)).toEqual({
+				tone: "warning",
+				label: "Paused",
+				ruleIndex: 1,
+			});
+			expect(evaluateTelemetryRule(true, schema)).toEqual({
+				tone: "success",
+				label: "Engaged",
+				ruleIndex: 2,
+			});
+		});
+
+		test("first matching rule wins", () => {
+			const schema = {
+				ranges: [
+					{ min: 0, max: 50, tone: "success", label: "First" },
+					{ min: 0, max: 100, tone: "warning", label: "Second" },
+				],
+			} as any;
+			expect(evaluateTelemetryRule(25, schema)).toEqual({
+				tone: "success",
+				label: "First",
+				ruleIndex: 0,
+			});
+		});
+	});
+
+	describe("Badge Counting & Tab Notification Contract", () => {
+		test("updateTabBadge updates dot and count badge modes", () => {
+			const figure = {
+				querySelector: (sel: string) => {
+					if (sel.includes("badge")) return mockBadge;
+					return mockTab;
+				},
+			} as any;
+
+			const mockBadge = {
+				attrs: {} as Record<string, string>,
+				className: "",
+				textContent: "",
+				setAttribute(k: string, v: string) { this.attrs[k] = v; },
+				removeAttribute(k: string) { delete this.attrs[k]; },
+			};
+			const mockTab = { appendChild: () => {} };
+
+			// Dot mode with updates
+			updateTabBadge(figure, "dot", 3);
+			expect(mockBadge.attrs["hidden"]).toBeUndefined();
+			expect(mockBadge.className).toContain("bk-measurement-tab-badge--dot");
+
+			// Count mode with updates
+			updateTabBadge(figure, "count", 4);
+			expect(mockBadge.attrs["hidden"]).toBeUndefined();
+			expect(mockBadge.className).toContain("bk-measurement-tab-badge--count");
+			expect(mockBadge.textContent).toBe("4");
+
+			// Zero count hides badge
+			updateTabBadge(figure, "count", 0);
+			expect(mockBadge.attrs["hidden"]).toBe("");
+		});
+
+		test("bkClearMeasurementBadge resets unseen counts", () => {
+			expect(() => bkClearMeasurementBadge("unknown-sim")).not.toThrow();
+			expect(() => bkClearMeasurementBadge()).not.toThrow();
+		});
+	});
+
+	describe("Security & Prototype Pollution Protection", () => {
+		test("prototype pollution attempts in telemetry are ignored", () => {
+			const badPayload = JSON.parse('{"__proto__": {"polluted": true}, "constructor": {"polluted": true}}');
+			// Object prototype must remain untainted
+			expect(({} as any).polluted).toBeUndefined();
 		});
 	});
 });

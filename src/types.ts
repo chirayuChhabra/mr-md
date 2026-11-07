@@ -1,3 +1,10 @@
+import type {
+	MeasurementPlot,
+	MeasurementsConfig,
+} from "./measurement-types.js";
+
+export type { MeasurementPlot, MeasurementsConfig };
+
 // ─── Block Types ─────────────────────────────────────────────────────────────
 
 export type BlockType =
@@ -79,6 +86,7 @@ export interface SimulationBlock extends BaseBlock, CaptionedBlock {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: MeasurementsConfig;
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // iframe height, default 400
 	controls?: "interactive" | "observe";
@@ -96,6 +104,7 @@ export interface WorldBlock extends BaseBlock, CaptionedBlock {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: MeasurementsConfig;
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // portal preview height, default 480
 	accent?: BlockAccent;
@@ -175,6 +184,7 @@ export interface StepsBlock extends BaseBlock, CaptionedBlock {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: MeasurementsConfig;
 	height?: number;
 	accent?: BlockAccent;
 	dependencies?: string[];
@@ -285,6 +295,7 @@ export interface SimulationOptions {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: MeasurementsConfig;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -313,6 +324,7 @@ export interface StepsOptions {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: MeasurementsConfig;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -335,6 +347,7 @@ export interface WorldOptions {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: MeasurementsConfig;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -367,6 +380,18 @@ export interface SimulationControl {
 	group?: string;
 }
 
+export type TelemetryTone = "neutral" | "success" | "warning" | "danger";
+
+export interface TelemetryRangeRule {
+	min?: number;
+	max?: number;
+	equals?: string | number | boolean;
+	tone: TelemetryTone;
+	label?: string;
+}
+
+export type TelemetryNotify = "off" | "change" | "range-change";
+
 /** Represents a declared telemetry quantity published by a simulation */
 export interface SimulationTelemetryItem {
 	label?: string;
@@ -375,6 +400,9 @@ export interface SimulationTelemetryItem {
 	group?: string;
 	description?: string;
 	display?: "metric" | "status" | "row";
+	tone?: TelemetryTone;
+	ranges?: TelemetryRangeRule[];
+	notify?: TelemetryNotify;
 }
 
 export type SimulationTelemetry = Record<string, SimulationTelemetryItem>;

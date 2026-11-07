@@ -1,7 +1,7 @@
 {
   "type": "block",
   "label": "Damped Harmonic Oscillator",
-  "caption": "Investigate spring-mass oscillations under viscous damping, presets, and impulse excitation. Damping ratio \u03b6 = c_eff / (2\u221a(km)) determines whether motion is underdamped, critically damped, or overdamped.",
+  "caption": "Investigate spring-mass oscillations under viscous damping, presets, and impulse excitation. Damping ratio ζ = c_eff / (2√(km)) determines whether motion is underdamped, critically damped, or overdamped.",
   "height": 520,
   "props": {
     "damping": 1.5,
@@ -27,7 +27,7 @@
       "min": 0,
       "max": 25,
       "step": 0.5,
-      "unit": "N\u00b7s/m"
+      "unit": "N·s/m"
     },
     "dampingMode": {
       "label": "Damping model",
@@ -52,19 +52,19 @@
       "type": "select",
       "options": [
         {
-          "label": "Vacuum (0.0\u00d7, c = 0)",
+          "label": "Vacuum (0.0×, c = 0)",
           "value": "vacuum"
         },
         {
-          "label": "Air (1.0\u00d7 drag)",
+          "label": "Air (1.0× drag)",
           "value": "air"
         },
         {
-          "label": "Water / Light Oil (2.5\u00d7)",
+          "label": "Water / Light Oil (2.5×)",
           "value": "water"
         },
         {
-          "label": "Viscous Glycerin (5.0\u00d7)",
+          "label": "Viscous Glycerin (5.0×)",
           "value": "glycerin"
         }
       ]
@@ -96,7 +96,7 @@
   },
   "actions": {
     "impulse": {
-      "label": "Apply Impulse (+\u0394v)",
+      "label": "Apply Impulse (+Δv)",
       "color": "green"
     },
     "zero": {
@@ -148,12 +148,26 @@
   },
   "telemetry": {
     "regime": {
-      "label": "Damping regime"
+      "label": "Damping regime",
+      "notify": "change"
     },
     "displacement": {
       "label": "Displacement x",
       "unit": "m",
-      "precision": 3
+      "precision": 3,
+      "notify": "change",
+      "ranges": [
+        {
+          "max": 0,
+          "tone": "warning",
+          "label": "Negative displacement"
+        },
+        {
+          "min": 0,
+          "tone": "success",
+          "label": "Positive displacement"
+        }
+      ]
     },
     "velocity": {
       "label": "Velocity v",
@@ -161,23 +175,67 @@
       "precision": 3
     },
     "angularFrequency": {
-      "label": "Natural angular frequency \u03c9\u2080",
+      "label": "Natural angular frequency ω₀",
       "unit": "rad/s",
       "precision": 2
     },
     "frequency": {
-      "label": "Natural frequency f\u2080",
+      "label": "Natural frequency f₀",
       "unit": "Hz",
       "precision": 2
     },
     "dampingRatio": {
-      "label": "Damping ratio \u03b6",
+      "label": "Damping ratio ζ",
       "precision": 3
     },
     "effectiveDamping": {
       "label": "Effective viscous damping",
-      "unit": "N\u00b7s/m",
+      "unit": "N·s/m",
       "precision": 1
+    },
+    "time": {
+      "label": "Elapsed time t",
+      "unit": "s",
+      "precision": 2
     }
+  },
+  "measurements": {
+    "badge": "count",
+    "plots": [
+      {
+        "id": "oscillator-kinematics",
+        "title": "Displacement over time",
+        "type": "line",
+        "x": "time",
+        "xLabel": "Time t (s)",
+        "yLabel": "Displacement x (m)",
+        "maxPoints": 300,
+        "y": "displacement"
+      },
+      {
+        "id": "oscillator-velocity",
+        "title": "Velocity over time",
+        "type": "line",
+        "x": "time",
+        "y": "velocity",
+        "xLabel": "Time t (s)",
+        "yLabel": "Velocity v (m/s)",
+        "maxPoints": 300
+      },
+      {
+        "id": "phase-portrait",
+        "title": "Phase Space (x vs v)",
+        "type": "scatter",
+        "x": "displacement",
+        "y": "velocity",
+        "xLabel": "Displacement x (m)",
+        "yLabel": "Velocity v (m/s)",
+        "xMin": -1.3,
+        "xMax": 1.3,
+        "yMin": -5,
+        "yMax": 5,
+        "maxPoints": 300
+      }
+    ]
   }
 }

@@ -578,6 +578,7 @@
       regime: regimeBadge,
       displacement: state.x,
       velocity: state.v,
+      time: state.time,
       angularFrequency: omega0,
       frequency: freq0,
       dampingRatio: state.dampingMode === "viscous" ? zeta : null,

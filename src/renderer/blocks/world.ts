@@ -54,6 +54,7 @@ export function renderWorld(
 		js: worldSrc,
 		dependencies: block.dependencies,
 		portal: portalType,
+		measurements: block.measurements,
 	};
 
 	let cardInnerHtml = "";
@@ -166,7 +167,18 @@ export function renderWorld(
     <div class="bk-world-frame-slot"></div>
   </div>
 
-  <script type="application/json" class="bk-world-config">${escapeScriptJson(worldConfig)}</script>
+  <script type="application/json" class="bk-world-config">${escapeScriptJson(worldConfig)}</script>${
+		block.telemetry || block.measurements
+			? `\n  <script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(
+					block.measurements
+						? {
+								telemetry: block.telemetry ?? {},
+								measurements: block.measurements,
+							}
+						: (block.telemetry ?? {}),
+				)}</script>`
+			: ""
+	}
 </figure>`.trim();
 
 	return {

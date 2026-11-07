@@ -1,11 +1,20 @@
 import type {
+	MeasurementsConfig,
 	SimulationTelemetry,
 	SimulationTelemetryItem,
 } from "../../types.js";
 import { escAttr, escHtml } from "../blocks.js";
 
-export function hasTelemetry(telemetry?: SimulationTelemetry): boolean {
-	return Boolean(telemetry && Object.keys(telemetry).length > 0);
+export function hasTelemetry(
+	telemetry?: SimulationTelemetry,
+	measurements?: MeasurementsConfig,
+): boolean {
+	const hasScalars = Boolean(telemetry && Object.keys(telemetry).length > 0);
+	const hasPlots = Boolean(
+		measurements?.plots && measurements.plots.length > 0,
+	);
+	const hasBadge = Boolean(measurements?.badge && measurements.badge !== "off");
+	return hasScalars || hasPlots || hasBadge;
 }
 
 /**
@@ -49,16 +58,19 @@ export function renderTelemetryRows(telemetry: SimulationTelemetry): string {
 			? `<div class="bk-telemetry-section-label">${escHtml(groupName)}</div>`
 			: "";
 		const rowsHtml = items
-			.map(
-				(item) => `
-        <div class="bk-telemetry-row" data-telemetry-key="${escAttr(item.key)}" data-telemetry-display="${item.display === "metric" || item.display === "status" || item.display === "row" ? item.display : "auto"}">
+			.map((item) => {
+				const initialTone = item.tone
+					? ` data-telemetry-tone="${escAttr(item.tone)}"`
+					: "";
+				return `
+        <div class="bk-telemetry-row" data-telemetry-key="${escAttr(item.key)}" data-telemetry-display="${item.display === "metric" || item.display === "status" || item.display === "row" ? item.display : "auto"}"${initialTone}>
           <span class="bk-telemetry-label">${escHtml(item.label)}</span>
           <span class="bk-telemetry-value">
-            <span class="bk-telemetry-num">—</span>${item.unit ? ` <span class="bk-telemetry-unit">${escHtml(item.unit)}</span>` : ""}
+            <span class="bk-telemetry-num">—</span>${item.unit ? ` <span class="bk-telemetry-unit">${escHtml(item.unit)}</span>` : ""}<span class="bk-telemetry-tone-label" hidden></span>
           </span>
           ${item.description ? `<span class="bk-telemetry-description">${escHtml(item.description)}</span>` : ""}
-        </div>`,
-			)
+        </div>`;
+			})
 			.join("");
 
 		sectionsHtml += `<div class="bk-telemetry-section">${headerHtml}<div class="bk-telemetry-rows">${rowsHtml}</div></div>`;
@@ -72,11 +84,24 @@ export function renderTelemetryRows(telemetry: SimulationTelemetry): string {
  */
 export function renderSimulationTelemetry(
 	simId: string,
-	telemetry: SimulationTelemetry,
+	telemetry?: SimulationTelemetry,
+	measurements?: MeasurementsConfig,
 ): string {
-	if (!telemetry || Object.keys(telemetry).length === 0) return "";
+	const hasScalars = Boolean(telemetry && Object.keys(telemetry).length > 0);
+	const hasPlots = Boolean(
+		measurements?.plots && measurements.plots.length > 0,
+	);
+	if (!hasScalars && !hasPlots) return "";
+
+	const rowsHtml =
+		hasScalars && telemetry ? renderTelemetryRows(telemetry) : "";
+	const plotsHtml = hasPlots
+		? `<div class="bk-measurement-plots" data-sim-id="${escAttr(simId)}"></div>`
+		: "";
+
 	return `<div class="bk-sim-telemetry" data-sim-id="${escAttr(simId)}">
-    ${renderTelemetryRows(telemetry)}
+    ${rowsHtml}
+    ${plotsHtml}
   </div>`;
 }
 
@@ -85,22 +110,32 @@ export function renderInspectorTabs(
 	id: string,
 	controlsHtml: string,
 	telemetryHtml: string,
+	measurements?: MeasurementsConfig,
 ): string {
 	controlsHtml = controlsHtml.trim();
 	telemetryHtml = telemetryHtml.trim();
 	if (!controlsHtml && !telemetryHtml) return "";
+	const badgeHtml =
+		measurements?.badge && measurements.badge !== "off"
+			? `<span class="bk-measurement-tab-badge" data-badge-type="${escAttr(measurements.badge)}" aria-hidden="true" hidden></span>`
+			: "";
 	const panels = [
-		{ key: "controls", label: "Settings", html: controlsHtml },
-		{ key: "telemetry", label: "Measurements", html: telemetryHtml },
+		{ key: "controls", label: "Settings", badge: "", html: controlsHtml },
+		{
+			key: "telemetry",
+			label: "Measurements",
+			badge: badgeHtml,
+			html: telemetryHtml,
+		},
 	].filter((panel) => panel.html);
 	const safeId = escAttr(id);
 	const scrollCue = `<button type="button" class="bk-sim-scroll-cue" data-bk-scroll-more hidden><span data-bk-scroll-label>More below</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>`;
 	if (panels.length === 1) {
 		const panel = panels[0];
-		return `<div class="bk-sim-tabs" data-sim-tabs="${safeId}"><div id="${safeId}-panel-${panel.key}" class="bk-sim-tabpanel bk-sim-tabpanel--${panel.key} is-active" tabindex="0"><h2 class="bk-sim-panel-heading">${panel.label}</h2>${panel.html}</div>${scrollCue}</div>`;
+		return `<div class="bk-sim-tabs" data-sim-tabs="${safeId}"><div id="${safeId}-panel-${panel.key}" class="bk-sim-tabpanel bk-sim-tabpanel--${panel.key} is-active" tabindex="0"><h2 class="bk-sim-panel-heading">${panel.label}${panel.badge}</h2>${panel.html}</div>${scrollCue}</div>`;
 	}
 	return `<div class="bk-sim-tabs" data-sim-tabs="${safeId}">
-  <div class="bk-sim-tablist" role="tablist" aria-label="Inspector tabs">${panels.map((panel, i) => `<button type="button" role="tab" class="bk-sim-tab${i === 0 ? " is-active" : ""}" id="${safeId}-tab-${panel.key}" aria-controls="${safeId}-panel-${panel.key}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${panel.label}</button>`).join("")}</div>
+  <div class="bk-sim-tablist" role="tablist" aria-label="Inspector tabs">${panels.map((panel, i) => `<button type="button" role="tab" class="bk-sim-tab${i === 0 ? " is-active" : ""}" id="${safeId}-tab-${panel.key}" aria-controls="${safeId}-panel-${panel.key}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${panel.label}${panel.badge}</button>`).join("")}</div>
   ${panels.map((panel, i) => `<div role="tabpanel" class="bk-sim-tabpanel bk-sim-tabpanel--${panel.key}${i === 0 ? " is-active" : ""}" id="${safeId}-panel-${panel.key}" aria-labelledby="${safeId}-tab-${panel.key}" tabindex="0"${i === 0 ? "" : " hidden"}>${panel.html}</div>`).join("")}
   ${scrollCue}
  </div>`;
