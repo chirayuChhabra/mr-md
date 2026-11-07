@@ -2,6 +2,7 @@
 import DOMPurify from "isomorphic-dompurify";
 import { bkApplyPropsToControls, bkGetCurrentProps } from "./simulation.js";
 import { bkThemeColors } from "./theme.js";
+import { bkSyncLabPauseOverlay, bkWireWorkspace } from "./workspace.js";
 
 const DOMPURIFY_CONFIG = {
 	USE_PROFILES: { mathMl: true, html: true },
@@ -194,6 +195,7 @@ function formatMessage(raw: string): string {
 }
 
 interface StepsState {
+	defaultProps: Record<string, unknown>;
 	currentIndex: number;
 	steps: Array<{
 		id: string;
@@ -217,7 +219,7 @@ interface StepsState {
 }
 
 const stepsMap = new WeakMap<HTMLElement, StepsState>();
-let lastActiveSteps: HTMLElement | null = null;
+let wiredStepsDocument: Document | null = null;
 
 function getStepsState(card: HTMLElement): StepsState | null {
 	const existing = stepsMap.get(card);
@@ -227,6 +229,9 @@ function getStepsState(card: HTMLElement): StepsState | null {
 	try {
 		const steps = JSON.parse(dataEl.textContent || "[]");
 		const state: StepsState = {
+			defaultProps: JSON.parse(
+				card.querySelector(".bk-steps-default-props")?.textContent || "{}",
+			),
 			currentIndex: 0,
 			steps: Array.isArray(steps) ? steps : [],
 			solved: new Array(steps.length).fill(false),
@@ -287,6 +292,8 @@ function handleStepsActivation(card: HTMLElement) {
 	const state = getStepsState(card);
 	if (!state) return;
 	state.isPlaying = true;
+	card.dataset.bkPlaybackState = "playing";
+	bkSyncLabPauseOverlay(card);
 
 	const iframe = card.querySelector("iframe");
 	iframe?.contentWindow?.postMessage({ type: "bk:play" }, "*");
@@ -337,6 +344,22 @@ function syncHostControls(card: HTMLElement, props?: Record<string, unknown>) {
 	card.querySelectorAll("select[data-bk-preset-select]").forEach((sel) => {
 		(sel as HTMLSelectElement).value = "";
 	});
+}
+
+function restoreTrialProps(
+	card: HTMLElement,
+	step?: { initialProps?: Record<string, unknown> },
+) {
+	const props = { ...getStepsState(card)?.defaultProps, ...step?.initialProps };
+	syncHostControls(card, props);
+	card.__bkCurrentProps = props;
+	card.dispatchEvent(
+		new CustomEvent("bk:simulation-reset", {
+			bubbles: true,
+			detail: { id: card.id },
+		}),
+	);
+	return props;
 }
 
 function updateStepsStep(
@@ -430,17 +453,34 @@ function updateStepsStep(
 		banner.style.display = "none";
 	}
 
-	// Synchronize host controls with step-specific initialProps
-	if (step.initialProps) {
-		syncHostControls(card, step.initialProps);
-	}
+	// Each trial starts from authored defaults, including revisits after a changed control.
+	const trialProps = restoreTrialProps(card, step);
 
-	// Reset interactivity on step transition so each step starts cleanly paused behind the "Click to interact" overlay
+	state.isPlaying = false;
+	card.dataset.bkPlaybackState = "paused";
+	bkSyncLabPauseOverlay(card);
+	const playButton = card.querySelector<HTMLButtonElement>(
+		".bk-steps-btn--play",
+	);
+	playButton?.classList.remove("is-active");
+	playButton?.setAttribute("aria-label", "Play simulation");
+	playButton?.setAttribute("title", "Play simulation (Space)");
+	playButton
+		?.querySelector<HTMLElement>(".bk-icon-pause")
+		?.style.setProperty("display", "none");
+	playButton
+		?.querySelector<HTMLElement>(".bk-icon-play")
+		?.style.setProperty("display", "");
+
+	// Keep the fullscreen scene reachable while each new trial waits for playback.
 	const frame = card.querySelector(
 		".bk-steps-frame, .bk-embed-interactive",
 	) as HTMLElement | null;
 	if (frame) {
-		frame.classList.remove("is-interactive");
+		frame.classList.toggle(
+			"is-interactive",
+			card.classList.contains("bk-object--maximized"),
+		);
 	}
 
 	// Update Hint Popover and Hint Button
@@ -508,6 +548,8 @@ function updateStepsStep(
 		feedback.setAttribute("hidden", "");
 		feedback.classList.remove("is-visible");
 	}
+	const announcement = card.querySelector(".bk-steps-announcement");
+	if (announcement) announcement.textContent = "";
 
 	// Autoplay step audio or voice narration if active and not muted
 	if (triggerVoice && !state.isVoiceMuted) {
@@ -523,7 +565,8 @@ function updateStepsStep(
 				type: "bk:steps-set-step",
 				stepIndex: targetIndex,
 				step: step,
-				props: step.initialProps || {},
+				props: trialProps,
+				replaceProps: true,
 			},
 			"*",
 		);
@@ -532,37 +575,6 @@ function updateStepsStep(
 			{ type: "bk:sim-play-state", playing: false },
 			"*",
 		);
-	}
-}
-
-function handleStepsKey(
-	card: HTMLElement,
-	state: StepsState,
-	key: string,
-	event?: KeyboardEvent,
-) {
-	if (key === "ArrowLeft") {
-		if (state.currentIndex > 0) {
-			if (event) event.preventDefault();
-			updateStepsStep(card, state.currentIndex - 1, true);
-		}
-	} else if (key === "ArrowRight") {
-		if (state.currentIndex < state.steps.length - 1) {
-			if (event) event.preventDefault();
-			updateStepsStep(card, state.currentIndex + 1, true);
-		}
-	} else if (key === "r" || key === "R") {
-		if (event) event.preventDefault();
-		const resetBtn = card.querySelector(
-			".bk-steps-btn--reset",
-		) as HTMLButtonElement | null;
-		resetBtn?.click();
-	} else if (key === " " || key === "Space" || key === "Spacebar") {
-		if (event) event.preventDefault();
-		const playBtn = card.querySelector(
-			".bk-steps-btn--play",
-		) as HTMLButtonElement | null;
-		playBtn?.click();
 	}
 }
 
@@ -577,6 +589,9 @@ export function bkInitSteps() {
 }
 
 export function bkWireSteps() {
+	bkWireWorkspace();
+	if (wiredStepsDocument === document) return;
+	wiredStepsDocument = document;
 	bkInitSteps();
 
 	// Listen for simulation activation from interactive.ts or iframe
@@ -596,10 +611,17 @@ export function bkWireSteps() {
 			".bk-steps-object",
 		) as HTMLElement;
 		if (card) {
+			const frame = card.querySelector(".bk-embed-interactive");
+			frame?.classList.remove("is-interactive");
+			card
+				.querySelector("iframe")
+				?.contentWindow?.postMessage({ type: "bk:pause" }, "*");
 			stopSpeech();
 			const state = getStepsState(card);
 			if (state) {
 				state.isPlaying = false;
+				card.dataset.bkPlaybackState = "paused";
+				bkSyncLabPauseOverlay(card);
 				if (state.audioEl) {
 					state.audioEl.pause();
 				}
@@ -624,39 +646,14 @@ export function bkWireSteps() {
 	};
 	document.addEventListener("bk:steps-deactivate", handleDeactivationEvent);
 
-	// Track active step simulation on pointerdown or focus
-	document.addEventListener(
-		"pointerdown",
-		(e) => {
-			const target = e.target as HTMLElement;
-			const card = target.closest?.(".bk-steps-object") as HTMLElement | null;
-			if (card) {
-				lastActiveSteps = card;
-			}
-		},
-		{ passive: true },
-	);
-
-	document.addEventListener(
-		"focusin",
-		(e) => {
-			const target = e.target as HTMLElement;
-			const card = target.closest?.(".bk-steps-object") as HTMLElement | null;
-			if (card) {
-				lastActiveSteps = card;
-			}
-		},
-		{ passive: true },
-	);
-
 	document.addEventListener("click", (e) => {
 		const target = e.target as HTMLElement;
 
-		// 0. Click to Interact Overlay or Card activation
+		// 0. Click to Interact Overlay or Card activation (only when expanded)
 		const overlay = target.closest(".bk-embed-overlay");
 		if (overlay) {
 			const card = overlay.closest(".bk-steps-object") as HTMLElement;
-			if (card) {
+			if (card && card.classList.contains("bk-object--maximized")) {
 				handleStepsActivation(card);
 			}
 		}
@@ -699,7 +696,9 @@ export function bkWireSteps() {
 				} else {
 					// Currently playing -> pause and return to click-to-interact mode
 					state.isPlaying = false;
-					if (frame) {
+					card.dataset.bkPlaybackState = "paused";
+					bkSyncLabPauseOverlay(card);
+					if (frame && !card.classList.contains("bk-object--maximized")) {
 						frame.classList.remove("is-interactive");
 					}
 					const iframe = card.querySelector("iframe");
@@ -764,17 +763,18 @@ export function bkWireSteps() {
 					feedback.setAttribute("hidden", "");
 					feedback.classList.remove("is-visible");
 				}
+				const announcement = card.querySelector(".bk-steps-announcement");
+				if (announcement) announcement.textContent = "";
 				const step = state.steps[state.currentIndex];
-				if (step?.initialProps) {
-					syncHostControls(card, step.initialProps);
-				}
+				const trialProps = restoreTrialProps(card, step);
 				const iframe = card.querySelector("iframe");
 				if (iframe?.contentWindow) {
 					iframe.contentWindow.postMessage(
 						{
 							type: "bk:steps-reset-step",
 							stepIndex: state.currentIndex,
-							props: step?.initialProps || {},
+							props: trialProps,
+							replaceProps: true,
 						},
 						"*",
 					);
@@ -893,16 +893,15 @@ export function bkWireSteps() {
 				state.solved.fill(false);
 				updateStepsStep(card, 0, true);
 				const step0 = state.steps[0];
-				if (step0?.initialProps) {
-					syncHostControls(card, step0.initialProps);
-				}
+				const trialProps = restoreTrialProps(card, step0);
 				const iframe = card.querySelector("iframe");
 				if (iframe?.contentWindow) {
 					iframe.contentWindow.postMessage(
 						{
 							type: "bk:steps-reset-step",
 							stepIndex: 0,
-							props: step0?.initialProps || {},
+							props: trialProps,
+							replaceProps: true,
 						},
 						"*",
 					);
@@ -915,82 +914,9 @@ export function bkWireSteps() {
 		}
 	});
 
-	// Keyboard navigation support
-	document.addEventListener("keydown", (e) => {
-		const activeEl = document.activeElement as HTMLElement | null;
-		if (
-			activeEl &&
-			(activeEl.tagName === "INPUT" ||
-				activeEl.tagName === "TEXTAREA" ||
-				activeEl.tagName === "SELECT" ||
-				activeEl.isContentEditable)
-		) {
-			return;
-		}
-
-		// If user is focused on an interactive element outside of any steps block, do not hijack keystrokes
-		if (
-			activeEl &&
-			activeEl !== document.body &&
-			activeEl !== document.documentElement &&
-			!activeEl.closest(".bk-steps-object")
-		) {
-			return;
-		}
-
-		// Native Space on any button should activate that button, not toggle play/pause
-		if (
-			activeEl?.tagName === "BUTTON" &&
-			(e.key === " " || e.key === "Space" || e.key === "Spacebar")
-		) {
-			return;
-		}
-
-		let card = activeEl?.closest(".bk-steps-object") as HTMLElement | null;
-
-		if (!card && lastActiveSteps && document.body.contains(lastActiveSteps)) {
-			card = lastActiveSteps;
-		}
-
-		if (!card) return;
-		// Do not hijack Spacebar, Arrow keys, or 'r' unless the simulation is actively interactive!
-		const frame = card.querySelector(".bk-steps-frame, .bk-embed-interactive");
-		if (!frame?.classList.contains("is-interactive")) {
-			return;
-		}
-
-		const state = getStepsState(card);
-		if (!state) return;
-
-		if (
-			e.key === "ArrowLeft" ||
-			e.key === "ArrowRight" ||
-			e.key === "r" ||
-			e.key === "R" ||
-			e.key === " "
-		) {
-			handleStepsKey(card, state, e.key, e);
-		}
-	});
-
 	// Handle postMessages from iframe
 	window.addEventListener("message", (e) => {
 		if (!e.data) return;
-
-		// Forwarded keydown from inside sandboxed iframe
-		if (e.data.type === "bk:steps-keydown" && e.data.key) {
-			document.querySelectorAll(".bk-steps-object").forEach((el) => {
-				const card = el as HTMLElement;
-				const iframe = card.querySelector("iframe");
-				if (iframe && iframe.contentWindow === e.source) {
-					const state = getStepsState(card);
-					if (state) {
-						handleStepsKey(card, state, e.data.key);
-					}
-				}
-			});
-			return;
-		}
 
 		// Iframe requesting theme state
 		if (e.data.type === "bk:request-theme") {
@@ -1021,17 +947,14 @@ export function bkWireSteps() {
 				if (iframe && iframe.contentWindow === e.source) {
 					const state = getStepsState(card);
 					if (state) {
+						const wasPlaying = state.isPlaying;
 						updateStepsStep(card, state.currentIndex, false);
 						const frame = card.querySelector(
 							".bk-steps-frame, .bk-embed-interactive",
 						);
 						const isInteractive = frame?.classList.contains("is-interactive");
-						if (isInteractive && state.isPlaying) {
-							iframe.contentWindow.postMessage({ type: "bk:play" }, "*");
-							iframe.contentWindow.postMessage(
-								{ type: "bk:sim-play-state", playing: true },
-								"*",
-							);
+						if (isInteractive && wasPlaying) {
+							handleStepsActivation(card);
 						} else {
 							iframe.contentWindow.postMessage({ type: "bk:pause" }, "*");
 						}
@@ -1112,6 +1035,10 @@ export function bkWireSteps() {
 					const rawFeedback =
 						currentStep?.feedbackHtml || formatMessage(feedbackMsg);
 					msgEl.innerHTML = safeHtml(rawFeedback);
+				}
+				const announcement = card.querySelector(".bk-steps-announcement");
+				if (announcement) {
+					announcement.textContent = `${badgeEl?.textContent || "Step Complete"}. ${msgEl?.textContent || feedbackMsg}`;
 				}
 
 				const nextBtn = feedback.querySelector(

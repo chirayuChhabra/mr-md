@@ -19,13 +19,33 @@ Choose the format that fits the lesson:
 
 | Format | Use it for | Configuration |
 | --- | --- | --- |
-| Block | A sandbox or model alongside the text | `"type": "block"` (default) |
+| Block | A still preview opening a dedicated experiment | `"type": "block"` (default) |
 | Steps | A sequence of goals with instructions and feedback | `"type": "steps"` |
 | World | An explorable scene entered through a portal | `"type": "world"` |
 
+## File and configuration layout
+
+Store simulation scripts and optional companion configurations relative to your lesson Markdown:
+
+```text
+lesson-directory/
+├── lesson.md                  # Lesson containing Markdown embeds
+└── sims/
+    ├── oscillator.js          # Simulation source (JavaScript or TypeScript)
+    └── oscillator.config.json # Sibling configuration ($schema, props, tunables, telemetry)
+```
+
+Embed the simulation with Markdown image syntax:
+
+```markdown
+![Damped Harmonic Oscillator](./sims/oscillator.js)
+```
+
+The host automatically pairs `oscillator.js` with `oscillator.config.json` by matching the file basename in the same directory.
+
 ## Block simulations
 
-To make your own, create a script next to your lesson. `bkSetup` provides a canvas and calls your drawing function on each animation frame:
+To create a block simulation, define a script next to your lesson. `bkSetup` configures the canvas and executes your drawing callback on each animation frame:
 
 ```javascript
 // mysim.js
@@ -36,11 +56,62 @@ window.bkSetup(800, 450, (ctx, width, height) => {
 });
 ```
 
-Embed it in your Markdown:
+### Playback, reset, and authoring lifecycle
 
-```markdown
-![My simulation](./mysim.js)
+Block simulations open as modal workspaces. The host supplies **Pause / Resume**
+and **Reset**. Closing pauses the model and restores the lesson position and focus;
+reopening preserves control values and an explicit pause. Background lesson
+controls stay unavailable while the workspace is open. Escape also works from
+inside the simulation iframe.
+
+Reset restores authored props, clears measurements, and resets the model. Older
+scripts continue working: the host reloads their iframe to reset private state.
+For new scripts, register a reset hook to avoid reloading:
+
+```javascript
+const sim = window.defineSimulation({ props: { speed: 2 } });
+let distance = 0;
+
+sim.onPropsChange((props) => {
+  // Recompute derived quantities here when parameters change.
+});
+sim.onReset(() => { distance = 0; });
+
+window.bkSetup(800, 450, (ctx, width, height) => {
+  distance += sim.props.speed * sim.deltaTime();
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = window.bkColor("text");
+  ctx.fillText(`Distance: ${distance.toFixed(2)}`, 80, 100);
+});
 ```
+
+`sim.deltaTime()` returns seconds, zero while paused, and caps long delays at
+0.1 seconds. Call it once per draw and pass that value to model updates. A draw
+can occur while paused to refresh a changed control, theme, or viewport; drawing
+must not itself advance the model or append history. Reset all evolving state,
+including elapsed time, traces, drag state, and completion guards.
+
+For TypeScript simulations, `import { defineSimulation } from "mr-md/simulation"`
+provides the same API with inferred prop types. `sim.props` is a readonly snapshot.
+`onPropsChange`, `onReset`, and `onPlaybackChange` return unsubscribe functions;
+`dispose()` removes runtime subscriptions. Existing `__simProps`, `bk:props`,
+`bk:action`, and `bkTelemetry` remain supported.
+
+### Validate configuration in your editor
+
+The package includes a JSON Schema at `mr-md/simulation.schema.json`. In a project
+with mr-md installed locally, add this field to a sibling config:
+
+```json
+{ "$schema": "../node_modules/mr-md/dist/simulation.schema.json" }
+```
+
+Adjust the relative path for the config location. The schema supplies editor
+completion; builds also check cross-field constraints and report the config file
+and field. Every tunable needs a matching prop default with the correct type,
+numeric defaults must fit their bounds, choice defaults must match an option,
+and `advancedControls` must name existing tunables. Presets and step defaults
+are checked against their controls too. Invalid JSON is a build error.
 
 ### Add controls
 
@@ -200,13 +271,60 @@ window.addEventListener("bk:action", (event) => {
 });
 ```
 
+Action buttons accept an optional `color`: `accent` (default), `neutral`, `red`, `green`, or `amber`. For example: `"impulse": { "label": "Apply impulse", "color": "green" }`. Use color to reinforce the action's meaning while keeping the label explicit.
+
 When a user selects a preset, the host updates the active controls and dispatches `bk:props` with all bundled values, identical to standard tunable updates.
+### Add live telemetry
+
+To display live scientific calculations (such as velocity, energy, or orbital period) without cluttering the canvas, declare a `telemetry` schema in your config and call `window.bkTelemetry`:
+
+```json
+{
+  "telemetry": {
+    "status": { "label": "Status", "group": "State" },
+    "speed": { "label": "Velocity (v)", "unit": "km/s", "precision": 2, "group": "Dynamics" }
+  }
+}
+```
+
+In your simulation script, publish updates whenever state changes:
+
+```javascript
+window.bkTelemetry({
+  status: "In Orbit",
+  speed: 29.78
+});
+```
+
+Regular block simulations appear inline as still previews without controls. Click **Click to expand** (or focus it and press Enter or Space) to open the simulation and start interacting. Closing pauses the preview and preserves its control values.
+
+Expanding a simulation opens a full-window host workspace with the scene on the left and an inspector on the right. Controls and Measurements have separate tabs when both are present. Exiting via the header's "Back to lesson" button or Escape restores the normal inline document view, prior scroll position, and focus.
 
 ## Steps simulations
 
 In addition to open sandboxes, `mr-md` supports **Step-by-Step Simulations**. Use steps when a learner should work through a sequence of goals. Each step can provide instructions, a hint, feedback, and optional narration:
 
 ![Orbital Slingshot Maneuver](./sims/orbital-slingshot.js)
+
+### How steps differ from blocks
+
+Both blocks and steps appear as still previews with a **Click to expand** button.
+Controls appear only in the expanded workspace. Both use the same pause and reset
+button styles in the inspector, with no simulation switcher above the scene.
+Steps also provide instructions, hints, progress, and optional narration. Closing
+pauses the trial and narration without erasing completed steps.
+
+Trial reset restores the current step, rather than restarting the whole activity.
+Step entry, revisiting, and trial reset apply top-level props plus that step's
+`initialProps`; values changed in a previous trial do not leak into the new one.
+Declare common defaults at the top level and step-specific differences in
+`initialProps`. Measurements clear when a new trial starts.
+
+Use `bkOnStep` to initialize the model on step entry. Use either `bkOnReset` or
+`sim.onReset` for trial reset, with one model-reset function shared by both paths.
+Keep `bkCompleteStep` for success reporting and clear the model's completion
+guard on every entry/reset. Use `sim.deltaTime()` or guard updates with `__loop`
+so paused redraws cannot move the model or complete a goal.
 
 ### Creating a Step-by-Step Simulation
 
@@ -272,36 +390,71 @@ lesson.steps("sims/orbital-slingshot.js", {
 });
 ```
 
-### Writing the Simulation Script
+### Writing the Step Simulation Script
 
-The author runtime provides clean lifecycle hooks inside the canvas iframe sandbox:
+The author runtime provides lifecycle hooks inside the sandboxed iframe:
 
 ```javascript
-let currentStep = 0;
+// sims/orbital-insertion.js
+const sim = window.defineSimulation({
+  props: { velocity: 15, targetDistance: 320 }
+});
 
-function setupStep(stepIndex) {
-  currentStep = stepIndex;
-  // Initialize objects, obstacles, or starting vectors for this step
+let probeX = 60;
+let reached = false;
+
+function resetTrial() {
+  probeX = 60;
+  reached = false;
 }
 
-// 1. Listen for Step Changes
+// 1. Initialize trial state when entering or switching steps
 window.bkOnStep((stepIndex, stepData, props) => {
-  setupStep(stepIndex);
+  resetTrial();
 });
 
-// 2. Listen for Trial Resets (e.g. Reset button or 'R' key)
-window.bkOnReset(() => {
-  setupStep(currentStep);
+// 2. Reset trial when the user clicks Reset or presses R
+sim.onReset(() => {
+  resetTrial();
 });
 
-// 3. Main Render Loop
-window.bkSetup(800, 450, function(ctx, width, height) {
-  // Update physics and render canvas using window.bkColor...
+// 3. Render and physics loop
+window.bkSetup(800, 450, (ctx, width, height) => {
+  const dt = sim.deltaTime();
+  const target = Number(sim.props.targetDistance);
+  const v = Number(sim.props.velocity);
 
-  // 4. Trigger Milestone Completion when goal condition is reached:
-  if (checkGoalAchieved()) {
-    window.bkCompleteStep("Orbital insertion achieved!");
+  // Physics advances only when playing (dt > 0)
+  if (dt > 0 && !reached) {
+    probeX += v * dt * 20;
+    if (probeX >= target) {
+      probeX = target;
+      reached = true;
+      window.bkCompleteStep("Orbital insertion confirmed!");
+    }
   }
+
+  // Draw scene
+  ctx.fillStyle = window.bkColor("bg");
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = window.bkColor("line-strong");
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(target, 140);
+  ctx.lineTo(target, 310);
+  ctx.stroke();
+
+  ctx.fillStyle = window.bkColor("accent");
+  ctx.beginPath();
+  ctx.arc(probeX, 225, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. Publish live measurements to the inspector
+  sim.publishTelemetry({
+    position: probeX.toFixed(1),
+    status: reached ? "Insertion complete" : "En route"
+  });
 });
 ```
 
@@ -374,20 +527,84 @@ The solar-system example uses Three.js and external resources; it requires a net
 | `bkColor(name)` | Read a theme color such as `accent`, `bg`, or `text`. |
 | `bkCanvasPoint(event, canvas)` | Convert pointer coordinates to canvas coordinates. |
 | `bkFitCanvas(canvas, width, height, options)` | Fit a custom canvas to its container. |
+| `defineSimulation({ props })` | Typed props, reset and playback subscriptions, `deltaTime()`, and telemetry publishing. |
 | `__simProps` | Read current properties; listen for `bk:props` to react to changes. |
 | `bk:action` event | Listen on `window` for action button events (`event.detail.action`). |
 | `bkOnStep`, `bkOnReset`, `bkCompleteStep` | Handle the steps lifecycle, as shown above. |
 
 These APIs are available on `window` inside the simulation iframe.
 
+## What mr-md automates
+
+mr-md manages layout, scaling, theme synchronization, and interaction infrastructure so authors can focus on the scientific model:
+
+### Canvas framing and Retina scaling
+
+Block and step simulations use a responsive canvas contract. The requested size is a minimum logical area. The host scales uniformly and expands callback `width` or `height` to fill available space without stretching:
+
+```javascript
+window.bkSetup(800, 450, (ctx, width, height) => {
+  ctx.fillStyle = window.bkColor("bg");
+  ctx.fillRect(0, 0, width, height);
+  // Derive positions and safe bounds from the current width and height.
+});
+```
+
+A fixed diagram can opt into `{ framing: "contain" }` as the fourth argument to preserve exact logical dimensions and proportions with letterboxing. Explicit `{ framing: "bleed" }` preserves fixed logical coordinates while exposing extended background bounds (`frame.originX`, `frame.originY`, `frame.viewportWidth`, `frame.viewportHeight`) in the fourth callback argument.
+
+Canvas backing bitmaps scale automatically to `window.devicePixelRatio`. Pointer coordinates mapped with `window.bkCanvasPoint(event, canvas)` translate directly to current logical coordinates.
+
+### Modal workspace and keyboard navigation
+
+Clicking **Click to expand** on a preview opens a full-window modal lab dialog (`role="dialog"`). The host isolates the underlying lesson (`inert`), traps focus within the workspace, and restores scroll position and focus when the user exits.
+
+Shortcuts work across the stage, the iframe sandbox, and inspector controls:
+- **Space**: toggle pause and resume.
+- **R**: reset the current trial or model.
+- **Left Arrow / Right Arrow**: navigate previous and next steps in step simulations.
+- **Escape**: return to the lesson.
+
+Pausing displays a stage overlay with a Resume button and shortcut reminder while keeping the inspector available for inspection.
+
+### Inspector layout and live telemetry
+
+Block and step simulations share a structured inspector column beside the canvas:
+- **Controls tab**: Tunables organize by `group` with declared order preserved. Unlisted controls appear under Parameters or Options. Secondary controls declared in `advancedControls` tuck into "More controls".
+- **Measurements tab**: Live measurements published via `sim.publishTelemetry` or `window.bkTelemetry` coalesce with host `requestAnimationFrame` cycles to prevent layout thrashing. Values format into two-column metric cards or full-width status rows with units and precision. Missing or null values display as `—` rather than placeholder zeros.
+- **Continuation cue**: Scrollable panels display a clickable cue to scroll down, offering "Back to top" at the end.
+
+## Compatibility guide
+
+mr-md maintains compatibility between authoring patterns, existing simulations, and step modes:
+
+### Legacy simulation scripts
+
+Existing simulations using `window.__simProps` and `window.addEventListener("bk:props", ...)` continue to function without changes. The runtime initializes `window.__simProps` before execution and dispatches `bk:props` whenever host controls or presets update.
+
+### In-place reset and reload fallback
+
+New simulations register an in-place reset callback via `sim.onReset` or `window.bkOnReset`. If an older block simulation does not register a reset callback, the host automatically falls back to reloading the iframe sandbox when the user clicks Reset.
+
+### Control visibility precedence
+
+Secondary controls support both individual `advanced: true` definitions and top-level `advancedControls: ["key"]` arrays. The host resolves visibility using:
+
+```javascript
+control.advanced ?? advancedControls.includes(key)
+```
+
+Setting `advanced: false` on a specific tunable explicitly overrides the collective list to keep that control visible.
+
+### Block previews and steps coexistence
+
+Both block and step simulations render inline still previews and expand into the shared full-window modal workspace. Steps simulations retain their guided milestone navigation, target badges, instructions, and hints without receiving duplicate block playback controls. Trial reset resets top-level props plus step `initialProps` in place, preserving student progress and narration across trials.
+
 ## AI-assisted authoring
 
-The optional mr-md Agent Skill provides an assistant with simulation authoring guidance. Install it with:
+The mr-md Agent Skill assists with simulation design, context grounding, and review. Install the skill into compatible coding assistants:
 
 ```bash
 bunx mr-md skill install
 ```
 
 See [Agent Skills](./agent-skills.html) for details. Review and test generated simulations in the lesson just as you would code written by hand.
-
-Action buttons accept an optional `color`: `accent` (default), `neutral`, `red`, `green`, or `amber`. For example, `"impulse": { "label": "Apply impulse", "color": "green" }`. Use color to reinforce the action’s meaning and keep the label explicit. Use a `select` for longer choices that would crowd a segmented control.

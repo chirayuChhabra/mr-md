@@ -1,7 +1,7 @@
 {
   "type": "block",
   "label": "Damped Harmonic Oscillator",
-  "caption": "Investigate spring-mass oscillations under viscous damping, presets, and impulse excitation. Damping ratio ζ = c_eff / (2√(km)) determines whether motion is underdamped, critically damped, or overdamped.",
+  "caption": "Investigate spring-mass oscillations under viscous damping, presets, and impulse excitation. Damping ratio \u03b6 = c_eff / (2\u221a(km)) determines whether motion is underdamped, critically damped, or overdamped.",
   "height": 520,
   "props": {
     "damping": 1.5,
@@ -27,7 +27,7 @@
       "min": 0,
       "max": 25,
       "step": 0.5,
-      "unit": "N·s/m"
+      "unit": "N\u00b7s/m"
     },
     "dampingMode": {
       "label": "Damping model",
@@ -52,19 +52,19 @@
       "type": "select",
       "options": [
         {
-          "label": "Vacuum (0.0×, c = 0)",
+          "label": "Vacuum (0.0\u00d7, c = 0)",
           "value": "vacuum"
         },
         {
-          "label": "Air (1.0× drag)",
+          "label": "Air (1.0\u00d7 drag)",
           "value": "air"
         },
         {
-          "label": "Water / Light Oil (2.5×)",
+          "label": "Water / Light Oil (2.5\u00d7)",
           "value": "water"
         },
         {
-          "label": "Viscous Glycerin (5.0×)",
+          "label": "Viscous Glycerin (5.0\u00d7)",
           "value": "glycerin"
         }
       ]
@@ -96,7 +96,7 @@
   },
   "actions": {
     "impulse": {
-      "label": "Apply Impulse (+Δv)",
+      "label": "Apply Impulse (+\u0394v)",
       "color": "green"
     },
     "zero": {
@@ -144,6 +144,40 @@
         "damping": 0.0,
         "mass": 1.0
       }
+    }
+  },
+  "telemetry": {
+    "regime": {
+      "label": "Damping regime"
+    },
+    "displacement": {
+      "label": "Displacement x",
+      "unit": "m",
+      "precision": 3
+    },
+    "velocity": {
+      "label": "Velocity v",
+      "unit": "m/s",
+      "precision": 3
+    },
+    "angularFrequency": {
+      "label": "Natural angular frequency \u03c9\u2080",
+      "unit": "rad/s",
+      "precision": 2
+    },
+    "frequency": {
+      "label": "Natural frequency f\u2080",
+      "unit": "Hz",
+      "precision": 2
+    },
+    "dampingRatio": {
+      "label": "Damping ratio \u03b6",
+      "precision": 3
+    },
+    "effectiveDamping": {
+      "label": "Effective viscous damping",
+      "unit": "N\u00b7s/m",
+      "precision": 1
     }
   }
 }

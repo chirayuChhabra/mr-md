@@ -1,45 +1,8 @@
 // @ts-nocheck
+import { bkWireWorkspace } from "./workspace.js";
+
 export function bkWireMaximizeControls() {
-	function unmaximizeAll() {
-		document.querySelectorAll(".bk-object--maximized").forEach((obj) => {
-			obj.classList.remove("bk-object--maximized");
-			const btn = obj.querySelector(".bk-object-maximize");
-			if (btn) {
-				btn.innerHTML =
-					'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
-			}
-		});
-		document.body.style.overflow = "";
-	}
-
-	document.addEventListener("click", (e) => {
-		const btn = (e.target as HTMLElement).closest?.(
-			".bk-object-maximize",
-		) as HTMLElement;
-		if (!btn) return;
-		const obj = btn.closest(".bk-object");
-		if (!obj) return;
-		const isMax = obj.classList.toggle("bk-object--maximized");
-		if (isMax) {
-			document.body.style.overflow = "hidden";
-			btn.innerHTML =
-				'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>';
-		} else {
-			document.body.style.overflow = "";
-			btn.innerHTML =
-				'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
-		}
-	});
-
-	document.addEventListener("keydown", (e) => {
-		if (e.key === "Escape") {
-			unmaximizeAll();
-		}
-	});
-
-	window.addEventListener("bk-page-loaded", () => {
-		unmaximizeAll();
-	});
+	bkWireWorkspace();
 }
 
 export function bkWireSidebarToggle() {
@@ -60,7 +23,8 @@ export function bkWireSidebarToggle() {
 				currentShell.setAttribute("data-mobile-open", "true");
 			}
 		} else {
-			const isCollapsed = currentShell.getAttribute("data-collapsed") === "true";
+			const isCollapsed =
+				currentShell.getAttribute("data-collapsed") === "true";
 			if (isCollapsed) {
 				currentShell.removeAttribute("data-collapsed");
 				localStorage.setItem("bk-sidebar-collapsed", "false");

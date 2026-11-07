@@ -496,7 +496,7 @@ a.bk-back-link:active {
 	-webkit-backdrop-filter: blur(16px);
 	border-bottom: 1px solid var(--line);
 	position: relative;
-	z-index: 70;
+	z-index: 1050;
 	transition: background 0.3s ease, border-color 0.3s ease;
 }
 
@@ -2366,6 +2366,41 @@ hr.bk-divider,
 	color: var(--muted);
 	font-weight: 600;
 }
+.bk-object-actions {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.bk-sim-telemetry-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 26px;
+	padding: 0 10px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 650;
+	letter-spacing: 0.04em;
+	color: var(--muted);
+	background: color-mix(in srgb, var(--paper) 92%, var(--line));
+	border: 1px solid var(--line);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	line-height: 1;
+	user-select: none;
+}
+.bk-sim-telemetry-btn:hover {
+	color: var(--ink);
+	background: var(--line);
+	border-color: var(--line-strong);
+}
+.bk-sim-telemetry-btn[aria-expanded="true"],
+.bk-sim-telemetry-btn.is-active {
+	color: var(--object-accent, var(--accent));
+	background: var(--accent-soft);
+	border-color: var(--object-accent, var(--accent));
+}
 .bk-object-maximize {
 	margin-left: auto;
 	width: 28px;
@@ -2377,6 +2412,9 @@ hr.bk-divider,
 	color: var(--muted);
 	cursor: pointer;
 	border-radius: 4px;
+}
+.bk-object-actions .bk-object-maximize {
+	margin-left: 0;
 }
 .bk-object-maximize:hover {
 	background: rgba(0, 0, 0, 0.05);
@@ -2391,13 +2429,15 @@ hr.bk-divider,
 	inset: 0;
 	width: 100vw;
 	height: 100vh;
-	z-index: 1000;
+	z-index: 1500;
 	margin: 0;
 	border: none;
 	border-radius: 0;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	background: var(--paper);
+	box-shadow: none;
 }
 .bk-object--maximized .bk-code-block {
 	flex-grow: 1;
@@ -2417,7 +2457,7 @@ hr.bk-divider,
 	max-height: 100%;
 }
 .bk-object--maximized .bk-caption {
-	margin-top: auto;
+	display: none;
 }
 .bk-object--maximized .bk-embed-interactive iframe {
 	pointer-events: auto;
@@ -2440,6 +2480,449 @@ hr.bk-divider,
 .bk-object--violet {
 	--object-accent: var(--violet);
 }
+
+/* ─── Simulation Workspace (Inline & Expanded Lab) ─── */
+.bk-sim-workspace {
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	width: 100%;
+}
+.bk-sim-inspector {
+	display: contents;
+}
+.bk-steps-banner {
+	order: 1;
+}
+.bk-sim-controls {
+	order: 1;
+}
+.bk-steps-object .bk-sim-controls {
+	order: 2;
+}
+.bk-sim-stage {
+	order: 3;
+	position: relative;
+	width: 100%;
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--paper);
+	isolation: isolate;
+	display: flex;
+	flex-direction: column;
+}
+.bk-steps-controls {
+	order: 4;
+}
+.bk-sim-stage .bk-embed-frame {
+	border-radius: 0;
+}
+/* Inline simulation & steps layout: BOTH block and steps are click-to-expand previews with NO inline inspector/controls */
+.bk-object:not(.bk-object--maximized) .bk-sim-inspector,
+.bk-object:not(.bk-object--maximized) .bk-sim-controls,
+.bk-object:not(.bk-object--maximized) .bk-steps-controls,
+.bk-object:not(.bk-object--maximized) .bk-steps-banner {
+	display: none !important;
+}
+.bk-object:not(.bk-object--maximized) .bk-sim-tabs {
+	display: none !important;
+}
+.bk-object:not(.bk-object--maximized) .bk-sim-tablist {
+	display: none !important;
+}
+.bk-object:not(.bk-object--maximized) .bk-sim-tabpanel {
+	display: none !important;
+}
+.bk-sim-telemetry {
+	display: none;
+}
+.bk-sim-inspector-divider {
+	display: none;
+}
+.bk-expanded-back {
+	display: none;
+}
+/* NO simulation selector above view */
+.bk-expanded-sim-picker,
+.bk-object--maximized .bk-expanded-sim-picker,
+.bk-object--maximized .bk-expanded-sim-picker:not([hidden]) {
+	display: none !important;
+}
+
+/* Document-level Topbar Measurements Toggle */
+.bk-topbar-btn.bk-doc-telemetry-btn {
+	color: var(--muted);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s ease;
+}
+.bk-topbar-btn.bk-doc-telemetry-btn:hover {
+	color: var(--ink);
+	background: var(--line);
+}
+.bk-topbar-btn.bk-doc-telemetry-btn.is-active,
+.bk-topbar-btn.bk-doc-telemetry-btn[aria-expanded="true"] {
+	color: var(--accent);
+	background: var(--accent-soft);
+}
+.bk-topbar-btn.bk-doc-telemetry-btn[hidden] {
+	display: none !important;
+}
+
+/* ─── Expanded Lab Workspace (Full-Window) ─── */
+.bk-object--maximized .bk-object-header {
+	flex: 0 0 48px;
+	height: 48px;
+	padding: 0 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	border-bottom: 1px solid var(--line);
+	background: color-mix(in srgb, var(--paper) 98%, var(--bg));
+	z-index: 10;
+}
+.bk-object--maximized .bk-expanded-back {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 12px;
+	font-size: 12px;
+	font-weight: 600;
+	font-family: var(--font-sans);
+	color: var(--muted);
+	background: transparent;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+.bk-object--maximized .bk-expanded-back:hover {
+	color: var(--ink);
+	background: var(--line);
+}
+.bk-object--maximized .bk-expanded-sim-picker,
+.bk-object--maximized .bk-expanded-sim-picker:not([hidden]) {
+	display: none !important;
+}
+
+.bk-object--maximized .bk-sim-workspace {
+	flex: 1 1 auto;
+	min-height: 0;
+	height: calc(100vh - 48px);
+	display: flex;
+	flex-direction: row;
+	overflow: hidden;
+	position: relative;
+}
+
+/* LEFT: Large uncluttered scene */
+.bk-object--maximized .bk-sim-stage {
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	order: 1;
+	background: var(--paper);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	overflow: hidden;
+	border-radius: 0;
+}
+.bk-object--maximized .bk-sim-stage .bk-embed-frame {
+	aspect-ratio: auto;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	max-width: 100%;
+	max-height: 100%;
+	border-radius: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+}
+.bk-object--maximized .bk-sim-stage iframe {
+	width: 100%;
+	height: 100%;
+	display: block;
+	border: none;
+}
+
+/* RIGHT: Reserved inspector column */
+.bk-object--maximized .bk-sim-inspector {
+	display: flex !important;
+	flex-direction: column;
+	flex: 0 0 clamp(320px, 24vw, 380px);
+	width: clamp(320px, 24vw, 380px);
+	height: 100%;
+	order: 2;
+	border-left: 1px solid var(--line-strong, var(--line));
+	background: color-mix(in srgb, var(--paper) 98%, var(--bg));
+	overflow: hidden;
+	padding: 0;
+	gap: 0;
+	box-sizing: border-box;
+	animation: bk-inspector-fade-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Fallback scrolling when no tabs are present (controls-only or telemetry-only) */
+.bk-object--maximized .bk-sim-inspector > .bk-sim-controls,
+.bk-object--maximized .bk-sim-inspector > .bk-sim-telemetry {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 18px 20px;
+	box-sizing: border-box;
+}
+
+/* ─── Inspector Tabs (Controls & Measurements) ─── */
+.bk-object--maximized .bk-sim-tabs {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+	height: 100%;
+	overflow: hidden;
+	position: relative;
+}
+
+/* Tabs stay visible pinned at the top of the inspector */
+.bk-object--maximized .bk-sim-tablist {
+ display: flex !important;
+ align-items: stretch;
+ gap: 0;
+ padding: 0 20px;
+ border-bottom: 1px solid var(--line);
+ background: var(--paper);
+ flex: 0 0 auto;
+ z-index: 2;
+ box-sizing: border-box;
+}
+
+.bk-sim-tab {
+ appearance: none;
+ position: relative;
+ flex: 1 1 0;
+ min-width: 0;
+ min-height: 48px;
+ margin: 0;
+ padding: 12px 8px;
+ border: 0;
+ border-radius: 0;
+ background: transparent;
+ color: var(--muted);
+ font-family: var(--font-sans);
+ font-size: 13px;
+ font-weight: 600;
+ line-height: 1.5;
+ text-align: center;
+ cursor: pointer;
+ transition: color 0.15s ease, background-color 0.15s ease;
+}
+.bk-sim-tab::after {
+ content: "";
+ position: absolute;
+ inset: auto 8px -1px;
+ height: 3px;
+ border-radius: 2px 2px 0 0;
+ background: transparent;
+}
+.bk-sim-tab:hover {
+ color: var(--ink);
+ background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.bk-sim-tab[aria-selected="true"] {
+ color: var(--accent);
+ background: transparent;
+ box-shadow: none;
+}
+.bk-sim-tab[aria-selected="true"]::after {
+ background: var(--accent);
+}
+.bk-sim-tab:focus-visible {
+ outline: 2px solid var(--accent);
+ outline-offset: -4px;
+}
+
+/* Selected panel independently scrolls */
+.bk-object--maximized .bk-sim-tabpanel {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 24px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.bk-object--maximized .bk-sim-tabpanel[hidden] {
+	display: none !important;
+}
+
+.bk-object.bk-object--maximized .bk-sim-controls {
+	border: none;
+	background: transparent;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	flex: 0 0 auto;
+	flex-wrap: nowrap;
+	order: 0;
+}
+
+.bk-object--maximized .bk-sim-inspector > * {
+	order: 0;
+	flex-shrink: 0;
+}
+
+/* Leave room for step instructions and playback controls. */
+.bk-object--maximized .bk-sim-inspector > .bk-sim-tabs {
+	flex: 1 1 0;
+	height: auto;
+}
+
+.bk-object--maximized .bk-sim-controls > * {
+	flex: 0 0 auto;
+	width: 100%;
+	max-width: none;
+	min-width: 0;
+	margin-left: 0;
+}
+
+.bk-object--maximized .bk-sim-inspector-divider {
+	display: none !important;
+}
+
+.bk-object--maximized .bk-sim-telemetry {
+	display: flex !important;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* Steps block in expanded inspector */
+.bk-object--maximized.bk-steps-object .bk-steps-banner {
+	border: none;
+	border-bottom: 1px solid var(--line);
+	border-radius: 0;
+	margin: 0;
+	padding: 12px 16px;
+	background: var(--paper);
+	flex: 0 0 auto;
+}
+.bk-object--maximized.bk-steps-object .bk-steps-controls {
+	border: none;
+	border-top: 1px solid var(--line);
+	border-radius: 0;
+	margin: 0;
+	padding: 10px 16px;
+	background: var(--paper);
+	width: 100%;
+	box-sizing: border-box;
+	flex: 0 0 auto;
+}
+
+/* Simplify redundant More controls heading inside expanded inspector; compact spacing */
+.bk-object--maximized .bk-sim-advanced {
+	margin-top: 4px;
+	border: none;
+	padding: 0;
+}
+.bk-object--maximized .bk-sim-advanced-summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--muted);
+	padding: 4px 0;
+	cursor: pointer;
+	list-style: none;
+}
+.bk-object--maximized .bk-sim-advanced-summary::-webkit-details-marker {
+	display: none;
+}
+.bk-object--maximized .bk-sim-advanced-summary::before {
+	display: none !important;
+}
+.bk-object--maximized .bk-sim-advanced-body {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-top: 8px;
+	margin-top: 2px;
+	border-top: 1px solid var(--line);
+}
+
+/* Readouts keep labels, values and units distinct without truncating meaning. */
+.bk-telemetry-section { display: grid; gap: 12px; min-width: 0; }
+.bk-telemetry-section + .bk-telemetry-section { padding-top: 24px; border-top: 1px solid var(--line); }
+.bk-telemetry-section-label { color: var(--ink); font-size: 13px; font-weight: 600; }
+.bk-telemetry-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.bk-telemetry-row { display: grid; grid-template-rows: subgrid; grid-row: span 3; align-items: start; gap: 8px; min-width: 0; padding: 0 0 8px; border-bottom: 1px solid var(--line); }
+.bk-telemetry-label { color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.bk-telemetry-value { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; color: var(--ink); font-family: var(--font-sans); font-size: 24px; font-weight: 500; line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; max-width: 100%; }
+.bk-telemetry-num { min-width: 0; overflow-wrap: anywhere; }
+.bk-telemetry-unit { font-size: 12px; font-weight: 400; color: var(--muted); }
+.bk-telemetry-description { font-size: 12px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.bk-telemetry-row:is([data-telemetry-display="status"], [data-telemetry-display="row"], [data-telemetry-display="auto"][data-value-type="status"]) { grid-column: 1 / -1; }
+.bk-telemetry-row:is([data-telemetry-display="status"], [data-telemetry-display="auto"][data-value-type="status"]) .bk-telemetry-value { font-size: 16px; }
+.bk-telemetry-row[data-telemetry-display="row"] { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: baseline; }
+.bk-telemetry-row[data-telemetry-display="row"] .bk-telemetry-value { font-size: 14px; }
+.bk-telemetry-row[data-telemetry-display="row"] .bk-telemetry-description { flex-basis: 100%; }
+
+@keyframes bk-inspector-fade-in {
+	from {
+		opacity: 0;
+		transform: translateX(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.bk-object--maximized .bk-sim-inspector {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+@media (max-width: 860px) {
+	.bk-object--maximized .bk-sim-workspace {
+		flex-direction: column;
+	}
+	.bk-object--maximized .bk-sim-stage {
+		flex: 0 0 52vh;
+		height: 52vh;
+		width: 100%;
+	}
+	.bk-object--maximized .bk-sim-inspector {
+		flex: 1 1 auto;
+		width: 100%;
+		max-width: 100%;
+		border-left: none;
+		border-top: 1px solid var(--line-strong, var(--line));
+		padding: 0;
+	}
+	.bk-object--maximized .bk-sim-tablist {
+		padding: 0 12px;
+	}
+	.bk-object--maximized .bk-sim-tabpanel {
+		padding: 12px 14px;
+	}
+}
+
 .bk-embed-frame {
 	position: relative;
 	width: 100%;
@@ -3621,10 +4104,28 @@ html[data-ui="neo"] .bk-sidebar-collapse,
 html[data-ui="neo"] .bk-sidebar-expand,
 html[data-ui="neo"] .bk-brand-mark,
 html[data-ui="neo"] .bk-code-block,
+html[data-ui="neo"] .bk-sim-telemetry-btn,
+html[data-ui="neo"] .bk-sim-telemetry-inspector,
 html[data-ui="neo"] .bk-code-runner {
 	border-width: 1.5px;
 	border-style: solid;
 	border-color: var(--line-strong, var(--line));
+}
+
+html[data-ui="neo"] .bk-object--maximized .bk-sim-inspector {
+	border-left: 1.5px solid var(--line-strong, var(--line));
+	background: var(--paper);
+}
+html[data-ui="neo"] .bk-expanded-sim-select,
+html[data-ui="neo"] .bk-expanded-back {
+	border-radius: 0;
+	border-width: 1.5px;
+}
+html[data-ui="neo"] .bk-sim-tablist {
+	border-bottom: 1.5px solid var(--line-strong, var(--line));
+}
+html[data-ui="neo"] .bk-sim-tab::after {
+	border-radius: 0;
 }
 
 html[data-ui="neo"] .bk-sidebar {
@@ -3872,6 +4373,20 @@ html[data-ui="playful"] .bk-code-runner {
 	transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	overflow: hidden;
 	background: var(--paper);
+}
+
+html[data-ui="playful"] .bk-object--maximized .bk-sim-inspector {
+	border-left: 2px solid var(--line);
+}
+html[data-ui="playful"] .bk-expanded-sim-select,
+html[data-ui="playful"] .bk-expanded-back {
+	border-radius: 8px;
+}
+html[data-ui="playful"] .bk-sim-tablist {
+	border-bottom: 2px solid var(--line);
+}
+html[data-ui="playful"] .bk-sim-tab::after {
+	border-radius: 4px 4px 0 0;
 }
 
 html[data-ui="playful"][data-theme="dark"] .bk-callout,
@@ -6330,3 +6845,303 @@ html[data-ui="playful"] .bk-steps-hint-popover {
   border-radius: 10px;
 }
 
+
+/* Shared inspector layout for block and guided simulations. */
+.bk-object--maximized .bk-sim-control-section {
+ min-width: 0;
+ margin: 0;
+ padding: 0;
+ border: 0;
+}
+.bk-object--maximized .bk-sim-control-section legend {
+ width: 100%;
+ padding: 0 0 4px;
+ color: var(--ink);
+ font-size: 13px;
+ font-weight: 600;
+}
+.bk-object--maximized .bk-sim-section-fields {
+ display: grid;
+ grid-template-columns: minmax(0, 1fr);
+ gap: 16px;
+}
+.bk-object--maximized .bk-sim-controls > * + * {
+ padding-top: 16px;
+ border-top: 1px solid var(--line);
+}
+.bk-object--maximized .bk-sim-controls > .bk-sim-control-section { padding-top: 0; border: 0; }
+.bk-object--maximized .bk-sim-range {
+ display: grid;
+ grid-template-columns: auto minmax(0, 1fr) auto auto;
+ gap: 8px;
+ max-width: none;
+ min-width: 0;
+ align-items: center;
+ color: var(--ink);
+ font-weight: 500;
+}
+.bk-object--maximized .bk-sim-range > span:first-child {
+ grid-column: 1 / 3;
+ grid-row: 1;
+ font-size: 13px;
+}
+.bk-object--maximized .bk-sim-range-input {
+ grid-column: 3;
+ grid-row: 1;
+ width: 8ch;
+ height: 32px;
+ font-size: 13px;
+}
+.bk-object--maximized .bk-sim-range > .bk-sim-unit {
+ grid-column: 4;
+ grid-row: 1;
+ font-size: 12px;
+}
+.bk-object--maximized .bk-sim-range input[type="range"] {
+ grid-column: 2 / 4;
+ grid-row: 2;
+ width: 100%;
+ min-width: 0;
+ margin: 8px 0;
+}
+.bk-object--maximized .bk-sim-range-bound { grid-row: 2; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bk-object--maximized .bk-sim-range-bound:nth-of-type(2) { grid-column: 1; }
+.bk-object--maximized .bk-sim-range-bound:nth-of-type(3) { grid-column: 4; text-align: right; }
+.bk-object--maximized .bk-sim-toggle,
+.bk-object--maximized .bk-sim-advanced-body .bk-sim-toggle {
+ display: flex;
+ flex-direction: row-reverse;
+ justify-content: space-between;
+ min-width: 0;
+ min-height: 32px;
+ height: auto;
+ margin: 0;
+ color: var(--ink);
+ font-size: 13px;
+ font-weight: 400;
+}
+.bk-object--maximized .bk-sim-toggle input { flex-shrink: 0; }
+.bk-object--maximized :is(.bk-sim-text, .bk-sim-number, .bk-sim-select, .bk-sim-segmented) { min-width: 0; gap: 8px; }
+.bk-object--maximized :is(.bk-sim-text, .bk-sim-number, .bk-sim-select) > span { color: var(--ink); font-size: 13px; font-weight: 400; letter-spacing: normal; }
+.bk-object--maximized :is(.bk-sim-text input, .bk-sim-number input, .bk-sim-select select) { height: 40px; max-width: 100%; font-size: 13px; }
+.bk-object--maximized .bk-sim-select::after { bottom: 16px; }
+.bk-object--maximized .bk-sim-advanced-summary {
+ display: flex;
+ justify-content: space-between;
+ font-size: 13px;
+ font-weight: 500;
+ text-transform: none;
+ letter-spacing: normal;
+ padding: 0;
+ color: var(--ink);
+}
+.bk-object--maximized .bk-sim-advanced-summary::before { display: none !important; }
+.bk-object--maximized .bk-sim-advanced-summary::after { content: "+"; font-size: 20px; color: var(--muted); }
+.bk-object--maximized .bk-sim-advanced[open] > summary::after { content: "−"; }
+.bk-object--maximized .bk-sim-advanced-body { gap: 24px; margin: 0; padding-top: 20px; border: 0; }
+.bk-object--maximized .bk-sim-preset-control { width: 100%; }
+.bk-object--maximized .bk-sim-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.bk-object--maximized .bk-sim-action-btn { min-height: 40px; white-space: normal; }
+.bk-object--maximized .bk-sim-inspector :is(button, input, select, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.bk-object-maximize[data-bk-lab-entry] {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ gap: 8px;
+ width: auto;
+ min-height: 32px;
+ padding: 4px 12px;
+ border: 1px solid var(--line);
+ font: inherit;
+ font-size: 12px;
+ font-weight: 600;
+ color: var(--ink);
+ white-space: nowrap;
+}
+.bk-object--maximized .bk-object-maximize[data-bk-lab-entry] {
+ width: 32px;
+ padding: 4px;
+}
+
+/* BOTH block and steps simulations expose their inspector only in the expanded workspace. */
+.bk-object:not(.bk-object--maximized) .bk-sim-inspector {
+	display: none !important;
+}
+button.bk-embed-overlay[data-bk-expand-preview],
+.bk-steps-frame .bk-embed-overlay,
+.bk-embed-overlay[role="button"] {
+	width: 100%;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+}
+button.bk-embed-overlay[data-bk-expand-preview]:focus-visible,
+.bk-steps-frame .bk-embed-overlay:focus-visible,
+.bk-embed-overlay[role="button"]:focus-visible {
+	outline: 3px solid var(--accent);
+	outline-offset: -4px;
+}
+
+/* Both simulation types use the step toolbar in the expanded inspector. */
+.bk-sim-playback { margin-top: auto; }
+.bk-sim-playback button[data-bk-playback] {
+  width: 36px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--paper));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  color: var(--accent);
+}
+[data-ui="neo"] .bk-steps-controls .bk-steps-btn { border-radius: 0; }
+[data-ui="playful"] .bk-steps-controls .bk-steps-btn { border-radius: 99px; }
+
+/* Playback belongs to the scene; instruction and data belong to the inspector. */
+.bk-object--maximized .bk-sim-stage .bk-embed-frame { flex: 1 1 auto; min-height: 0; }
+.bk-object--maximized .bk-steps-feedback { position: static; transform: none; width: auto; max-width: none; box-shadow: none; margin: 16px; animation: none; flex-direction: column; align-items: flex-start; }
+.bk-steps-instruction { padding: 0; background: transparent; border: 0; }
+.bk-sim-empty { color: var(--muted); padding: 16px; font-size: 13px; }
+.bk-object:not(.bk-object--maximized) .bk-object-maximize[data-bk-lab-entry] { display: none; }
+.bk-object--maximized .bk-object-kicker { display: none; }
+.bk-lab-breadcrumbs { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-lab-breadcrumbs::after { content: " / "; }
+.bk-object--maximized .bk-object-maximize[data-bk-lab-entry] { font-size: 24px; line-height: 1; }
+.bk-object--maximized > .bk-topbar { width: 100%; box-sizing: border-box; gap: 12px; }
+.bk-object--maximized > .bk-topbar .bk-topbar-left { min-width: 0; }
+.bk-object--maximized > .bk-topbar .bk-object-header { flex: 1 1 auto; min-width: 0; height: auto; padding: 0; border: 0; background: transparent; }
+.bk-object--maximized > .bk-topbar .bk-topbar-sidebar-toggle { display: none; }
+
+.bk-object--maximized:has(> .bk-topbar) > .bk-object-header { display: none; }
+.bk-object--maximized > .bk-topbar .bk-topbar-left { flex: 1; }
+.bk-object--maximized > .bk-topbar .bk-topbar-right { margin-left: auto; }
+/* A centered transport with secondary tools and progress in stable side slots. */
+.bk-object--maximized .bk-sim-stage .bk-steps-controls {
+ display: grid;
+ grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+ align-items: center;
+ flex: 0 0 auto;
+ width: 100%;
+ min-height: 88px;
+ padding: 16px 24px;
+ gap: 16px;
+ box-sizing: border-box;
+ background: var(--paper);
+ color: var(--ink);
+ border: 0;
+ border-top: 1px solid var(--line);
+ border-radius: 0;
+}
+.bk-object--maximized .bk-sim-stage .bk-steps-nav {
+ grid-column: 2;
+ grid-row: 1;
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ padding: 4px;
+ border: 1px solid var(--line);
+ border-radius: var(--bk-transport-radius, 40px);
+ background: var(--bg);
+}
+.bk-object--maximized .bk-sim-stage .bk-steps-tools { grid-column: 3; grid-row: 1; justify-self: end; gap: 4px; }
+.bk-object--maximized .bk-sim-stage .bk-steps-progress { grid-column: 1; grid-row: 1; margin: 0; min-width: 0; overflow-x: auto; padding: 8px 0; }
+.bk-object--maximized .bk-sim-stage .bk-steps-divider { display: none; }
+.bk-object--maximized .bk-sim-stage .bk-steps-btn {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ width: 40px;
+ min-width: 40px;
+ height: 40px;
+ padding: 0;
+ border-radius: var(--bk-transport-radius, 50%);
+ border: 1px solid transparent;
+ background: transparent;
+ color: var(--ink);
+ box-shadow: none;
+}
+.bk-object--maximized .bk-sim-stage .bk-steps-btn::after { content: none; }
+.bk-object--maximized .bk-sim-stage :is([data-bk-playback], .bk-steps-btn--play) {
+ width: 48px;
+ height: 48px;
+ background: var(--ink);
+ color: var(--paper);
+}
+.bk-object--maximized .bk-sim-stage .bk-steps-btn:hover:not(:disabled) { background: var(--line); color: var(--ink); }
+.bk-object--maximized .bk-sim-stage :is([data-bk-playback], .bk-steps-btn--play):hover { background: var(--accent); color: var(--paper); }
+.bk-object--maximized .bk-sim-stage .bk-steps-btn svg { width: 18px; height: 18px; }
+.bk-object--maximized .bk-sim-panel-heading { margin: 0; font-size: 14px; line-height: 1.5; }
+@media (max-width: 540px) {
+ .bk-object--maximized .bk-sim-stage .bk-steps-controls { padding: 12px; gap: 8px; }
+ .bk-object--maximized .bk-sim-stage .bk-steps-tools { flex-wrap: wrap; justify-content: flex-end; }
+ .bk-object--maximized .bk-sim-stage .bk-steps-dots { flex-wrap: wrap; }
+}
+
+html[data-ui="neo"] .bk-object--maximized .bk-steps-controls { --bk-transport-radius: 0px; }
+html[data-ui="playful"] .bk-object--maximized .bk-steps-controls { --bk-transport-radius: 24px; }
+
+/* Scroll continuation stays outside the scrolling content and clears at its end. */
+.bk-sim-scroll-cue { display: none; }
+.bk-object--maximized .bk-sim-scroll-cue:not([hidden]) {
+ display: flex;
+ flex: 0 0 40px;
+ align-items: center;
+ justify-content: center;
+ gap: 8px;
+ position: relative;
+ z-index: 1;
+ width: 100%;
+ padding: 8px 16px;
+ border: 0;
+ border-top: 1px solid var(--line);
+ background: var(--paper);
+ color: var(--muted);
+ font: 500 12px var(--font-sans);
+ cursor: pointer;
+}
+.bk-sim-scroll-cue::before {
+ content: "";
+ position: absolute;
+ inset: auto 0 100%;
+ height: 24px;
+ background: linear-gradient(transparent, var(--paper));
+ pointer-events: none;
+}
+.bk-sim-scroll-cue[data-scroll-end="true"]::before { display: none; }
+.bk-sim-scroll-cue:hover { color: var(--ink); }
+.bk-sim-scroll-cue svg { width: 14px; height: 14px; transition: transform 160ms ease; }
+.bk-sim-scroll-cue[data-scroll-end="true"] svg { transform: rotate(180deg); }
+.bk-object--maximized .bk-sim-tabpanel { overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+.bk-sim-pause-overlay[hidden] { display: none; }
+.bk-object--maximized .bk-sim-pause-overlay:not([hidden]) {
+ position: absolute;
+ inset: 0;
+ z-index: 5;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ justify-content: center;
+ gap: 12px;
+ background: color-mix(in srgb, var(--bg) 72%, transparent);
+ color: var(--ink);
+ text-align: center;
+ padding: 24px;
+}
+.bk-sim-pause-content { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 100%; }
+.bk-sim-pause-title { font: 600 24px/1.25 var(--font-sans); margin: 0; }
+.bk-sim-pause-hint { font: 400 13px/1.5 var(--font-sans); color: var(--muted); margin: 0; }
+.bk-sim-pause-overlay [data-bk-resume] {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ gap: 8px;
+ min-height: 44px;
+ padding: 12px 24px;
+ border: 1px solid var(--line-strong);
+ border-radius: var(--radius, 8px);
+ color: var(--paper);
+ background: var(--ink);
+ font: 500 13px var(--font-sans);
+ cursor: pointer;
+}
+.bk-sim-pause-overlay button:focus-visible, .bk-sim-scroll-cue:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+@media (prefers-reduced-motion: reduce) { .bk-sim-scroll-cue svg { transition: none; } }

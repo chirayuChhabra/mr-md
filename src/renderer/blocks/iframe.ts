@@ -1,3 +1,8 @@
+import { canvasFramingRuntime } from "./canvas-framing.js";
+import {
+	simulationAuthoringRuntime,
+	workspaceKeyboardBridge,
+} from "./simulation-runtime.js";
 import { escAttr } from "./utils.js";
 
 export function iframeDoc(
@@ -26,28 +31,42 @@ window.__simProps=JSON.parse(document.getElementById("bk-sim-props").textContent
 window.__loop=${loop ?? false};
 window.__isWorld=${isWorld ? "true" : "false"};
 window.bkSetupCalled = false;
+${simulationAuthoringRuntime}
+${isWorld ? "" : workspaceKeyboardBridge}
 window.__bkTheme = { colors: {}, theme: "light", palette: "ink", ui: "standard" };
-window.bkColor = function(name) {
-  const fallbacks = {
-    bg: "#0a0d14",
-    paper: "#121722",
-    accent: "#38bdf8",
-    "accent-soft": "rgba(56, 189, 248, 0.2)",
-    text: "#f1f5f9",
-    "text-light": "#94a3b8",
-    line: "rgba(255, 255, 255, 0.12)",
-    "line-strong": "rgba(255, 255, 255, 0.28)"
-  };
-  return (window.__bkTheme.colors && window.__bkTheme.colors[name]) || fallbacks[name] || "#ffffff";
-};
-window.bkUi = function() { return window.__bkTheme.ui; };
 window.bkThemeMode = function() {
   const rootTheme = window.__bkTheme.theme;
   if (rootTheme === "auto") {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light";
   }
-  return rootTheme;
+  return rootTheme || "light";
 };
+window.bkColor = function(name) {
+  if (window.__bkTheme.colors && window.__bkTheme.colors[name]) {
+    return window.__bkTheme.colors[name];
+  }
+  const isDark = window.bkThemeMode() === "dark";
+  const fallbacks = {
+    bg: isDark ? "#080c14" : "#f8fafc",
+    paper: isDark ? "#0f172a" : "#ffffff",
+    accent: isDark ? "#38bdf8" : "#0284c7",
+    "accent-soft": isDark ? "rgba(56, 189, 248, 0.2)" : "rgba(2, 132, 199, 0.15)",
+    text: isDark ? "#f1f5f9" : "#0f172a",
+    "text-light": isDark ? "#94a3b8" : "#64748b",
+    line: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(15, 23, 42, 0.08)",
+    "line-strong": isDark ? "rgba(255, 255, 255, 0.28)" : "rgba(15, 23, 42, 0.18)"
+  };
+  return fallbacks[name] || (isDark ? "#ffffff" : "#000000");
+};
+window.bkUi = function() { return window.__bkTheme.ui; };
+function bkSyncBackground() {
+  const bg = window.bkColor("bg");
+  if (bg) {
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+  }
+}
+bkSyncBackground();
 window.addEventListener("message", function(e) {
   if (e.source !== window.parent) return;
   if (e.data && e.data.type === "bk:theme-sync") {
@@ -56,6 +75,8 @@ window.addEventListener("message", function(e) {
     if (background) {
       document.documentElement.style.backgroundColor = background;
       document.body.style.backgroundColor = background;
+    } else {
+      bkSyncBackground();
     }
     window.dispatchEvent(new CustomEvent("bk:theme-changed", { detail: window.__bkTheme }));
   }
@@ -63,6 +84,14 @@ window.addEventListener("message", function(e) {
 if (window.parent && window.parent !== window) {
   window.parent.postMessage({ type: "bk:request-theme" }, "*");
 }
+window.bkTelemetry = function(data) {
+  if (!data || typeof data !== "object") return;
+  if (window.parent && window.parent !== window) {
+    try {
+      window.parent.postMessage({ type: "bk:telemetry", data: data }, "*");
+    } catch (_) {}
+  }
+};
 
 ${
 	isWorld
@@ -245,124 +274,115 @@ window.bkSetupWorld = function(loopFn) {
     if (!window.__loop && !loopId) requestAnimationFrame(renderFrame);
   });
   window.addEventListener("message", function(event) {
-    if (!event.data) return;
+    if (event.source !== window.parent || !event.data) return;
     if (event.data.type === "bk:play") start();
     else if (event.data.type === "bk:pause") { window.__loop = false; }
   });
 };
 `
 		: `
-window.bkCanvasPoint = function(event, canvas) {
-  const c = canvas || event.currentTarget || event.target;
-  const rect = c.getBoundingClientRect();
-  const logicalW = c.__bkLogicalW || 800;
-  const logicalH = c.__bkLogicalH || 500;
-  const clientX = event.clientX !== undefined ? event.clientX : (event.touches?.[0]?.clientX ?? event.changedTouches?.[0]?.clientX ?? 0);
-  const clientY = event.clientY !== undefined ? event.clientY : (event.touches?.[0]?.clientY ?? event.changedTouches?.[0]?.clientY ?? 0);
-  return {
-    x: rect.width ? ((clientX - rect.left) * logicalW) / rect.width : 0,
-    y: rect.height ? ((clientY - rect.top) * logicalH) / rect.height : 0
-  };
-};
-window.bkFitCanvas = function(c, requestedW, requestedH, options) {
-  if (!c) return { scale: 1, width: requestedW, height: requestedH, cssScale: 1 };
-  const dpr = window.devicePixelRatio || 1;
-  const w = requestedW;
-  const h = requestedH;
-  
-  c.__bkLogicalW = w;
-  c.__bkLogicalH = h;
-  
-  c.style.width = w + "px";
-  c.style.height = h + "px";
-  
-  c.style.position = "relative";
-  c.style.left = "auto";
-  c.style.top = "auto";
-  c.style.transformOrigin = "center center";
-  
-  const scaleX = window.innerWidth / w;
-  const scaleY = window.innerHeight / h;
-  const cssScale = Math.min(scaleX, scaleY);
-  
-  c.style.transform = "scale(" + cssScale + ")";
-  
-  const physW = Math.max(1, Math.round(w * dpr));
-  const physH = Math.max(1, Math.round(h * dpr));
-
-  if (!options || options.bitmap !== false) {
-    if (c.width !== physW || c.height !== physH) {
-      c.width = physW;
-      c.height = physH;
-    }
-  }
-  return { scale: dpr, width: w, height: h, cssScale };
-};
-window.bkSetup = function(requestedW, requestedH, loopFn) {
+${canvasFramingRuntime()}
+window.bkSetup = function(requestedW, requestedH, loopFnOrOpts, maybeLoopFn) {
   window.bkSetupCalled = true;
   const canvas = document.getElementById("c");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  
+
+  const loopFn = typeof loopFnOrOpts === "function" ? loopFnOrOpts : maybeLoopFn;
+  const options = (typeof loopFnOrOpts === "object" && loopFnOrOpts !== null) ? loopFnOrOpts : ((typeof maybeLoopFn === "object" && maybeLoopFn !== null) ? maybeLoopFn : {});
+  if (typeof loopFn !== "function") return;
+
   let loopId = null;
-  let cachedFit = window.bkFitCanvas(canvas, requestedW, requestedH);
+  let cachedFit = window.bkFitCanvas(canvas, requestedW, requestedH, options);
+
+  function drawFrame() {
+    if (window.innerWidth < 32 || window.innerHeight < 32) return;
+
+    ctx.save();
+    if (cachedFit.framing !== "contain") {
+      ctx.scale(cachedFit.scale, cachedFit.scale);
+
+      const bg = window.bkColor("bg");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, cachedFit.windowWidth, cachedFit.windowHeight);
+
+      ctx.save();
+      ctx.translate(cachedFit.offsetX, cachedFit.offsetY);
+      ctx.scale(cachedFit.fitScale, cachedFit.fitScale);
+
+      const frameInfo = {
+        width: cachedFit.width,
+        height: cachedFit.height,
+        scale: cachedFit.fitScale,
+        offsetX: cachedFit.offsetX,
+        offsetY: cachedFit.offsetY,
+        viewportWidth: cachedFit.viewportWidth,
+        viewportHeight: cachedFit.viewportHeight,
+        originX: cachedFit.originX,
+        originY: cachedFit.originY,
+        windowWidth: cachedFit.windowWidth,
+        windowHeight: cachedFit.windowHeight,
+        framing: cachedFit.framing
+      };
+
+      loopFn(ctx, cachedFit.width, cachedFit.height, frameInfo);
+      ctx.restore();
+    } else {
+      ctx.scale(cachedFit.scale, cachedFit.scale);
+      loopFn(ctx, cachedFit.width, cachedFit.height);
+    }
+    ctx.restore();
+  }
+
+  window.__renderFrame = drawFrame;
+  window.__startLoop = function() {
+    window.__loop = true;
+    if (!loopId) loopId = requestAnimationFrame(loop);
+  };
+  window.__stopLoop = function() {
+    window.__loop = false;
+    if (loopId) cancelAnimationFrame(loopId);
+    loopId = null;
+  };
 
   function loop() {
-    if (window.innerWidth >= 32 && window.innerHeight >= 32) {
-      ctx.save();
-      ctx.scale(cachedFit.scale, cachedFit.scale);
-      
-      loopFn(ctx, cachedFit.width, cachedFit.height);
-      
-      ctx.restore();
-    }
+    drawFrame();
     if (window.__loop) {
       loopId = requestAnimationFrame(loop);
     } else {
       loopId = null;
     }
   }
-  
+
   function initDraw() {
     if (window.innerWidth >= 32 && window.innerHeight >= 32) {
-      cachedFit = window.bkFitCanvas(canvas, requestedW, requestedH);
+      cachedFit = window.bkFitCanvas(canvas, requestedW, requestedH, options);
       loop();
     } else {
       requestAnimationFrame(initDraw);
     }
   }
   initDraw();
-  
-  window.addEventListener("resize", () => {
-    cachedFit = window.bkFitCanvas(canvas, requestedW, requestedH);
+
+  function onResizeOrTheme() {
+    cachedFit = window.bkFitCanvas(canvas, requestedW, requestedH, options);
     if (!window.__loop && window.innerWidth >= 32 && window.innerHeight >= 32) {
       if (!loopId) {
-        ctx.save();
-        ctx.scale(cachedFit.scale, cachedFit.scale);
-        loopFn(ctx, cachedFit.width, cachedFit.height);
-        ctx.restore();
+        drawFrame();
       }
     }
-  });
-  
-  window.addEventListener("bk:theme-changed", () => {
-    if (!window.__loop && window.innerWidth >= 32 && window.innerHeight >= 32) {
-      if (!loopId) {
-        ctx.save();
-        ctx.scale(cachedFit.scale, cachedFit.scale);
-        loopFn(ctx, cachedFit.width, cachedFit.height);
-        ctx.restore();
-      }
-    }
-  });
-  
+  }
+
+  window.addEventListener("resize", onResizeOrTheme);
+  window.addEventListener("bk:theme-changed", onResizeOrTheme);
+
   window.addEventListener("message", (event) => {
-    if (!event.data) return;
+    if (event.source !== window.parent || !event.data) return;
     if (event.data.type === "bk:play") {
       window.__loop = true;
       if (!loopId) loopId = requestAnimationFrame(loop);
     } else if (event.data.type === "bk:pause") {
-      window.__loop = false; // will stop at next frame
+      window.__loop = false;
     }
   });
 
@@ -392,13 +412,14 @@ window.bkSetup = function(requestedW, requestedH, loopFn) {
 }
 
 window.addEventListener("message", (event) => {
-  if (event.source !== window.parent) return;
-  if (!event.data) return;
+  if (event.source !== window.parent || !event.data) return;
   if (event.data.type === "bk:set-props") {
     window.__simProps = { ...window.__simProps, ...event.data.props };
     window.dispatchEvent(new CustomEvent("bk:props", { detail: window.__simProps }));
+    if (!window.__loop) window.__renderFrame?.();
   } else if (event.data.type === "bk:action") {
     window.dispatchEvent(new CustomEvent("bk:action", { detail: { action: event.data.action } }));
+    if (!window.__loop) window.__renderFrame?.();
   } else if (event.data.type === "bk:world-enter") {
     if (window.bkWorld) {
       window.bkWorld.active = true;

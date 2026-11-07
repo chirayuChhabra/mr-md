@@ -1,0 +1,41 @@
+{
+  "type": "steps",
+  "label": "Travel at constant speed",
+  "props": {
+    "speed": 40,
+    "target": 200
+  },
+  "tunables": {
+    "speed": {
+      "type": "range",
+      "label": "Speed (units/s)",
+      "min": 20,
+      "max": 100,
+      "step": 10
+    }
+  },
+  "steps": [
+    {
+      "id": "near",
+      "title": "Reach the near marker",
+      "instruction": "Press play and observe travel time.",
+      "initialProps": {
+        "speed": 40,
+        "target": 200
+      }
+    },
+    {
+      "id": "far",
+      "title": "Reach the far marker",
+      "instruction": "Predict how doubling distance changes travel time.",
+      "initialProps": {
+        "speed": 40,
+        "target": 400
+      }
+    }
+  ],
+  "$schema": "../../dist/simulation.schema.json",
+  "voice": false,
+  "audio": false,
+  "caption": "Compare travel time over two distances. Pause, reset the current trial, or switch steps to try again."
+}

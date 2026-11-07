@@ -1,14 +1,13 @@
 // Replace this model and wording with the target lesson's concept and units.
-let x = 0, done = false, previous = performance.now();
-function reset() { x = 0; done = false; previous = performance.now(); }
+const sim = window.defineSimulation({ props: { speed: 40, target: 200 } });
+let x = 0, done = false;
+function reset() { x = 0; done = false; }
 window.bkOnStep(reset);
-window.bkOnReset(reset);
+sim.onReset(reset);
 window.bkSetup(800, 450, (ctx, width, height) => {
-  const now = performance.now();
-  const dt = Math.min(0.05, Math.max(0, (now - previous) / 1000));
-  previous = now;
-  const { speed = 40, target = 200 } = window.__simProps;
-  if (window.__loop && !done) {
+  const dt = sim.deltaTime();
+  const { speed, target } = sim.props;
+  if (dt > 0 && !done) {
     x = Math.min(Number(target), x + Number(speed) * dt);
     if (x >= Number(target)) {
       done = true;

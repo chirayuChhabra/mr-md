@@ -40,5 +40,28 @@
       "feedback": "Aerobraking successful! Atmospheric friction safely converted excess hyper-orbital kinetic energy into heat, capturing the spacecraft into Low Mars Orbit.",
       "hint": "Aim through the glowing red atmosphere ring without crashing into Mars. Atmospheric aerobraking will circularize the orbit."
     }
-  ]
+  ],
+  "telemetry": {
+    "status": {
+      "label": "Mission status"
+    },
+    "detail": {
+      "label": "Mission detail"
+    },
+    "speed": {
+      "label": "Speed",
+      "unit": "km/s",
+      "precision": 1
+    },
+    "initialSpeed": {
+      "label": "Initial speed",
+      "unit": "km/s",
+      "precision": 1
+    },
+    "pitch": {
+      "label": "Initial pitch",
+      "unit": "\u00b0",
+      "precision": 0
+    }
+  }
 }

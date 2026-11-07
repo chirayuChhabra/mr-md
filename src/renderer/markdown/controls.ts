@@ -1,5 +1,4 @@
 import type {
-	Block,
 	SimulationAction,
 	SimulationControl,
 	SimulationPreset,
@@ -187,23 +186,22 @@ export function renderSimulationControls(
 	const primaryControls = controls.filter((c) => !isAdvanced(c));
 	const advancedControls = controls.filter((c) => isAdvanced(c));
 
-	const sortGroup = (list: typeof controls) => {
-		const ranges = list.filter((c) => c.type === "range");
-		const booleans = list.filter((c) => c.type === "boolean");
-		const others = list.filter(
-			(c) =>
-				c.type === "text" ||
-				c.type === "number" ||
-				c.type === "select" ||
-				c.type === "segmented",
-		);
-		return [...ranges, ...others, ...booleans];
+	const renderSections = (items: typeof controls) => {
+		const groups = new Map<string, typeof controls>();
+		for (const item of items) {
+			const name =
+				item.control.group?.trim() ||
+				(item.type === "boolean" ? "Options" : "Parameters");
+			if (!groups.has(name)) groups.set(name, []);
+			groups.get(name)!.push(item);
+		}
+		return Array.from(
+			groups,
+			([name, items]) =>
+				`<fieldset class="bk-sim-control-section"><legend>${escHtml(name)}</legend><div class="bk-sim-section-fields">${items.map(renderControlItem).join("\n")}</div></fieldset>`,
+		).join("\n");
 	};
-
-	const sortedPrimary = sortGroup(primaryControls);
-	const sortedAdvanced = sortGroup(advancedControls);
-
-	const primaryHtml = sortedPrimary.map(renderControlItem).join("\n    ");
+	const primaryHtml = renderSections(primaryControls);
 
 	const presetsHtml = hasPresets
 		? `<div class="bk-sim-presets">
@@ -242,11 +240,11 @@ export function renderSimulationControls(
 		: "";
 
 	const advancedHtml =
-		sortedAdvanced.length > 0
+		advancedControls.length > 0
 			? `<details class="bk-sim-advanced">
       <summary class="bk-sim-advanced-summary">More controls</summary>
       <div class="bk-sim-advanced-body">
-        ${sortedAdvanced.map(renderControlItem).join("\n        ")}
+        ${renderSections(advancedControls)}
       </div>
     </details>`
 			: "";

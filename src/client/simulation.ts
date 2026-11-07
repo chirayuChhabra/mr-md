@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { bkResumeSimulationIfPaused } from "./workspace.js";
 
 function parseTypedVal(rawAttr, fallback) {
 	if (rawAttr !== undefined && rawAttr !== null) {
@@ -72,7 +73,9 @@ export function bkApplyPropsToControls(figure, props) {
 				if (el.type === "range") {
 					updateSliderTrack(el);
 				}
-				const sync = el.parentElement?.querySelector("[data-bk-sync]");
+				const sync =
+					el.parentElement?.querySelector("[data-bk-sync]") ||
+					figure.querySelector(`[data-bk-sync="${key}"]`);
 				if (sync) {
 					sync.value = String(val);
 				}
@@ -145,6 +148,7 @@ export function bkWireSimControls() {
 				{ type: "bk:set-props", props: merged },
 				"*",
 			);
+			bkResumeSimulationIfPaused(figure);
 			return;
 		}
 
@@ -201,6 +205,7 @@ export function bkWireSimControls() {
 			{ type: "bk:set-props", props: merged },
 			"*",
 		);
+		bkResumeSimulationIfPaused(figure);
 	};
 
 	const clickHandler = (e) => {
@@ -215,6 +220,7 @@ export function bkWireSimControls() {
 				{ type: "bk:action", action: actionKey },
 				"*",
 			);
+			bkResumeSimulationIfPaused(figure);
 			return;
 		}
 
@@ -256,6 +262,7 @@ export function bkWireSimControls() {
 				{ type: "bk:set-props", props: merged },
 				"*",
 			);
+			bkResumeSimulationIfPaused(figure);
 			return;
 		}
 	};

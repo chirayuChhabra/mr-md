@@ -1,6 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import { logger } from "../cli/logger.js";
+import {
+	readSimulationConfig,
+	SimulationConfigError,
+	validateSimulationConfig,
+} from "../simulation-config.js";
 import type {
 	AnimationBlock,
 	AnimationOptions,
@@ -137,9 +142,10 @@ export abstract class LessonBlocks {
 			const ext = path.extname(resolved);
 			const configPath = `${ext.length > 0 ? resolved.slice(0, -ext.length) : resolved}.config.json`;
 			if (fs.existsSync(configPath)) {
-				return JSON.parse(fs.readFileSync(configPath, "utf-8"));
+				return readSimulationConfig(configPath);
 			}
 		} catch (err: unknown) {
+			if (err instanceof SimulationConfigError) throw err;
 			logger.warn(
 				`Failed to load simulation config for ${src}: ${err instanceof Error ? err.message : String(err)}`,
 			);
@@ -149,6 +155,10 @@ export abstract class LessonBlocks {
 
 	steps(src: string, opts: StepsOptions = {}): this {
 		const fileConfig = this.loadSimulationConfig(src);
+		validateSimulationConfig(
+			{ ...fileConfig, ...opts, props: opts.props || fileConfig?.props },
+			src,
+		);
 		this.blocks.push({
 			type: "steps",
 			src,
@@ -160,6 +170,7 @@ export abstract class LessonBlocks {
 			actions: opts.actions || fileConfig?.actions,
 			presets: opts.presets || fileConfig?.presets,
 			advancedControls: opts.advancedControls ?? fileConfig?.advancedControls,
+			telemetry: opts.telemetry || fileConfig?.telemetry,
 			height: opts.height ?? fileConfig?.height,
 			accent: opts.accent ?? fileConfig?.accent ?? "blue",
 			dependencies: fileConfig?.dependencies,
@@ -180,6 +191,7 @@ export abstract class LessonBlocks {
 			return this.world(src, opts as WorldOptions, height);
 		}
 		const normalized = normalizeSimulationOptions(opts, height, fileConfig);
+		validateSimulationConfig(normalized, src);
 		this.blocks.push({
 			type: "simulation",
 			src,
@@ -205,6 +217,7 @@ export abstract class LessonBlocks {
 	): this {
 		const fileConfig = this.loadSimulationConfig(src) as WorldConfig | null;
 		const normalized = normalizeWorldOptions(opts, height, fileConfig);
+		validateSimulationConfig(normalized, src);
 		this.blocks.push({
 			type: "world",
 			src,
