@@ -151,17 +151,19 @@ lesson project. Do not edit the installed skill's assets as project source.
 
 Follow this order:
 
-1. Define a stable logical coordinate system, commonly `1280 × 720`, plus a safe
-   content rectangle inside it.
-2. Read initial values from `window.__simProps`.
-3. Listen for `bk:props` and update local state when host controls change.
+1. Request a minimum logical coordinate area, commonly `1280 × 720`, then
+   derive layout and a safe content rectangle from the current draw callback
+   dimensions. Default framing expands the area to fill the viewport uniformly.
+   Use explicit `framing: "contain"` only for diagrams that need fixed bounds.
+2. Prefer `window.defineSimulation({ props: defaults })` for new scripts; existing `window.__simProps` remains supported.
+3. Use `sim.onPropsChange` (or legacy `bk:props`) when host controls change; register `sim.onReset` to restore all evolving model state.
 4. Register pointer listeners once, during initialization.
 5. Convert pointer coordinates with `window.bkCanvasPoint`.
 6. For block/steps 2D, render with `window.bkSetup`; do not add a competing
    `requestAnimationFrame` loop.
 7. Obtain host colors through `window.bkColor` on every draw.
 8. Obtain the current visual language through `window.bkUi` on every draw.
-9. Clamp elapsed time after pauses so resumed simulations do not jump.
+9. Use `sim.deltaTime()` once per draw. It returns zero while paused and clamps delays; redraws must not advance physics or append history.
 
 Read `references/runtime-and-ui.md` for the host contract and
 `references/ui-language.md` for required visual adaptation. Read
@@ -263,10 +265,61 @@ includes sliders, toggles, text fields, number fields, selects, ordinary action
 buttons, and control cards. Reshape the interaction around host props and actions when
 possible. Do not draw fake input boxes or toolbars on the canvas.
 
+## Publish abstract telemetry to host
+
+The simulation canvas is reserved solely for the experiment, spatial interaction,
+and minimal essential spatial labels. Just as mr-md host owns controls, **the host
+owns telemetry presentation**. Do not render floating readouts, heads-up tables,
+or metric strips on the canvas.
+
+1. Declare telemetry quantities in the companion `.config.json`:
+
+```json
+{
+  "telemetry": {
+    "status": {
+      "label": "Orbit Status",
+      "group": "State"
+    },
+    "eccentricity": {
+      "label": "Eccentricity (e)",
+      "precision": 3,
+      "group": "Geometry"
+    },
+    "speed": {
+      "label": "Current Velocity (v)",
+      "unit": "km/s",
+      "precision": 2,
+      "group": "Dynamics"
+    }
+  }
+}
+```
+
+Telemetry item fields:
+- `label`: Readable label with lesson notation (e.g. `Eccentricity (e)`).
+- `unit`: Optional physical unit string (e.g. `km/s`, `AU`, `yr`, `MJ/kg`).
+- `precision`: Optional number of decimal places for numeric values.
+- `group`: Optional section name for grouping related measurements (e.g. `Geometry`, `Dynamics`).
+
+2. In the simulation script, publish computed values using `window.bkTelemetry`:
+
+```javascript
+window.bkTelemetry({
+  status: "Elliptical Orbit",
+  eccentricity: e,
+  speed: v
+});
+```
+
+The simulation retains scientific computation; the host workspace owns rendering,
+formatting, units, live updates, and presentation in the expanded lab inspector column
+directly below host controls, preserving full simulation bounds and theme tokens.
+
 ## Plan and contain the viewport
 
 For block/steps, treat the canvas as a diagram or experimental scene, not a second application
-shell. The host already owns the lab title, controls, fullscreen action, and
+shell. The host already owns the lab title, controls, expanded inspector, and
 caption. Do not repeat them inside the canvas.
 
 Keep the scene visually current and focused:
@@ -454,3 +507,20 @@ State:
 
 Do not claim visual validation if only a build or unit test was run.
 
+
+
+## Block previews and steps compatibility
+
+Block simulations are still inline previews that open the expanded workspace.
+Their host owns Pause / Resume, Reset, controls, and measurements. Do not add
+controls inside thumbnails or inside the canvas. A block without an SDK reset
+handler reloads its iframe on Reset; new scripts should reset in place through
+`sim.onReset`. The package exports `mr-md/simulation` for typed authoring and
+`mr-md/simulation.schema.json` for config completion.
+
+Steps retain their inline guided flow and existing playback/trial-reset controls.
+They share the expanded modal workspace but must not receive duplicate block
+playback controls. Initialize each trial from top-level props plus the current
+step `initialProps`; reset clears trial measurements and the model completion
+guard, while closing preserves solved progress and pauses narration. Read the
+steps reference before changing this lifecycle.

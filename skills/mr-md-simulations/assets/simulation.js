@@ -4,6 +4,8 @@
 // exact terminology and notation. Replace the example model rather than
 // layering new behavior over it.
 
+const sim = window.defineSimulation({ props: { speed: 1, showGuide: true } });
+
 const state = {
   speed: readFiniteNumber(window.__simProps?.speed, 1),
   showGuide: Boolean(window.__simProps?.showGuide ?? true),
@@ -13,10 +15,10 @@ const state = {
 };
 
 let initialized = false;
-let previousTime = performance.now();
 
 const LOGICAL_WIDTH = 1280;
 const LOGICAL_HEIGHT = 720;
+const viewport = { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
 const SAFE_INSET = 80;
 const MARKER_RADIUS = 26;
 const MAX_MARKER_EXTENT = 36;
@@ -34,29 +36,26 @@ function moveMarker(point) {
   state.x = clamp(
     point.x,
     SAFE_INSET + MAX_MARKER_EXTENT,
-    LOGICAL_WIDTH - SAFE_INSET - MAX_MARKER_EXTENT,
+    viewport.width - SAFE_INSET - MAX_MARKER_EXTENT,
   );
   state.y = clamp(
     point.y,
     SAFE_INSET + MAX_MARKER_EXTENT,
-    LOGICAL_HEIGHT - SAFE_INSET - MAX_MARKER_EXTENT,
+    viewport.height - SAFE_INSET - MAX_MARKER_EXTENT,
   );
 }
 
-window.addEventListener("bk:props", (event) => {
-  const props = event.detail ?? {};
+sim.onPropsChange((props) => {
   state.speed = readFiniteNumber(props.speed, state.speed);
   if (props.showGuide !== undefined) {
     state.showGuide = Boolean(props.showGuide);
   }
 });
 
-window.addEventListener("bk:action", (event) => {
-  const action = event.detail?.action;
-  if (action === "reset") {
-    state.x = 400;
-    state.y = 250;
-  }
+sim.onReset(() => {
+  state.x = 400;
+  state.y = 250;
+  state.phase = 0;
 });
 
 function initialize(canvas) {
@@ -159,11 +158,11 @@ function drawMarker(context, style, radius) {
 }
 
 function draw(context, width, height) {
+  viewport.width = width;
+  viewport.height = height;
   initialize(context.canvas);
 
-  const now = performance.now();
-  const dt = Math.min((now - previousTime) / 1000, 0.1);
-  previousTime = now;
+  const dt = sim.deltaTime();
   state.phase += dt * state.speed;
 
   const ui = getUiStyle();
