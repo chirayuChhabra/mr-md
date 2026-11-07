@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Unified full-width topbar with single breadcrumb navigation (`[ ◨ ] Parent / Current`) and stationary sidebar toggle button across all themes.
+
+### Changed
+- Streamlined sidebar header by eliminating duplicate document titles and redundant branding.
+- Converted sidebar toggle button into a clean, borderless icon with matching 24px height and vertical alignment with breadcrumbs across all themes (Standard, Neo, Playful).
+- Instruct the simulation skill to preserve existing lesson content and flag potential inaccuracies without editing them unless asked.
+
 ### Fixed
 - Improve syntax highlighting and line number contrast in light-mode code editors.
 - Preserve CodeMirror editor styles across dev server live reloads.
-
-### Changed
-- Instruct the simulation skill to preserve existing lesson content and flag potential inaccuracies without editing them unless asked.
 
 ## [4.0.0-alpha.2] - 2026-11-02
 
