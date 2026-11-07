@@ -49,37 +49,61 @@ export function bkWireSidebarToggle() {
 		shell.setAttribute("data-collapsed", "true");
 	}
 
+	function toggleSidebar() {
+		const currentShell = document.querySelector(".bk-shell");
+		if (!currentShell) return;
+		if (window.innerWidth <= 800) {
+			const isOpen = currentShell.getAttribute("data-mobile-open") === "true";
+			if (isOpen) {
+				currentShell.removeAttribute("data-mobile-open");
+			} else {
+				currentShell.setAttribute("data-mobile-open", "true");
+			}
+		} else {
+			const isCollapsed = currentShell.getAttribute("data-collapsed") === "true";
+			if (isCollapsed) {
+				currentShell.removeAttribute("data-collapsed");
+				localStorage.setItem("bk-sidebar-collapsed", "false");
+			} else {
+				currentShell.setAttribute("data-collapsed", "true");
+				localStorage.setItem("bk-sidebar-collapsed", "true");
+			}
+		}
+	}
+
 	document.addEventListener("click", (e) => {
 		const target = e.target as HTMLElement;
 		const currentShell = document.querySelector(".bk-shell");
-		if (target.closest("#bk-sidebar-collapse")) {
+		if (
+			target.closest("#bk-sidebar-toggle-btn") ||
+			target.closest("#bk-topbar-sidebar-toggle")
+		) {
+			toggleSidebar();
+		} else if (target.closest("#bk-sidebar-collapse")) {
 			currentShell?.setAttribute("data-collapsed", "true");
 			localStorage.setItem("bk-sidebar-collapsed", "true");
 		} else if (target.closest("#bk-sidebar-expand")) {
 			currentShell?.removeAttribute("data-collapsed");
 			localStorage.setItem("bk-sidebar-collapsed", "false");
-		} else if (target.closest("#bk-topbar-sidebar-toggle")) {
-			if (window.innerWidth <= 800) {
-				const isOpen =
-					currentShell?.getAttribute("data-mobile-open") === "true";
-				if (isOpen) {
-					currentShell?.removeAttribute("data-mobile-open");
-				} else {
-					currentShell?.setAttribute("data-mobile-open", "true");
-				}
-			} else {
-				const isCollapsed =
-					currentShell?.getAttribute("data-collapsed") === "true";
-				if (isCollapsed) {
-					currentShell?.removeAttribute("data-collapsed");
-					localStorage.setItem("bk-sidebar-collapsed", "false");
-				} else {
-					currentShell?.setAttribute("data-collapsed", "true");
-					localStorage.setItem("bk-sidebar-collapsed", "true");
-				}
-			}
 		} else if (target.closest("#bk-backdrop")) {
 			currentShell?.removeAttribute("data-mobile-open");
+		}
+	});
+
+	document.addEventListener("keydown", (e) => {
+		const activeEl = document.activeElement;
+		const isInput =
+			activeEl &&
+			(activeEl.tagName === "INPUT" ||
+				activeEl.tagName === "TEXTAREA" ||
+				activeEl.hasAttribute("contenteditable") ||
+				activeEl.closest(".cm-editor") ||
+				activeEl.closest(".monaco-editor"));
+		if (isInput) return;
+
+		if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+			e.preventDefault();
+			toggleSidebar();
 		}
 	});
 

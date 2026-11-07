@@ -123,6 +123,10 @@ export function renderPage(
     </article>
 	`;
 
+	const sidebarTitle = lesson.meta.parentTitle
+		? "Mr Markdown"
+		: lesson.meta.title;
+
 	return renderLayout(
 		lesson.meta.title,
 		lesson.meta.description,
@@ -133,5 +137,6 @@ export function renderPage(
 		topBarHtml,
 		breadcrumbsHtml,
 		false,
+		sidebarTitle,
 	);
 }
