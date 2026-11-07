@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Unified full-width topbar with single breadcrumb navigation (`[ ◨ ] Parent / Current`) and stationary sidebar toggle button across all themes.
 - **Full-Window Simulation Workspace & Inspector**:
   - Modal lab dialog (`role="dialog"`, `aria-modal="true"`) expanding inline block and step simulations into a focused stage and inspector column.
   - Background isolation setting non-active elements `inert`, accessible focus trapping within the dialog, and restoring lesson scroll position and prior focus upon exit.
@@ -41,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Streamlined sidebar header by eliminating duplicate document titles and redundant branding.
+- Converted sidebar toggle button into a clean, borderless icon with matching 24px height and vertical alignment with breadcrumbs across all themes (Standard, Neo, Playful).
 - Updated guided step simulations (`type: "steps"`) to integrate with the shared modal workspace, isolating trial parameter resets (`initialProps`) without reloading iframes.
 - In-place model reset via `sim.onReset` or `window.bkOnReset`, with automatic iframe reload fallback for legacy simulations.
 - Instruct the simulation skill to preserve existing lesson content and flag potential inaccuracies without editing them unless asked.

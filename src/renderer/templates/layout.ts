@@ -72,6 +72,7 @@ export function renderLayout(
 	topBarHtml: string = "",
 	breadcrumbsHtml: string = "",
 	_isChapter: boolean = false,
+	sidebarTitle?: string,
 	docTelemetryButtonHtml: string = "",
 	docTelemetryPanelHtml: string = "",
 ): string {
@@ -162,13 +163,15 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
     }
   })();
 </script>
+  <div class="bk-backdrop" id="bk-backdrop" aria-hidden="true"></div>
   <header class="bk-topbar" id="bk-topbar">
     <div class="bk-topbar-left">
-      <button class="bk-icon-btn bk-topbar-btn bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle navigation" title="Toggle sidebar">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
+      <button class="bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Toggle sidebar (⌘B)">
+        <svg class="bk-icon-panel-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="3"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg>
+        <svg class="bk-icon-panel-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="3"></rect><path d="M9 3v18"></path><path d="m14 9 3 3-3 3"></path></svg>
       </button>
       <nav class="bk-topbar-breadcrumbs" aria-label="Breadcrumb">
-        ${breadcrumbsHtml || `<span class="bk-topbar-crumb-item bk-topbar-crumb-current">${escHtml(title)}</span>`}
+        ${breadcrumbsHtml || `<span class="bk-topbar-crumb-item bk-topbar-crumb-current">Overview</span>`}
       </nav>
     </div>
     <div class="bk-topbar-right">
@@ -189,19 +192,21 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
     ${
 			!_isChapter
 				? `<div class="bk-topbar-progress" aria-hidden="true">
-      <div class="bk-topbar-progress-bar" id="bk-scroll-progress-bar"></div>
-    </div>`
+        <div class="bk-topbar-progress-bar" id="bk-scroll-progress-bar"></div>
+      </div>`
 				: ""
 		}
   </header>
-  <div class="bk-backdrop" id="bk-backdrop" aria-hidden="true"></div>
+  <button class="bk-sidebar-collapse" id="bk-sidebar-collapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar" style="display:none" aria-hidden="true">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
   ${docTelemetryPanelHtml}
   <div class="bk-body" id="bk-body">
     <aside class="bk-sidebar">
       <div class="bk-sidebar-inner">
-        <div class="bk-sidebar-header">
+        <div class="bk-sidebar-header" style="display:none" aria-hidden="true">
           ${topBarHtml ? `<div class="bk-sidebar-top-bar" style="display:none" aria-hidden="true">${topBarHtml}</div>` : ""}
-          <div class="bk-sidebar-title">${escHtml(title)}</div>
+          <div class="bk-sidebar-title">${escHtml(sidebarTitle ?? title)}</div>
           ${extraSidebar}
         </div>
         <nav class="bk-nav">${navHtml}</nav>
@@ -216,9 +221,6 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
         </div>
       </div>
     </aside>
-    <button class="bk-sidebar-collapse" id="bk-sidebar-collapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar" style="display:none" aria-hidden="true">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
     <main class="bk-main">
       <button class="bk-icon-btn bk-sidebar-expand" id="bk-sidebar-expand" type="button" aria-label="Expand sidebar" title="Expand sidebar" style="display:none" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>

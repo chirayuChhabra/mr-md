@@ -129,6 +129,9 @@ export function renderPage(
     </article>
 	`;
 
+	const sidebarTitle = lesson.meta.parentTitle
+		? "Mr Markdown"
+		: lesson.meta.title;
 	const telemetrySims: DocumentTelemetrySimulation[] = [];
 	lesson.blocks.forEach((block, idx) => {
 		if (block.type === "simulation" || block.type === "steps") {
@@ -162,6 +165,7 @@ export function renderPage(
 		topBarHtml,
 		breadcrumbsHtml,
 		false,
+		sidebarTitle,
 		docTelemetryButtonHtml,
 		docTelemetryPanelHtml,
 	);
