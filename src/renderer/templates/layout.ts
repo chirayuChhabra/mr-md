@@ -164,7 +164,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
   <div class="bk-backdrop" id="bk-backdrop" aria-hidden="true"></div>
   <header class="bk-topbar" id="bk-topbar">
     <div class="bk-topbar-left">
-      <button class="bk-icon-btn bk-topbar-btn bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Toggle sidebar (⌘B)">
+      <button class="bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Toggle sidebar (⌘B)">
         <svg class="bk-icon-panel-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="3"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg>
         <svg class="bk-icon-panel-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="3"></rect><path d="M9 3v18"></path><path d="m14 9 3 3-3 3"></path></svg>
       </button>

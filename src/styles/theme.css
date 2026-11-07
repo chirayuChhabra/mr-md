@@ -503,9 +503,10 @@ a.bk-back-link:active {
 .bk-topbar-left {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 8px;
 	min-width: 0;
 	flex: 1;
+	height: 24px;
 }
 
 .bk-topbar-btn {
@@ -532,7 +533,62 @@ a.bk-back-link:active {
 }
 
 .bk-topbar-sidebar-toggle {
-	display: inline-grid !important;
+	width: 24px;
+	height: 24px;
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	margin: 0;
+	border: none !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	outline: none !important;
+	color: var(--muted);
+	cursor: pointer;
+	flex-shrink: 0;
+	transform: none !important;
+	transition: color 0.15s ease;
+}
+
+.bk-topbar-sidebar-toggle:hover {
+	color: var(--ink) !important;
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	transform: none !important;
+}
+
+.bk-topbar-sidebar-toggle:active,
+.bk-topbar-sidebar-toggle:focus,
+.bk-topbar-sidebar-toggle:focus-visible {
+	outline: none !important;
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	transform: none !important;
+}
+
+html[data-ui="neo"] .bk-topbar-sidebar-toggle,
+html[data-ui="neo"] .bk-topbar-sidebar-toggle:hover,
+html[data-ui="neo"] .bk-topbar-sidebar-toggle:active,
+html[data-ui="neo"] .bk-topbar-sidebar-toggle:focus,
+html[data-ui="neo"][data-theme="dark"] .bk-topbar-sidebar-toggle,
+html[data-ui="neo"][data-theme="dark"] .bk-topbar-sidebar-toggle:hover,
+html[data-ui="playful"] .bk-topbar-sidebar-toggle,
+html[data-ui="playful"] .bk-topbar-sidebar-toggle:hover,
+html[data-ui="playful"] .bk-topbar-sidebar-toggle:active,
+html[data-ui="playful"] .bk-topbar-sidebar-toggle:focus {
+	width: 24px !important;
+	height: 24px !important;
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	border-radius: 0 !important;
+	outline: none !important;
+	transform: none !important;
+	padding: 0 !important;
 }
 
 .bk-topbar-sidebar-toggle .bk-icon-panel-open {
@@ -567,10 +623,24 @@ a.bk-back-link:active {
 	min-width: 0;
 	overflow: hidden;
 	white-space: nowrap;
+	height: 24px;
+	line-height: 24px;
+}
+
+.bk-topbar-crumb-link,
+.bk-topbar-crumb-sep,
+.bk-topbar-crumb-item,
+.bk-topbar-crumb-current,
+.bk-topbar-crumb-lesson,
+.bk-topbar-active-section {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	line-height: 24px;
+	box-sizing: border-box;
 }
 
 .bk-topbar-crumb-link {
-	display: inline;
 	font-size: 13px;
 	font-weight: 500;
 	color: var(--muted);
@@ -612,8 +682,6 @@ a.bk-back-link:active {
 }
 
 .bk-topbar-crumb-current {
-	display: inline-flex;
-	align-items: center;
 	color: var(--ink);
 	font-weight: 600;
 }
@@ -3724,21 +3792,25 @@ html[data-ui="neo"] .bk-topbar {
 	background: var(--paper);
 }
 html[data-ui="neo"] .bk-topbar-btn {
-	border: 1.5px solid var(--line-strong, var(--line));
+	border: none;
 	border-radius: 0;
 	box-shadow: none;
+	background: transparent;
 }
 html[data-ui="neo"] .bk-topbar-btn:hover {
-	border-color: var(--ink);
-	box-shadow: 1px 1px 0px 0px var(--ink);
+	border-color: transparent;
+	box-shadow: none;
+	color: var(--ink);
 }
 html[data-ui="neo"][data-theme="dark"] .bk-topbar-btn {
-	border-color: var(--line-strong);
+	border: none;
 	box-shadow: none;
+	background: transparent;
 }
 html[data-ui="neo"][data-theme="dark"] .bk-topbar-btn:hover {
-	border-color: var(--accent);
-	box-shadow: 1px 1px 0px 0px var(--accent);
+	border-color: transparent;
+	box-shadow: none;
+	color: var(--ink);
 }
 html[data-ui="neo"] .bk-topbar-crumb-link {
 	border: none;
