@@ -12,6 +12,10 @@ import {
 	normalizeWorldOptions,
 } from "../builder/utils.js";
 import { logger } from "../cli/logger.js";
+import {
+	readSimulationConfig,
+	SimulationConfigError,
+} from "../simulation-config.js";
 import type {
 	Block,
 	BuildOptions,
@@ -161,9 +165,10 @@ export function parseLesson(
 						);
 						const configPath = `${resolved.slice(0, -ext.length)}.config.json`;
 						if (fs.existsSync(configPath)) {
-							fileConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+							fileConfig = readSimulationConfig(configPath);
 						}
 					} catch (e: unknown) {
+						if (e instanceof SimulationConfigError) throw e;
 						logger.warn(
 							`Failed to load config for ${src}: ${e instanceof Error ? e.message : String(e)}`,
 						);
@@ -172,11 +177,10 @@ export function parseLesson(
 					const isWorld = fileConfig?.type === "world";
 
 					if (isWorld) {
-						const normalized = normalizeWorldOptions(
-							{ caption },
-							480,
-							fileConfig,
-						);
+						const normalized = normalizeWorldOptions({ caption }, 480, {
+							...fileConfig,
+							type: "world",
+						});
 						blocks.push({
 							type: "world",
 							src,
@@ -199,6 +203,7 @@ export function parseLesson(
 							actions: fileConfig?.actions,
 							presets: fileConfig?.presets,
 							advancedControls: fileConfig?.advancedControls,
+							telemetry: fileConfig?.telemetry,
 							height: fileConfig?.height,
 							accent: fileConfig?.accent ?? "blue",
 							dependencies: fileConfig?.dependencies,

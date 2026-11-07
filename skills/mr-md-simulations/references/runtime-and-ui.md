@@ -13,15 +13,18 @@ sibling .config.json
 Markdown parser or builder
         |
         +--> generated host controls (tunables, presets, actions)
+        +--> generated host controls & telemetry inspector
         |
         v
 sandboxed iframe --> window.__simProps
         ^                    |
         |                    v
         +---- bk:props / bk:action
+        |                    +--> window.bkTelemetry({ key: val })
+        +---- bk:set-props / bk:props
 ```
 
-The host owns the controls. The iframe owns simulation state and drawing.
+The host owns controls and telemetry presentation. The iframe owns simulation state and drawing.
 
 ## Embedding and configuration
 
@@ -48,6 +51,7 @@ Supported config fields correspond to `SimulationConfig`:
   "advancedControls": [],
   "actions": {},
   "presets": {},
+  "telemetry": {},
   "height": 420,
   "label": "Interactive Lab",
   "caption": "Instructions for the learner.",
@@ -76,7 +80,22 @@ Top-level configuration options:
 - `actions?: Record<string, { label: string }>`: push-button actions rendered inline with primary controls. Outlined restrained buttons dispatch `bk:action` events to the iframe (`event.detail.action`). Useful for repeatable impulses, triggers, or resets.
 - `presets?: Record<string, { label: string, props: Record<string, string | number | boolean> }>`: named parameter bundles rendered as a labeled native select with an initial neutral "Choose preset". Selecting a preset updates active controls (including hidden advanced controls) and applies properties via `bk:props`. Manual adjustments clear the preset selection.
 
-Do not add playback controls (play/pause/step) to block simulations; steps simulations already own playback.
+The host supplies Pause / Resume and Reset for expanded block simulations. Steps retain their existing playback and trial-reset controls. Do not duplicate these controls inside the iframe.
+
+Declared `telemetry` quantities describe computed physical outputs published by
+the simulation. In the expanded lab workspace, live measurements are displayed
+in the reserved inspector column directly below host controls, grouped with
+quiet section labels, readable label/value rows, units, and optional decimal precision:
+
+```json
+{
+  "telemetry": {
+    "status": { "label": "Orbit Status", "group": "State" },
+    "eccentricity": { "label": "Eccentricity (e)", "precision": 3, "group": "Geometry" },
+    "speed": { "label": "Current Velocity (v)", "unit": "km/s", "precision": 2, "group": "Dynamics" }
+  }
+}
+```
 
 For block/steps, these generated controls are the non-spatial input UI. Keep form fields,
 toggles, selects, ordinary action buttons, and control panels out of the iframe.
@@ -124,6 +143,22 @@ window.addEventListener("bk:action", (event) => {
   }
 });
 ```
+### `window.bkTelemetry(data)`
+
+Publishes live computed measurements from the simulation to the host:
+
+```js
+window.bkTelemetry({
+  status: "Elliptical Orbit",
+  eccentricity: e,
+  speed: v
+});
+```
+
+Updates are safely coalesced via `requestAnimationFrame` on the host side to
+prevent layout thrashing during 60 FPS animation loops. Quantities not yet
+published or undefined/null are displayed explicitly as `—` rather than fake
+zeros in the document-level Measurements inspector anchored below the global topbar.
 
 ### `window.bkSetup(width, height, draw)`
 
@@ -138,11 +173,26 @@ The callback initially draws once. The host starts and pauses continuous
 drawing by posting lifecycle messages as the frame is activated or leaves the
 viewport. Do not start another animation loop around `bkSetup`.
 
-The requested dimensions define logical coordinates, not a license to place
-content at their edges. Keep essential content inside a safe rectangle inset by
-at least 6% on every side. Include text, strokes, shadows, animation extent, and
-hit-target padding in layout bounds. Validate both normal and maximized frame
-states; compile-time checks cannot detect cropping or overlap.
+Default framing is responsive. The requested width and height establish the
+minimum logical drawing area. The harness uses one uniform scale and expands
+one callback dimension to match the available viewport. Lay out and clear the
+scene using the current callback dimensions on every draw. Do not capture those
+dimensions once in pointer listeners; use `bkCanvasPoint` for current coordinates.
+This contract is identical in inline previews and expanded block/step workspaces.
+
+The fourth callback argument contains `width`, `height`, `viewportWidth`,
+`viewportHeight`, `originX`, `originY`, `windowWidth`, `windowHeight`, and `framing`.
+In default responsive framing the origins are zero and the viewport dimensions
+match the callback dimensions. Keep essential content inside a safe rectangle
+inset by at least 6% on every side. Include text, strokes, shadows, animation
+extent, and hit-target padding in layout bounds.
+
+For a diagram that must keep fixed logical coordinates, use
+`bkSetup(width, height, { framing: "contain" }, draw)`. It preserves the whole
+diagram with letterboxing. Explicit `framing: "bleed"` also keeps fixed callback
+dimensions, but exposes expanded background bounds through the fourth argument.
+Neither mode stretches or crops the diagram. Fixed legacy layouts cannot be
+reflowed automatically if they ignore the callback's available dimensions.
 
 ### `window.bkCanvasPoint(event, canvas)`
 
@@ -283,3 +333,30 @@ World rendering does not generate the standard tunable control panel; do not
 assume a field present in a shared type guarantees visible controls.
 
 Action buttons accept an optional `color`: `accent` (default), `neutral`, `red`, `green`, or `amber`. For example, `"impulse": { "label": "Apply impulse", "color": "green" }`. Use color to reinforce the action’s meaning and keep the label explicit. Use a `select` for longer choices that would crowd a segmented control.
+
+
+## Preview and model lifecycle
+
+Regular blocks are still inline previews with a native Click to expand button.
+The inspector is visible only in the expanded modal workspace. Keep the iframe
+scene free of fake controls, repeated titles, and application chrome.
+
+Prefer `window.defineSimulation({ props: defaults })` for new scripts, or import
+`defineSimulation` from `mr-md/simulation` in TypeScript. The returned runtime has
+readonly `props` and `isPlaying`, `onPropsChange`, `onReset`, `onPlaybackChange`,
+`publishTelemetry`, `deltaTime`, and `dispose`. Subscriptions return unsubscribe
+functions. Read `sim.props` initially; change subscriptions handle later updates.
+
+Call `sim.deltaTime()` once per draw. It returns zero while paused, starts at
+zero after resume, and caps delays at 0.1 seconds. Never advance physics or append
+trace history merely because the host requested a paused redraw.
+
+Host Reset restores configured props and clears measurements. Register
+`sim.onReset` to restore model state in place. Without a reset handler, block
+iframes reload as the compatibility fallback. Restore elapsed time, positions,
+velocities, drag state, histories, and completion guards. Closing preserves values
+and pauses the frame; reopening respects explicit Pause.
+
+Builds validate config JSON against the shared Zod contract and cross-field
+rules. Use the packaged `mr-md/simulation.schema.json` for editor completion.
+Errors identify the source config and invalid field; do not suppress these errors.

@@ -1,5 +1,11 @@
 import type { BuildOptions, Lesson } from "../../types.js";
 import { escAttr, escHtml } from "../blocks.js";
+import {
+	type DocumentTelemetrySimulation,
+	hasTelemetry,
+	renderDocTelemetryButton,
+	renderDocTelemetryPanel,
+} from "../markdown/telemetry.js";
 import type { NavItem } from "../utils.js";
 import { renderLayout } from "./layout.js";
 
@@ -123,6 +129,29 @@ export function renderPage(
     </article>
 	`;
 
+	const telemetrySims: DocumentTelemetrySimulation[] = [];
+	lesson.blocks.forEach((block, idx) => {
+		if (block.type === "simulation" || block.type === "steps") {
+			const tel = block.telemetry;
+			if (hasTelemetry(tel) && tel) {
+				telemetrySims.push({
+					id: block.type === "simulation" ? `sim-${idx}` : `steps-${idx}`,
+					title:
+						block.label ||
+						(block.type === "simulation"
+							? "Interactive Simulation"
+							: "Step-by-Step Simulation"),
+					telemetry: tel,
+				});
+			}
+		}
+	});
+
+	const docTelemetryButtonHtml = renderDocTelemetryButton(
+		telemetrySims.length > 0,
+	);
+	const docTelemetryPanelHtml = renderDocTelemetryPanel(telemetrySims);
+
 	return renderLayout(
 		lesson.meta.title,
 		lesson.meta.description,
@@ -133,5 +162,7 @@ export function renderPage(
 		topBarHtml,
 		breadcrumbsHtml,
 		false,
+		docTelemetryButtonHtml,
+		docTelemetryPanelHtml,
 	);
 }

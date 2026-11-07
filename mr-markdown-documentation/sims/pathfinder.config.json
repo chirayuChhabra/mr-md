@@ -1,8 +1,28 @@
 {
-  "props": { "mazeDensity": 25, "diagonal": false, "showStats": true },
+  "props": {
+    "mazeDensity": 25,
+    "diagonal": false
+  },
   "tunables": {
-    "mazeDensity": { "label": "Maze Density (%)", "min": 0, "max": 50, "step": 1 },
-    "diagonal": { "label": "Allow Diagonal", "type": "boolean" },
-    "showStats": { "label": "Show Stats", "type": "boolean" }
+    "mazeDensity": {
+      "label": "Maze Density (%)",
+      "min": 0,
+      "max": 50,
+      "step": 1
+    },
+    "diagonal": {
+      "label": "Allow Diagonal",
+      "type": "boolean"
+    }
+  },
+  "telemetry": {
+    "status": {
+      "label": "Status"
+    },
+    "pathLength": {
+      "label": "Shortest path length",
+      "unit": "steps",
+      "precision": 0
+    }
   }
 }

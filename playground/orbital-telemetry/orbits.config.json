@@ -1,0 +1,104 @@
+{
+  "type": "block",
+  "label": "Keplerian Orbital Dynamics",
+  "caption": "Interactive two-body gravitational experiment. Adjust orbital eccentricity or simulation speed, and expand the lab to observe conserved energy and angular momentum.",
+  "props": {
+    "eccentricity": 0.45,
+    "simulationSpeed": 1.0,
+    "showVelocityVector": true,
+    "showApsides": true
+  },
+  "tunables": {
+    "eccentricity": {
+      "label": "Eccentricity (e)",
+      "type": "range",
+      "min": 0,
+      "max": 0.85,
+      "step": 0.05
+    },
+    "simulationSpeed": {
+      "label": "Simulation speed (\u00d7)",
+      "type": "range",
+      "min": 0.2,
+      "max": 2.5,
+      "step": 0.1
+    },
+    "showVelocityVector": {
+      "label": "Velocity Vector (v)",
+      "type": "boolean"
+    },
+    "showApsides": {
+      "label": "Show Apsides",
+      "type": "boolean"
+    }
+  },
+  "telemetry": {
+    "status": {
+      "label": "Orbit Status",
+      "group": "State"
+    },
+    "eccentricity": {
+      "label": "Eccentricity (e)",
+      "precision": 3,
+      "group": "Geometry"
+    },
+    "semiMajorAxis": {
+      "label": "Semi-Major Axis (a)",
+      "unit": "AU",
+      "precision": 2,
+      "group": "Geometry"
+    },
+    "period": {
+      "label": "Orbital Period (T)",
+      "unit": "yr",
+      "precision": 2,
+      "group": "Geometry"
+    },
+    "periapsis": {
+      "label": "Periapsis (r_p)",
+      "unit": "AU",
+      "precision": 2,
+      "group": "Geometry"
+    },
+    "apoapsis": {
+      "label": "Apoapsis (r_a)",
+      "unit": "AU",
+      "precision": 2,
+      "group": "Geometry"
+    },
+    "specificEnergy": {
+      "label": "Specific Energy (\u03b5)",
+      "unit": "MJ/kg",
+      "precision": 2,
+      "group": "Dynamics"
+    },
+    "angularMomentum": {
+      "label": "Angular Momentum (h)",
+      "unit": "AU\u00b2/yr",
+      "precision": 2,
+      "group": "Dynamics"
+    },
+    "currentSpeed": {
+      "label": "Current Speed (v)",
+      "unit": "km/s",
+      "precision": 2,
+      "group": "Dynamics"
+    },
+    "periapsisSpeed": {
+      "label": "Periapsis Speed (v_p)",
+      "unit": "km/s",
+      "precision": 2,
+      "group": "Dynamics"
+    },
+    "apoapsisSpeed": {
+      "label": "Apoapsis Speed (v_a)",
+      "unit": "km/s",
+      "precision": 2,
+      "group": "Dynamics"
+    }
+  },
+  "advancedControls": [
+    "showVelocityVector",
+    "showApsides"
+  ]
+}

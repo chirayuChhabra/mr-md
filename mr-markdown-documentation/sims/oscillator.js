@@ -7,6 +7,8 @@
 (() => {
   "use strict";
 
+  const sim = window.defineSimulation({ props: { damping: 1.5, dampingMode: "viscous", medium: "air", stiffness: 25, mass: 1, showTrace: true, showPhase: true } });
+
   // Core physical state (all variables encapsulated in local closure)
   const state = {
     // Model parameters synced with host controls
@@ -34,7 +36,6 @@
   let lastDragX = 0;
   let lastDragTime = 0;
   let impulseFlash = 0;
-  let previousTime = performance.now();
   let pointerInitialized = false;
 
   // Coordinate geometry for 1280 x 540 logical coordinate space
@@ -78,8 +79,7 @@
   }
 
   // React to host property changes (tunables & presets)
-  window.addEventListener("bk:props", (event) => {
-    const p = event.detail || {};
+  sim.onPropsChange((p) => {
     if (p.damping !== undefined) state.damping = Math.max(0, Number(p.damping));
     if (p.dampingMode !== undefined) state.dampingMode = String(p.dampingMode);
     if (p.medium !== undefined) state.medium = String(p.medium);
@@ -87,6 +87,16 @@
     if (p.mass !== undefined) state.mass = Math.max(0.1, Number(p.mass));
     if (p.showTrace !== undefined) state.showTrace = Boolean(p.showTrace);
     if (p.showPhase !== undefined) state.showPhase = Boolean(p.showPhase);
+  });
+
+  sim.onReset(() => {
+    state.x = 0.75;
+    state.v = 0;
+    state.time = 0;
+    plotHistory.length = 0;
+    isDragging = false;
+    dragPointerId = null;
+    impulseFlash = 0;
   });
 
   // React to host action button clicks (repeatable impulses and rest reset)
@@ -109,6 +119,7 @@
   });
 
   // Pointer drag interaction for manual displacement
+  let layoutOffsetY = 0;
   function initializePointer(canvas) {
     if (pointerInitialized) return;
 
@@ -119,7 +130,7 @@
 
       if (
         Math.abs(pt.x - cartCenterX) <= CART_WIDTH / 2 + 18 &&
-        Math.abs(pt.y - cartCenterY) <= CART_HEIGHT / 2 + 18
+        Math.abs(pt.y - layoutOffsetY - cartCenterY) <= CART_HEIGHT / 2 + 18
       ) {
         isDragging = true;
         dragPointerId = event.pointerId;
@@ -293,7 +304,7 @@
 
   // Numerical simulation integration with sub-stepping
   function updatePhysics(dt) {
-    if (isDragging) return;
+    if (isDragging || dt <= 0) return;
 
     const subSteps = 4;
     const dtSub = dt / subSteps;
@@ -354,12 +365,14 @@
   }
 
   // Main canvas draw callback
-  function draw(ctx, width, height) {
+  function draw(ctx, width, height, frame) {
+    const viewX = frame?.originX ?? 0;
+    const viewY = frame?.originY ?? 0;
+    const viewWidth = frame?.viewportWidth ?? width;
+    const viewHeight = frame?.viewportHeight ?? height;
     initializePointer(ctx.canvas);
 
-    const now = performance.now();
-    const dt = Math.min((now - previousTime) / 1000, 0.05);
-    previousTime = now;
+    const dt = Math.min(sim.deltaTime(), 0.05);
 
     updatePhysics(dt);
 
@@ -368,8 +381,10 @@
     }
 
     // Record sample in rolling trajectory history
-    plotHistory.push({ t: state.time, x: state.x, v: state.v });
-    if (plotHistory.length > MAX_HISTORY) plotHistory.shift();
+    if (dt > 0) {
+      plotHistory.push({ t: state.time, x: state.x, v: state.v });
+      if (plotHistory.length > MAX_HISTORY) plotHistory.shift();
+    }
 
     const ui = getUiStyle();
     const bg = window.bkColor("bg");
@@ -383,7 +398,10 @@
 
     // Clear canvas background
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(viewX, viewY, viewWidth, viewHeight);
+    layoutOffsetY = viewY;
+    ctx.save();
+    ctx.translate(0, layoutOffsetY);
 
     // Analytical linear oscillator quantities
     const mediumMult = getMediumMultiplier(state.medium);
@@ -414,7 +432,7 @@
     //  TOP-LEFT APPARATUS: WALL, TRACK, SPRING, DASHPOT, CART
     // ============================================================
     const trackStartX = ANCHOR_X;
-    const trackEndX = 670;
+    const trackEndX = 1200;
     const railY = TRACK_Y + CART_HEIGHT / 2 + 10;
 
     // Track rails
@@ -556,96 +574,21 @@
       ctx.fill();
     }
 
-    // ============================================================
-    //  TOP-RIGHT PANEL: DIAGNOSTICS & TELEMETRY
-    // ============================================================
-    const badgeX = 710;
-    const badgeY = 24;
-    const badgeWidth = 510;
-    const badgeHeight = 172;
-
-    ctx.save();
-    ctx.fillStyle = paper;
-    ctx.strokeStyle = line;
-    ctx.lineWidth = ui.lineWidth;
-
-    if (ui.mode === "neo") {
-      ctx.fillRect(badgeX + ui.shadowOffset, badgeY + ui.shadowOffset, badgeWidth, badgeHeight);
-      ctx.fillStyle = paper;
-      ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
-      ctx.strokeRect(badgeX, badgeY, badgeWidth, badgeHeight);
-    } else {
-      ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, ui.panelRadius);
-      ctx.fill();
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // Fixed concise header
-    ctx.font = `600 11px ${ui.fontFamily}`;
-    ctx.fillStyle = accent;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText("DAMPED HARMONIC OSCILLATOR", badgeX + 18, badgeY + 24);
-
-    ctx.font = `700 13px ${ui.fontFamily}`;
-    ctx.fillStyle = text;
-    ctx.fillText(regimeBadge, badgeX + 18, badgeY + 44);
-
-    // Telemetry columns
-    const col1X = badgeX + 18;
-    const col2X = badgeX + 265;
-    ctx.font = `11px ${ui.fontFamily}`;
-
-    // Column 1
-    ctx.fillStyle = textLight;
-    ctx.fillText("Displacement x:", col1X, badgeY + 74);
-    ctx.fillText("Velocity v:", col1X, badgeY + 98);
-    ctx.fillText("Natural Freq ω₀:", col1X, badgeY + 122);
-    ctx.fillText("Frequency f₀:", col1X, badgeY + 146);
-
-    ctx.fillStyle = text;
-    ctx.font = `600 11px monospace`;
-    ctx.fillText(`${state.x >= 0 ? "+" : ""}${state.x.toFixed(3)} m`, col1X + 115, badgeY + 74);
-    ctx.fillText(`${state.v >= 0 ? "+" : ""}${state.v.toFixed(3)} m/s`, col1X + 115, badgeY + 98);
-    ctx.fillText(`${omega0.toFixed(2)} rad/s`, col1X + 115, badgeY + 122);
-    ctx.fillText(`${freq0.toFixed(2)} Hz`, col1X + 115, badgeY + 146);
-
-    // Column 2
-    ctx.font = `11px ${ui.fontFamily}`;
-    ctx.fillStyle = textLight;
-    if (state.dampingMode === "viscous") {
-      ctx.fillText("Damping ratio ζ:", col2X, badgeY + 74);
-      ctx.fillText("Spring stiffness k:", col2X, badgeY + 98);
-      ctx.fillText("Effective c:", col2X, badgeY + 122);
-      ctx.fillText("Medium factor:", col2X, badgeY + 146);
-
-      ctx.fillStyle = text;
-      ctx.font = `600 11px monospace`;
-      ctx.fillText(`${zeta.toFixed(3)}`, col2X + 120, badgeY + 74);
-      ctx.fillText(`${state.stiffness.toFixed(0)} N/m`, col2X + 120, badgeY + 98);
-      ctx.fillText(`${effC.toFixed(1)} N·s/m`, col2X + 120, badgeY + 122);
-      ctx.fillText(`${state.medium} (${mediumMult.toFixed(1)}×)`, col2X + 120, badgeY + 146);
-    } else {
-      ctx.fillText("Damping Model:", col2X, badgeY + 74);
-      ctx.fillText("Spring stiffness k:", col2X, badgeY + 98);
-      ctx.fillText("Base parameter c:", col2X, badgeY + 122);
-      ctx.fillText("Medium factor:", col2X, badgeY + 146);
-
-      ctx.fillStyle = text;
-      ctx.font = `600 11px monospace`;
-      ctx.fillText(`${state.dampingMode}`, col2X + 120, badgeY + 74);
-      ctx.fillText(`${state.stiffness.toFixed(0)} N/m`, col2X + 120, badgeY + 98);
-      ctx.fillText(`${state.damping.toFixed(1)}`, col2X + 120, badgeY + 122);
-      ctx.fillText(`${state.medium} (${mediumMult.toFixed(1)}×)`, col2X + 120, badgeY + 146);
-    }
+    window.bkTelemetry({
+      regime: regimeBadge,
+      displacement: state.x,
+      velocity: state.v,
+      angularFrequency: omega0,
+      frequency: freq0,
+      dampingRatio: state.dampingMode === "viscous" ? zeta : null,
+      effectiveDamping: state.dampingMode === "viscous" ? effC : null
+    });
 
     // ============================================================
     //  BOTTOM PLOTS: DISPLACEMENT x(t) & PHASE SPACE (x vs v)
     // ============================================================
     const plotY = 216;
-    const plotHeight = 300;
+    const plotHeight = Math.max(300, viewHeight - plotY - 24);
 
     let traceWidth = 1140;
     if (state.showTrace && state.showPhase) {
@@ -814,6 +757,7 @@
       }
       ctx.restore();
     }
+    ctx.restore();
   }
 
   // Register canvas loop with standard mr-md lifecycle

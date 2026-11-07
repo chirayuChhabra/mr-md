@@ -204,13 +204,7 @@ function draw(ctx, logicalW, logicalH) {
     resetProton(logicalW / 2, logicalH / 2);
     
     function getMouse(e) {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = logicalW / rect.width;
-      const scaleY = logicalH / rect.height;
-      return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY
-      };
+      return window.bkCanvasPoint(e, canvas);
     }
     
     canvas.addEventListener("pointerdown", (e) => {

@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+import { bkInitInspectors } from "./inspector.js";
 import {
 	bkInitInteractiveFrames,
 	bkWireInteractiveFrames,
@@ -9,6 +10,7 @@ import { bkInitRouter } from "./router.js";
 import { bkInitCodeRunners, bkWireCodeRunners } from "./runner.js";
 import { bkInitSimControls, bkWireSimControls } from "./simulation.js";
 import { bkInitSteps, bkWireSteps } from "./steps.js";
+import { bkInitTelemetry, bkWireTelemetry } from "./telemetry.js";
 import { bkBroadcastTheme, bkWireThemeControls } from "./theme.js";
 import {
 	bkInitCodeCopy,
@@ -30,6 +32,7 @@ function wireOnce() {
 	bkWireSidebarToggle();
 	bkWireThemeControls();
 	bkWireSimControls();
+	bkWireTelemetry();
 	bkWireInteractiveFrames();
 	bkWireCodeCopy();
 	bkWireCodeRunners();
@@ -42,6 +45,8 @@ function initOnPageLoad() {
 	bkInitCodeCopy();
 	bkInitCodeRunners();
 	bkInitSimControls();
+	bkInitTelemetry();
+	bkInitInspectors();
 	bkInitInteractiveFrames();
 	bkInitWorldPortals();
 	bkInitSteps();

@@ -1,3 +1,8 @@
+import { canvasFramingRuntime } from "./canvas-framing.js";
+import {
+	simulationAuthoringRuntime,
+	workspaceKeyboardBridge,
+} from "./simulation-runtime.js";
 import { escAttr } from "./utils.js";
 
 export function stepsIframeDoc(
@@ -40,6 +45,8 @@ ${scriptTags}
 window.__simProps = JSON.parse(document.getElementById("bk-sim-props").textContent || "{}");
 window.__loop = false;
 window.bkSetupCalled = false;
+${simulationAuthoringRuntime}
+${workspaceKeyboardBridge}
 window.__bkTheme = { colors: {}, theme: "light", palette: "ink", ui: "standard" };
 window.__bkStepCallbacks = [];
 window.__bkResetCallbacks = [];
@@ -53,7 +60,12 @@ window.addEventListener("error", function(e) {
   console.error("Simulation Error:", e.error || e.message);
   const errDiv = document.createElement("div");
   errDiv.style.cssText = "position:absolute;inset:0;padding:20px;color:#ef4444;background:rgba(15,23,42,0.96);font-family:monospace;font-size:13px;z-index:9999;overflow:auto;";
-  errDiv.innerHTML = "<h4 style='margin:0 0 8px;color:#f87171;'>Simulation Error</h4><pre style='white-space:pre-wrap;margin:0;'>" + (e.error ? (e.error.stack || e.error.message) : e.message) + "</pre>";
+  const title = document.createElement("h4");
+  title.textContent = "Simulation Error";
+  const detail = document.createElement("pre");
+  detail.style.cssText = "white-space:pre-wrap;margin:0;";
+  detail.textContent = String((e.error ? (e.error.stack || e.error.message) : e.message));
+  errDiv.replaceChildren(title, detail);
   document.body.appendChild(errDiv);
 });
 
@@ -62,7 +74,12 @@ window.addEventListener("unhandledrejection", function(e) {
   const errDiv = document.createElement("div");
   errDiv.style.cssText = "position:absolute;inset:0;padding:20px;color:#ef4444;background:rgba(15,23,42,0.96);font-family:monospace;font-size:13px;z-index:9999;overflow:auto;";
   const msg = e.reason ? (e.reason.stack || e.reason.message || String(e.reason)) : "Unhandled Promise Rejection";
-  errDiv.innerHTML = "<h4 style='margin:0 0 8px;color:#f87171;'>Simulation Promise Rejection</h4><pre style='white-space:pre-wrap;margin:0;'>" + msg + "</pre>";
+  const title = document.createElement("h4");
+  title.textContent = "Simulation Promise Rejection";
+  const detail = document.createElement("pre");
+  detail.style.cssText = "white-space:pre-wrap;margin:0;";
+  detail.textContent = String(msg);
+  errDiv.replaceChildren(title, detail);
   document.body.appendChild(errDiv);
 });
 
@@ -96,6 +113,24 @@ window.bkUi = function() {
   return window.__bkTheme.ui || "standard";
 };
 
+function bkSyncBackground() {
+  const bg = window.bkColor("bg");
+  if (bg) {
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+  }
+}
+bkSyncBackground();
+
+window.bkTelemetry = function(data) {
+  if (!data || typeof data !== "object") return;
+  if (window.parent && window.parent !== window) {
+    try {
+      window.parent.postMessage({ type: "bk:telemetry", data: data }, "*");
+    } catch (_) {}
+  }
+};
+
 window.addEventListener("message", function(e) {
   if (e.source !== window.parent || !e.data) return;
   if (e.data.type === "bk:theme-sync") {
@@ -116,7 +151,7 @@ window.addEventListener("message", function(e) {
     window.__currentStepIndex = e.data.stepIndex ?? 0;
     window.__currentStepData = e.data.step || null;
     const stepProps = e.data.props || e.data.step?.initialProps || {};
-    window.__simProps = { ...window.__simProps, ...stepProps, step: window.__currentStepIndex };
+    window.__simProps = { ...(e.data.replaceProps ? {} : window.__simProps), ...stepProps, step: window.__currentStepIndex };
     window.dispatchEvent(new CustomEvent("bk:props", { detail: window.__simProps }));
     window.__bkStepCallbacks.forEach(function(fn) {
       try { fn(window.__currentStepIndex, window.__currentStepData, window.__simProps); } catch(err) { console.error(err); }
@@ -131,7 +166,7 @@ window.addEventListener("message", function(e) {
       window.__loop = false;
     }
     if (e.data.props) {
-      window.__simProps = { ...window.__simProps, ...e.data.props, step: window.__currentStepIndex };
+      window.__simProps = { ...(e.data.replaceProps ? {} : window.__simProps), ...e.data.props, step: window.__currentStepIndex };
       window.dispatchEvent(new CustomEvent("bk:props", { detail: window.__simProps }));
     }
     window.__bkResetCallbacks.forEach(function(fn) {
@@ -176,60 +211,10 @@ if (window.parent && window.parent !== window) {
   window.addEventListener("pointerdown", function() {
     window.parent.postMessage({ type: "bk:steps-user-interacted" }, "*");
   }, { passive: true });
-  window.addEventListener("keydown", function(e) {
-    if (e.defaultPrevented) return;
-    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable)) {
-      return;
-    }
-    if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " " || e.key === "r" || e.key === "R") {
-      if (e.key === " ") {
-        e.preventDefault();
-      }
-      window.parent.postMessage({
-        type: "bk:steps-keydown",
-        key: e.key
-      }, "*");
-    }
-  });
+
 }
 
-window.bkCanvasPoint = function(event, canvas) {
-  const c = canvas || event.currentTarget || event.target;
-  const rect = c.getBoundingClientRect();
-  const logicalW = c.__bkLogicalW || 800;
-  const logicalH = c.__bkLogicalH || 450;
-  const clientX = event.clientX !== undefined ? event.clientX : (event.touches?.[0]?.clientX ?? event.changedTouches?.[0]?.clientX ?? 0);
-  const clientY = event.clientY !== undefined ? event.clientY : (event.touches?.[0]?.clientY ?? event.changedTouches?.[0]?.clientY ?? 0);
-  return {
-    x: rect.width ? ((clientX - rect.left) * logicalW) / rect.width : 0,
-    y: rect.height ? ((clientY - rect.top) * logicalH) / rect.height : 0
-  };
-};
-
-window.bkFitCanvas = function(c, requestedW, requestedH) {
-  if (!c) return { scale: 1, width: requestedW, height: requestedH, cssScale: 1 };
-  const dpr = window.devicePixelRatio || 1;
-  const w = requestedW || 800;
-  const h = requestedH || 450;
-  c.__bkLogicalW = w;
-  c.__bkLogicalH = h;
-  c.style.width = w + "px";
-  c.style.height = h + "px";
-  c.style.position = "relative";
-  c.style.transformOrigin = "center center";
-  const scaleX = window.innerWidth / w;
-  const scaleY = window.innerHeight / h;
-  const cssScale = Math.min(scaleX, scaleY);
-  c.style.transform = "scale(" + cssScale + ")";
-  const physW = Math.max(1, Math.round(w * dpr));
-  const physH = Math.max(1, Math.round(h * dpr));
-  if (c.width !== physW || c.height !== physH) {
-    c.width = physW;
-    c.height = physH;
-  }
-  return { scale: dpr, width: w, height: h, cssScale };
-};
-
+${canvasFramingRuntime(450)}
 window.bkOnStep = function(callback) {
   window.__bkStepCallbacks.push(callback);
   if (window.__currentStepData !== null) {
@@ -241,20 +226,55 @@ window.bkOnReset = function(callback) {
   window.__bkResetCallbacks.push(callback);
 };
 
-window.bkSetup = function(requestedW, requestedH, loopFn) {
+window.bkSetup = function(requestedW, requestedH, loopFnOrOpts, maybeLoopFn) {
   window.bkSetupCalled = true;
   const canvas = document.getElementById("c");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
+
+  const loopFn = typeof loopFnOrOpts === "function" ? loopFnOrOpts : maybeLoopFn;
+  const options = (typeof loopFnOrOpts === "object" && loopFnOrOpts !== null) ? loopFnOrOpts : ((typeof maybeLoopFn === "object" && maybeLoopFn !== null) ? maybeLoopFn : {});
+  if (typeof loopFn !== "function") return;
+
   let loopId = null;
-  let cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450);
+  let cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450, options);
 
   function renderFrame() {
     if (window.innerWidth >= 32 && window.innerHeight >= 32) {
-      cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450);
+      cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450, options);
       ctx.save();
-      ctx.scale(cachedFit.scale, cachedFit.scale);
-      loopFn(ctx, cachedFit.width, cachedFit.height);
+      if (cachedFit.framing !== "contain") {
+        ctx.scale(cachedFit.scale, cachedFit.scale);
+
+        const bg = window.bkColor("bg");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, cachedFit.windowWidth, cachedFit.windowHeight);
+
+        ctx.save();
+        ctx.translate(cachedFit.offsetX, cachedFit.offsetY);
+        ctx.scale(cachedFit.fitScale, cachedFit.fitScale);
+
+        const frameInfo = {
+          width: cachedFit.width,
+          height: cachedFit.height,
+          scale: cachedFit.fitScale,
+          offsetX: cachedFit.offsetX,
+          offsetY: cachedFit.offsetY,
+          viewportWidth: cachedFit.viewportWidth,
+          viewportHeight: cachedFit.viewportHeight,
+          originX: cachedFit.originX,
+          originY: cachedFit.originY,
+          windowWidth: cachedFit.windowWidth,
+          windowHeight: cachedFit.windowHeight,
+          framing: cachedFit.framing
+        };
+
+        loopFn(ctx, cachedFit.width, cachedFit.height, frameInfo);
+        ctx.restore();
+      } else {
+        ctx.scale(cachedFit.scale, cachedFit.scale);
+        loopFn(ctx, cachedFit.width, cachedFit.height);
+      }
       ctx.restore();
     }
   }
@@ -286,7 +306,7 @@ window.bkSetup = function(requestedW, requestedH, loopFn) {
 
   function initDraw() {
     if (window.innerWidth >= 32 && window.innerHeight >= 32) {
-      cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450);
+      cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450, options);
       loop();
     } else {
       requestAnimationFrame(initDraw);
@@ -295,7 +315,7 @@ window.bkSetup = function(requestedW, requestedH, loopFn) {
   initDraw();
 
   function handleResize() {
-    cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450);
+    cachedFit = window.bkFitCanvas(canvas, requestedW || 800, requestedH || 450, options);
     if (!window.__loop) {
       renderFrame();
     }

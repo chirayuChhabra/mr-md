@@ -8,6 +8,11 @@ export function bkInitInteractiveFrames() {
 				entries.forEach((e) => {
 					const frame = e.target;
 					const iframe = frame.querySelector("iframe");
+					if (
+						frame.classList.contains("bk-sim-preview") &&
+						frame.closest(".bk-object--maximized")
+					)
+						return;
 					if (!e.isIntersecting) {
 						if (frame.classList.contains("is-interactive")) {
 							frame.classList.remove("is-interactive");
@@ -67,6 +72,8 @@ export function bkWireInteractiveFrames() {
 			});
 
 		if (activateFrame) {
+			if (activateFrame.classList.contains("bk-sim-preview")) return;
+
 			const isSteps = obj?.classList.contains("bk-steps-object");
 
 			// For step-by-step simulations, reading banner text, toggling hints, audio,
@@ -138,7 +145,8 @@ export function bkWireInteractiveFrames() {
 				} else {
 					if (
 						frame.dataset.isAnimation === "true" ||
-						frame.classList.contains("is-interactive")
+						(frame.classList.contains("is-interactive") &&
+							frame.closest(".bk-object")?.dataset.bkPlaybackState !== "paused")
 					) {
 						iframe.contentWindow.postMessage({ type: "bk:play" }, "*");
 					}

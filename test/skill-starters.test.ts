@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
+import { defineSimulation } from "../src/simulation.js";
 import { parseLesson } from "../src/parser/mdx.js";
 
 const base = resolve(import.meta.dir, "../skills/mr-md-simulations/assets");
@@ -15,7 +16,13 @@ test("starter configs route through the real lesson parser", () => {
 test("steps starter pauses, completes once, and resets on step changes", () => {
   let draw: Function, onStep: Function, onReset: Function;
   let now = 0, completions = 0;
+  const listeners = new Map<string, Function[]>();
+  const parent = { postMessage() {} };
   const window = {
+    parent,
+    addEventListener: (name: string, fn: Function) => { listeners.set(name, [...(listeners.get(name) || []), fn]); },
+    removeEventListener() {},
+    dispatchEvent: (event: Event) => { for (const fn of listeners.get(event.type) || []) fn(event); },
     __loop: false, __simProps: { speed: 100, target: 1 },
     bkOnStep: (fn: Function) => { onStep = fn; },
     bkOnReset: (fn: Function) => { onReset = fn; },
@@ -23,12 +30,12 @@ test("steps starter pauses, completes once, and resets on step changes", () => {
     bkColor: () => "#000", bkCompleteStep: () => { completions++; },
   };
   const ctx = new Proxy({}, { get: () => () => {} });
-  runInNewContext(readFileSync(resolve(base, "steps.js"), "utf8"), { window, performance: { now: () => now } });
-  const render = () => { now += 50; draw!(ctx, 800, 450); };
+  runInNewContext(`window.defineSimulation = ${defineSimulation.toString()};\n${readFileSync(resolve(base, "steps.js"), "utf8")}`, { window, structuredClone, CustomEvent, performance: { now: () => now } });
+  const render = () => { now += 50; for (const fn of listeners.get("message") || []) fn({source:parent,data:{type:window.__loop ? "bk:play" : "bk:pause"}}); draw!(ctx, 800, 450); };
   render(); expect(completions).toBe(0);
   window.__loop = true; render(); render(); expect(completions).toBe(1);
-  onReset!(); render(); expect(completions).toBe(2);
-  onStep!(); render(); expect(completions).toBe(3);
+  onReset!(); render(); render(); expect(completions).toBe(2);
+  onStep!(); render(); render(); expect(completions).toBe(3);
 });
 
 test("2D world starter draws through host world setup", () => {

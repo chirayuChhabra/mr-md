@@ -26,8 +26,9 @@ text generation before promising silence or automatic narration.
 ## Runtime hooks and state
 
 Register `bkOnStep((index, step, props) => ...)` and `bkOnReset((index, step) => ...)`
-once. The index is zero-based. Step selection merges props rather than clearing
-all old values: define every step-dependent default explicitly. Initialize model
+once. The index is zero-based. Step selection and trial reset restore top-level props plus the current step
+`initialProps`. Define common defaults at the top level and every step-dependent
+difference explicitly; previous trial edits are discarded on entry/reset. Initialize model
 state from the supplied props, not only from module-start values. Reset position,
 velocity, elapsed time, drag state, and the local completion guard on each trial.
 
@@ -52,3 +53,19 @@ sound quality. Check console, narrow/fullscreen layouts, and live appearance.
 
 Source: `src/types.ts`, `src/renderer/blocks/steps.ts`, `steps-iframe.ts`,
 `src/client/steps.ts`, and `test/steps.test.ts`.
+
+
+## Shared workspace and typed runtime
+
+Keep steps inline interactive with their instructions, hints, and progress.
+Do not convert them into block-style thumbnails as a side effect of shared
+workspace changes. Expansion isolates the lesson and contains keyboard focus;
+closing pauses the trial and narration without erasing solved progress.
+
+The optional `defineSimulation` runtime works in steps too. `sim.onReset` adapts
+the existing trial-reset lifecycle, receiving current trial props. Continue to
+use `bkOnStep` for step initialization and `bkCompleteStep` for success. Register
+one reset path per model, rather than both `bkOnReset` and `sim.onReset` for the
+same callback. `sim.deltaTime()` keeps physics paused during redraws. Never
+reload a steps iframe for a normal trial reset: that would lose the activity
+lifecycle and its model callbacks.

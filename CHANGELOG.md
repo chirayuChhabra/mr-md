@@ -7,11 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Full-Window Simulation Workspace & Inspector**:
+  - Modal lab dialog (`role="dialog"`, `aria-modal="true"`) expanding inline block and step simulations into a focused stage and inspector column.
+  - Background isolation setting non-active elements `inert`, accessible focus trapping within the dialog, and restoring lesson scroll position and prior focus upon exit.
+  - Dual-tab inspector layout separating `Controls` and `Measurements` when telemetry is present, with continuation cues for scrollable panels.
+  - Centered playback controls with Pause/Resume and in-place Reset buttons.
+  - Pause overlay on the stage with a Resume trigger and keyboard hints.
+  - Global keyboard shortcuts: `Space` to toggle play/pause, `R` to reset model or trial, `←` / `→` for step navigation, and `Escape` to close the workspace.
+- **Abstract Live Telemetry**:
+  - Companion config `telemetry` schema defining named outputs with `label`, `unit`, `precision`, `group`, `description`, and `display` (`metric`, `status`, or `row`).
+  - Runtime publishing via `sim.publishTelemetry()` and global `window.bkTelemetry()`.
+  - Host-side update coalescing with `requestAnimationFrame` to avoid layout thrashing during animation frames.
+  - Readout formatting with unit badges and explicit `—` placeholders for unpublished or null values.
+- **Typed Authoring SDK & Configuration Schema**:
+  - Packaged `mr-md/simulation` module and global `window.defineSimulation({ props })` runtime providing typed `props`, `isPlaying`, `onPropsChange`, `onReset`, `onPlaybackChange`, `publishTelemetry`, `deltaTime()`, and `dispose()`.
+  - Frame delta calculation via `deltaTime()` returning elapsed seconds while active, zero while paused, and capped at 0.1s after delays.
+  - Exported JSON Schema (`mr-md/simulation.schema.json`) for IDE completion in sibling `.config.json` files.
+  - Ahead-of-time configuration validation (`validateSimulationConfig`) reporting invalid fields, missing defaults, out-of-bounds ranges, and unknown advanced controls with file and path diagnostics.
+- **Responsive Canvas Framing**:
+  - Responsive canvas contract in `bkSetup` sizing to a minimum logical coordinate area and expanding callback dimensions uniformly without coordinate distortion.
+  - Optional `{ framing: "contain" }` preserving fixed aspect ratios with letterboxing, and `{ framing: "bleed" }` exposing expanded background bounds through callback arguments.
+  - Immediate canvas background synchronization eliminating white flash during theme switches.
+- **Expanded Host Controls Contract**:
+  - Segmented button groups (`type: "segmented"`) and compact pickers (`type: "select"`).
+  - Numeric unit suffixes (`unit: "N/m"`, `"kg"`).
+  - Discrete push-button actions (`actions`) with configurable color tokens (`accent`, `neutral`, `red`, `green`, `amber`) dispatching `bk:action` window events.
+  - Parameter bundles (`presets`) updating all configured properties atomically.
+  - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
+
 ### Fixed
 - Improve syntax highlighting and line number contrast in light-mode code editors.
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Updated guided step simulations (`type: "steps"`) to integrate with the shared modal workspace, isolating trial parameter resets (`initialProps`) without reloading iframes.
+- In-place model reset via `sim.onReset` or `window.bkOnReset`, with automatic iframe reload fallback for legacy simulations.
 - Instruct the simulation skill to preserve existing lesson content and flag potential inaccuracies without editing them unless asked.
 
 ## [4.0.0-alpha.2] - 2026-11-02

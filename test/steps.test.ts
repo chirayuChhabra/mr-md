@@ -274,7 +274,7 @@ describe("Step-by-Step Simulation Framework", () => {
 
 		test("injects keyboard forwarding and flexible bkCompleteStep signature", () => {
 			const doc = stepsIframeDoc("console.log('sim')", "{}");
-			expect(doc).toContain("bk:steps-keydown");
+			expect(doc).toContain("bk:workspace-keydown");
 			expect(doc).toContain("ArrowLeft");
 			expect(doc).toContain("ArrowRight");
 			expect(doc).toContain("voice: voice");

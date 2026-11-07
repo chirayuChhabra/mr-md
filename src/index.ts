@@ -12,6 +12,17 @@ export {
 	preloadLanguagesFromMarkdown,
 } from "./renderer/markdown/index.js";
 export type {
+	SimulationConfigIssue,
+	ValidatedSimulationConfig,
+} from "./simulation-config.js";
+
+export {
+	SimulationConfigError,
+	simulationConfigJsonSchema,
+	simulationConfigSchema,
+	validateSimulationConfig,
+} from "./simulation-config.js";
+export type {
 	AnimationBlock,
 	AnimationOptions,
 	Block,

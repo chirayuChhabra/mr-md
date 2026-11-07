@@ -912,9 +912,15 @@ function drawPredictionArc(ctx, points, isDark, accent) {
 }
 
 // ─── Main Canvas Render Loop ───
-window.bkSetup(800, 450, (ctx, W, H) => {
-  simTime += 0.025;
-  stationAngle += 0.012;
+window.bkSetup(800, 450, (ctx, W, H, frame) => {
+  const viewX = frame?.originX ?? 0;
+  const viewY = frame?.originY ?? 0;
+  const viewWidth = frame?.viewportWidth ?? W;
+  const viewHeight = frame?.viewportHeight ?? H;
+  if (window.__loop) {
+    simTime += 0.025;
+    stationAngle += 0.012;
+  }
 
   const isDark = window.bkThemeMode() === "dark";
   const bg = isDark ? (window.bkColor("bg") || "#070b14") : "#f1f5f9";
@@ -926,7 +932,7 @@ window.bkSetup(800, 450, (ctx, W, H) => {
   // 1. Atmosphere / Space Canvas Background
   if (isDark) {
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(viewX, viewY, viewWidth, viewHeight);
 
     // Deep space stars only in Dark Mode
     for (let i = 0; i < STARS.length; i++) {
@@ -944,7 +950,7 @@ window.bkSetup(800, 450, (ctx, W, H) => {
     lightBg.addColorStop(0.7, "#f1f5f9");
     lightBg.addColorStop(1, "#e2e8f0");
     ctx.fillStyle = lightBg;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(viewX, viewY, viewWidth, viewHeight);
   }
 
   // Subtle telemetry range rings centered on the primary planet
@@ -984,13 +990,13 @@ window.bkSetup(800, 450, (ctx, W, H) => {
   ctx.lineWidth = 1;
   const cLen = 8;
   // Top-left
-  ctx.beginPath(); ctx.moveTo(14, 14 + cLen); ctx.lineTo(14, 14); ctx.lineTo(14 + cLen, 14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(viewX + 14, viewY + 14 + cLen); ctx.lineTo(viewX + 14, viewY + 14); ctx.lineTo(viewX + 14 + cLen, viewY + 14); ctx.stroke();
   // Top-right
-  ctx.beginPath(); ctx.moveTo(W - 14 - cLen, 14); ctx.lineTo(W - 14, 14); ctx.lineTo(W - 14, 14 + cLen); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(viewX + viewWidth - 14 - cLen, viewY + 14); ctx.lineTo(viewX + viewWidth - 14, viewY + 14); ctx.lineTo(viewX + viewWidth - 14, viewY + 14 + cLen); ctx.stroke();
   // Bottom-left
-  ctx.beginPath(); ctx.moveTo(14, H - 14 - cLen); ctx.lineTo(14, H - 14); ctx.lineTo(14 + cLen, H - 14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(viewX + 14, viewY + viewHeight - 14 - cLen); ctx.lineTo(viewX + 14, viewY + viewHeight - 14); ctx.lineTo(viewX + 14 + cLen, viewY + viewHeight - 14); ctx.stroke();
   // Bottom-right
-  ctx.beginPath(); ctx.moveTo(W - 14 - cLen, H - 14); ctx.lineTo(W - 14, H - 14); ctx.lineTo(W - 14, H - 14 - cLen); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(viewX + viewWidth - 14 - cLen, viewY + viewHeight - 14); ctx.lineTo(viewX + viewWidth - 14, viewY + viewHeight - 14); ctx.lineTo(viewX + viewWidth - 14, viewY + viewHeight - 14 - cLen); ctx.stroke();
   ctx.restore();
 
   // 2. Draw Celestial Bodies (Planets)
@@ -1189,19 +1195,17 @@ window.bkSetup(800, 450, (ctx, W, H) => {
     ctx.restore();
 
     // Telemetry readout above handle
-    const currentSpeed = Math.hypot(currentV0.x, currentV0.y).toFixed(1);
-    const currentAngleDeg = ((-Math.atan2(currentV0.y, currentV0.x) * 180) / Math.PI).toFixed(0);
 
     ctx.save();
     ctx.fillStyle = accent;
     ctx.font = "bold 11px system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`v₀ = ${currentSpeed} km/s  •  θ = ${currentAngleDeg}°`, handleX, handleY - reticleRadius - 10);
+
     ctx.restore();
   }
 
   // 6. Physics Simulation Step of Spacecraft
-  if (probe && probe.hasLaunched && !isDragging) {
+  if (window.__loop && probe && probe.hasLaunched && !isDragging) {
     if (probe.docked) {
       // ─── Case A: Securely Docked at Space Station ───
       const target = stepData.target;
@@ -1391,7 +1395,7 @@ window.bkSetup(800, 450, (ctx, W, H) => {
         if (!restartTimer) {
           restartTimer = setTimeout(() => {
             restartTimer = null;
-            if (!solved) resetProbe(false);
+            if (!solved && window.__loop) resetProbe(false);
           }, 1200);
         }
       }
@@ -1412,9 +1416,11 @@ window.bkSetup(800, 450, (ctx, W, H) => {
 
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life -= 0.025;
+    if (window.__loop) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.025;
+    }
     if (p.life <= 0) {
       particles.splice(i, 1);
       continue;
@@ -1517,65 +1523,13 @@ window.bkSetup(800, 450, (ctx, W, H) => {
     statusDetail = `INITIAL VECTOR: ${initSpd} km/s • DRAG CROSSHAIR TO AIM & FIRE`;
   }
 
-  // Draw telemetry bar pill
-  let pillBg, pillBorder, pillText;
-  if (isDark) {
-    pillBg = "rgba(15, 23, 42, 0.94)";
-    if (hudType === "emerald") {
-      pillBorder = "#10b981";
-      pillText = "#34d399";
-    } else if (hudType === "red") {
-      pillBorder = "#ef4444";
-      pillText = "#f87171";
-    } else if (hudType === "amber") {
-      pillBorder = "#f59e0b";
-      pillText = "#fcd34d";
-    } else {
-      pillBorder = "#38bdf8";
-      pillText = "#7dd3fc";
-    }
-  } else {
-    if (hudType === "emerald") {
-      pillBg = "#d1fae5";
-      pillBorder = "#10b981";
-      pillText = "#065f46";
-    } else if (hudType === "red") {
-      pillBg = "#fee2e2";
-      pillBorder = "#ef4444";
-      pillText = "#991b1b";
-    } else if (hudType === "amber") {
-      pillBg = "#fef3c7";
-      pillBorder = "#d97706";
-      pillText = "#92400e";
-    } else {
-      pillBg = "#e0f2fe";
-      pillBorder = "#0284c7";
-      pillText = "#0369a1";
-    }
-  }
-
-  const uiStyle = window.bkUi ? window.bkUi() : "standard";
-  const pillRadius = uiStyle === "neo" ? 2 : (uiStyle === "playful" ? 12 : 6);
-
-  ctx.fillStyle = pillBg;
-  ctx.strokeStyle = pillBorder;
-  ctx.lineWidth = uiStyle === "neo" ? 2 : 1.5;
-  ctx.beginPath();
-  ctx.roundRect(18, H - 34, W - 36, 24, pillRadius);
-  ctx.fill();
-  ctx.stroke();
-
-  // Left side: status badge
-  ctx.fillStyle = pillText;
-  ctx.font = "bold 11px system-ui, sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(statusBadge, 30, H - 18);
-
-  // Right side: live telemetry readout
-  ctx.font = "10px monospace, system-ui, sans-serif";
-  ctx.textAlign = "right";
-  ctx.fillText(statusDetail, W - 30, H - 18);
-
+  window.bkTelemetry({
+    status: statusBadge,
+    detail: statusDetail,
+    speed: probe && probe.hasLaunched ? Math.hypot(probe.vx, probe.vy) : null,
+    initialSpeed: Math.hypot(currentV0.x, currentV0.y),
+    pitch: -Math.atan2(currentV0.y, currentV0.x) * 180 / Math.PI
+  });
   ctx.restore();
 
   // 10. Modulate continuous dynamic gravity and atmospheric audio in real time

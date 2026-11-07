@@ -76,6 +76,8 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		await frame!.evaluate(() => {
 			const canvas = document.getElementById("c") as HTMLCanvasElement;
 			const context = canvas.getContext("2d")!;
+			(window as any).__telemetry = {};
+			(window as any).bkTelemetry = (values: object) => { (window as any).__telemetry = values; };
 			const original = context.fillText.bind(context);
 			(window as any).__drawnText = [];
 			context.fillText = ((...args: Parameters<CanvasRenderingContext2D["fillText"]>) => {
@@ -157,6 +159,8 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		await frame!.evaluate(() => {
 			const canvas = document.getElementById("c") as HTMLCanvasElement;
 			const context = canvas.getContext("2d")!;
+			(window as any).__telemetry = {};
+			(window as any).bkTelemetry = (values: object) => { (window as any).__telemetry = values; };
 			const original = context.fillText.bind(context);
 			(window as any).__drawnText = [];
 			context.fillText = ((...args: Parameters<CanvasRenderingContext2D["fillText"]>) => {
@@ -199,7 +203,7 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 
 		await delay(300);
 
-		expect(await frame!.evaluate(() => (window as any).__drawnText.includes("1.000"))).toBe(true);
+		expect(await frame!.evaluate(() => (window as any).__telemetry.dampingRatio)).toBeCloseTo(1, 3);
 
 		// Verify no errors occurred on preset update
 		const errorCheck = await frame!.evaluate(() => {
@@ -250,6 +254,8 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		await frame!.evaluate(() => {
 			const canvas = document.getElementById("c") as HTMLCanvasElement;
 			const context = canvas.getContext("2d")!;
+			(window as any).__telemetry = {};
+			(window as any).bkTelemetry = (values: object) => { (window as any).__telemetry = values; };
 			const original = context.fillText.bind(context);
 			(window as any).__drawnText = [];
 			context.fillText = ((...args: Parameters<CanvasRenderingContext2D["fillText"]>) => {
@@ -307,9 +313,9 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		});
 
 		expect(postReset).not.toBe(postImpulse2);
-		const resetReadout = await frame!.evaluate(() => (window as any).__drawnText.slice(-35));
-		expect(resetReadout).toContain("+0.000 m");
-		expect(resetReadout).toContain("+0.000 m/s");
+		const resetReadout = await frame!.evaluate(() => (window as any).__telemetry);
+		expect(resetReadout.displacement).toBeCloseTo(0, 3);
+		expect(resetReadout.velocity).toBeCloseTo(0, 3);
 
 		// Ensure no iframe errors throughout
 		const hasError = await frame!.evaluate(() => document.body.innerText.includes("Error:"));
@@ -335,6 +341,8 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		await frame!.evaluate(() => {
 			const canvas = document.getElementById("c") as HTMLCanvasElement;
 			const context = canvas.getContext("2d")!;
+			(window as any).__telemetry = {};
+			(window as any).bkTelemetry = (values: object) => { (window as any).__telemetry = values; };
 			const original = context.fillText.bind(context);
 			(window as any).__drawnText = [];
 			context.fillText = ((...args: Parameters<CanvasRenderingContext2D["fillText"]>) => {

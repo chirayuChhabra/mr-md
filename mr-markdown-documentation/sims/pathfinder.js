@@ -5,12 +5,10 @@
 
 let mazeDensity = 25;
 let diagonal = false;
-let showStats = true;
 
 if (window.__simProps) {
   if (window.__simProps.mazeDensity !== undefined) mazeDensity = window.__simProps.mazeDensity;
   if (window.__simProps.diagonal !== undefined) diagonal = window.__simProps.diagonal;
-  if (window.__simProps.showStats !== undefined) showStats = window.__simProps.showStats;
 }
 
 window.addEventListener("bk:props", (e) => {
@@ -26,10 +24,6 @@ window.addEventListener("bk:props", (e) => {
     diagonal = p.diagonal;
     needSolve = true;
   }
-  if (p.showStats !== undefined && p.showStats !== showStats) {
-    showStats = p.showStats;
-  }
-  
   if (needMazeRegen) {
     generateMaze();
     solveAlgorithm();
@@ -39,7 +33,7 @@ window.addEventListener("bk:props", (e) => {
 });
 
 const COLS = 40;
-const ROWS = 26;
+let ROWS = 26;
 let grid = [];
 let startNode;
 let endNode;
@@ -190,21 +184,26 @@ let initialized = false;
 let cellW = 0;
 let cellH = 0;
 let time = 0;
+let viewportX = 0;
+let viewportY = 0;
 
-function draw(ctx, logicalW, logicalH) {
+function draw(ctx, logicalW, logicalH, frame) {
+  const viewportWidth = frame?.viewportWidth ?? logicalW;
+  const viewportHeight = frame?.viewportHeight ?? logicalH;
+  viewportX = frame?.originX ?? 0;
+  viewportY = frame?.originY ?? 0;
+  cellW = viewportWidth / COLS;
+  cellH = viewportHeight / ROWS;
+  ctx.translate(viewportX, viewportY);
   if (!initialized) {
     const canvas = ctx.canvas;
     canvas.style.touchAction = "none";
     
-    cellW = logicalW / COLS;
-    cellH = logicalH / ROWS;
 
     function getCell(e) {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = logicalW / rect.width;
-      const scaleY = logicalH / rect.height;
-      const lx = (e.clientX - rect.left) * scaleX;
-      const ly = (e.clientY - rect.top) * scaleY;
+      const point = window.bkCanvasPoint(e, canvas);
+      const lx = point.x - viewportX;
+      const ly = point.y - viewportY;
       const c = Math.floor(lx / cellW);
       const r = Math.floor(ly / cellH);
       return {c, r};
@@ -265,32 +264,6 @@ function draw(ctx, logicalW, logicalH) {
     generateMaze();
     solveAlgorithm();
 
-    // Create HTML HUD Overlay for blur effect
-    const hud = document.createElement('div');
-    hud.style.position = 'absolute';
-    hud.style.top = '15px';
-    hud.style.left = '15px';
-    hud.style.pointerEvents = 'none'; // allow clicks to pass through to grid
-    hud.style.fontFamily = 'monospace';
-    hud.style.zIndex = '10';
-    hud.style.transition = 'opacity 0.25s ease';
-    hud.style.overflow = 'hidden';
-    hud.style.boxSizing = 'border-box';
-    hud.style.borderRadius = '12px';
-    hud.style.padding = '12px 16px';
-    
-    // WebKit specific blur for Safari
-    hud.style.backdropFilter = 'blur(12px)';
-    hud.style.webkitBackdropFilter = 'blur(12px)';
-
-    if (canvas.parentElement) {
-      if (getComputedStyle(canvas.parentElement).position === 'static') {
-        canvas.parentElement.style.position = 'relative';
-      }
-      canvas.parentElement.appendChild(hud);
-    }
-    window.__pathfinderHUD = hud;
-
     initialized = true;
   }
   
@@ -298,7 +271,7 @@ function draw(ctx, logicalW, logicalH) {
 
   // Background
   ctx.fillStyle = bkColor('bg');
-  ctx.fillRect(0, 0, logicalW, logicalH);
+  ctx.fillRect(0, 0, viewportWidth, viewportHeight);
 
   // Draw Grid
   for (let c = 0; c < COLS; c++) {
@@ -465,36 +438,10 @@ function draw(ctx, logicalW, logicalH) {
     ctx.restore();
   }
 
-  // Update HTML HUD
-  if (window.__pathfinderHUD) {
-    const isDarkHUD = bkThemeMode() === "dark";
-    
-    // Dynamic styling for theme
-    window.__pathfinderHUD.style.background = isDarkHUD ? 'rgba(25, 25, 30, 0.6)' : 'rgba(255, 255, 255, 0.35)'; // More transparent for better blur in light mode
-    window.__pathfinderHUD.style.border = isDarkHUD ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.15)';
-    window.__pathfinderHUD.style.color = window.bkColor('text') || (isDarkHUD ? '#fff' : '#000');
-    window.__pathfinderHUD.style.boxShadow = isDarkHUD ? '0 4px 15px rgba(0,0,0,0.4)' : '0 4px 15px rgba(0,0,0,0.1)';
-
-    if (showStats) {
-      window.__pathfinderHUD.style.display = 'block';
-      window.__pathfinderHUD.style.opacity = '1';
-
-      let text2Html = '';
-      if (noSolution) {
-        text2Html = `<div style="font-weight: bold;">NO PATH FOUND!</div>`;
-      } else if (algorithmDone) {
-        const accentColor = window.bkColor('accent') || (isDarkHUD ? '#fff' : '#000');
-        text2Html = `<div style="color: ${accentColor}; font-weight: bold;">Shortest Path Length: ${path.length} steps</div>`;
-      }
-      
-      window.__pathfinderHUD.innerHTML = `
-        ${text2Html}
-      `;
-    } else {
-      window.__pathfinderHUD.style.display = 'none';
-      window.__pathfinderHUD.style.opacity = '0';
-    }
-  }
+  window.bkTelemetry({
+    status: noSolution ? "No path found" : algorithmDone ? "Path found" : "Searching",
+    pathLength: algorithmDone && !noSolution ? Math.max(0, path.length - 1) : null
+  });
 }
 
 window.bkSetup(1280, 720, draw);
