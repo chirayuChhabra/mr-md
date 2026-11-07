@@ -22,7 +22,10 @@ chapters/
 lessons/
 update-*.py
 
-playground*
+playground/*
+!playground/orbital-telemetry/
+playground/**/out/
 
 .idea/
 .agents/
+skills/system/

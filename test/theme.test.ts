@@ -86,4 +86,5 @@ describe("simulation theme colors", () => {
 		expect(css).toContain('color: #ffffff !important;');
 		expect(css).toContain('background: #ef4444 !important;');
 	});
+
 });

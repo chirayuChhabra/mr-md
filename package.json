@@ -10,6 +10,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./simulation.schema.json": "./dist/simulation.schema.json",
+    "./simulation": {
+      "types": "./dist/simulation.d.ts",
+      "import": "./dist/simulation.js",
+      "default": "./dist/simulation.js"
     }
   },
   "bin": {

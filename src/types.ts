@@ -78,6 +78,7 @@ export interface SimulationBlock extends BaseBlock, CaptionedBlock {
 	actions?: Record<string, SimulationAction>;
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
+	telemetry?: SimulationTelemetry;
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // iframe height, default 400
 	controls?: "interactive" | "observe";
@@ -94,6 +95,7 @@ export interface WorldBlock extends BaseBlock, CaptionedBlock {
 	actions?: Record<string, SimulationAction>;
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
+	telemetry?: SimulationTelemetry;
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // portal preview height, default 480
 	accent?: BlockAccent;
@@ -172,6 +174,7 @@ export interface StepsBlock extends BaseBlock, CaptionedBlock {
 	actions?: Record<string, SimulationAction>;
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
+	telemetry?: SimulationTelemetry;
 	height?: number;
 	accent?: BlockAccent;
 	dependencies?: string[];
@@ -281,6 +284,7 @@ export interface SimulationOptions {
 	actions?: Record<string, SimulationAction>;
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
+	telemetry?: SimulationTelemetry;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -308,6 +312,7 @@ export interface StepsOptions {
 	actions?: Record<string, SimulationAction>;
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
+	telemetry?: SimulationTelemetry;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -329,6 +334,7 @@ export interface WorldOptions {
 	actions?: Record<string, SimulationAction>;
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
+	telemetry?: SimulationTelemetry;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -357,7 +363,21 @@ export interface SimulationControl {
 	unit?: string;
 	options?: Array<SimulationControlOption>;
 	advanced?: boolean;
+	/** Named inspector section. Declaration order is preserved within sections. */
+	group?: string;
 }
+
+/** Represents a declared telemetry quantity published by a simulation */
+export interface SimulationTelemetryItem {
+	label?: string;
+	unit?: string;
+	precision?: number;
+	group?: string;
+	description?: string;
+	display?: "metric" | "status" | "row";
+}
+
+export type SimulationTelemetry = Record<string, SimulationTelemetryItem>;
 
 export interface AnimationOptions {
 	loop?: boolean;
@@ -405,3 +425,56 @@ export interface Chapter {
 	meta: ChapterMeta;
 	lessons: Lesson[];
 }
+
+// ─── Simulation Runtime Messages ─────────────────────────────────────────────
+
+export type SimulationHostToIframeMessage =
+	| { type: "bk:play" }
+	| { type: "bk:pause" }
+	| { type: "bk:sim-play-state"; playing: boolean }
+	| { type: "bk:set-props"; props: Record<string, unknown> }
+	| { type: "bk:action"; action: string }
+	| { type: "bk:reset"; props: Record<string, unknown>; playing?: boolean }
+	| { type: "bk:runtime-query" }
+	| {
+			type: "bk:steps-set-step";
+			stepIndex: number;
+			step?: unknown;
+			props?: Record<string, unknown>;
+			replaceProps?: boolean;
+	  }
+	| {
+			type: "bk:steps-reset-step";
+			stepIndex: number;
+			props?: Record<string, unknown>;
+			replaceProps?: boolean;
+	  }
+	| { type: "bk:theme-sync"; state: unknown }
+	| { type: "bk:world-enter" }
+	| { type: "bk:world-exit" }
+	| { type: "bk:world-reset-camera" };
+
+export type SimulationIframeToHostMessage =
+	| { type: "bk:runtime-ready"; reset?: boolean }
+	| { type: "bk:reset-complete" }
+	| { type: "bk:telemetry"; data: Record<string, unknown> }
+	| { type: "bk:request-theme" }
+	| { type: "bk:workspace-close" }
+	| { type: "bk:workspace-focus"; direction: "forward" | "backward" }
+	| { type: "bk:steps-ready" }
+	| { type: "bk:steps-user-interacted" }
+	| { type: "bk:steps-complete"; stepIndex?: number; feedback?: string }
+	| {
+			type: "bk:workspace-keydown";
+			key: string;
+			repeat?: boolean;
+			ctrlKey?: boolean;
+			altKey?: boolean;
+			metaKey?: boolean;
+	  }
+	| { type: "bk:mousemove"; clientX: number; clientY: number }
+	| { type: "bk:world-exit" };
+
+export type SimulationMessage =
+	| SimulationHostToIframeMessage
+	| SimulationIframeToHostMessage;

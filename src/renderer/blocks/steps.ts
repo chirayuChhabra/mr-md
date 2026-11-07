@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { PAUSE_ICON, PLAY_ICON, RESET_ICON } from "../../simulation-toolbar.js";
 import type {
 	BuildOptions,
 	SimulationBlock,
@@ -8,7 +9,9 @@ import type {
 } from "../../types.js";
 import {
 	escapeScriptJson,
+	renderInspectorTabs,
 	renderSimulationControls,
+	renderSimulationTelemetry,
 } from "../markdown/index.js";
 import { mdInline } from "../markdown/sanitize.js";
 import { type NavItem, resolveAssetSrc, resolveContent } from "../utils.js";
@@ -130,101 +133,122 @@ export function renderSteps(
 		? `style="height:${block.height}px;"`
 		: "";
 
+	const hasTel = Boolean(
+		block.telemetry && Object.keys(block.telemetry).length > 0,
+	);
+	const telemetryHtml = hasTel
+		? renderSimulationTelemetry(id, block.telemetry!)
+		: "";
+	const inspectorContent = renderInspectorTabs(id, controlsHtml, telemetryHtml);
+	const telemetrySchemaScript = hasTel
+		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry)}</script>`
+		: "";
+
 	const html = `
 <figure id="${id}" class="bk-object bk-object--${escAttr(accent)} bk-steps-object" data-step-count="${steps.length}">
   <div class="bk-object-header">
     <span class="bk-object-kicker">${escHtml(block.kicker || "Step-by-Step Simulation")}</span>
     <span class="bk-object-title">${escHtml(label)}</span>
-    <div class="bk-steps-header-step">
-      <span class="bk-steps-step-badge">Step <strong class="bk-step-cur">1</strong> of ${steps.length}</span>
+    <div class="bk-expanded-sim-picker" hidden></div>
+    <div class="bk-object-actions">
+      <button type="button" class="bk-object-maximize" data-bk-lab-entry aria-label="Open lab" title="Open lab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        <span>Open lab</span>
+      </button>
     </div>
-    <button type="button" class="bk-object-maximize" aria-label="Maximize" title="Maximize">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-    </button>
   </div>
 
-  <div class="bk-steps-banner">
-    <div class="bk-steps-banner-row">
-      <div class="bk-steps-title-group">
-        <h4 class="bk-steps-step-title">${escHtml(firstStep.title)}</h4>
-        ${firstStep.targetHtml ? `<span class="bk-steps-step-target">${firstStep.targetHtml}</span>` : ""}
+  <div class="bk-sim-workspace">
+    <div class="bk-sim-stage">
+      <div class="bk-embed-frame bk-steps-frame bk-embed-interactive bk-sim-preview" ${frameHeightAttr}>
+        <button type="button" class="bk-embed-overlay" data-bk-expand-preview aria-label="Expand step-by-step simulation">
+          <span class="bk-embed-overlay-text">Click to expand</span>
+        </button>
+        <iframe title="${escAttr(label)}" srcdoc="${stepsIframeDoc(simSrc, propsJson, block.dependencies)}"
+          sandbox="allow-scripts"
+          allow="autoplay"
+          style="width:100%;height:100%;border:none;display:block;background:transparent;">
+        </iframe>
+
+      </div>
+            <div class="bk-steps-controls" role="group" aria-label="Simulation playback">
+        <div class="bk-steps-nav">
+          <button type="button" class="bk-steps-btn bk-steps-btn--prev" aria-label="Previous step" title="Previous step (Left Arrow)" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <button type="button" class="bk-steps-btn bk-steps-btn--play is-active" aria-label="Pause / Play" title="Pause / Play (Space)">
+            ${PAUSE_ICON}
+            ${PLAY_ICON}
+          </button>
+          <button type="button" class="bk-steps-btn bk-steps-btn--next" aria-label="Next step" title="Next step (Right Arrow)" ${steps.length <= 1 ? "disabled" : ""}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+
+        <span class="bk-steps-divider" aria-hidden="true"></span>
+
+        <div class="bk-steps-tools">
+          ${
+						hasAnyAudio
+							? `<button type="button" class="bk-steps-btn bk-steps-btn--audio is-active" aria-label="Audio Narration" title="Toggle audio narration">
+            <svg class="bk-icon-audio" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+          </button>`
+							: ""
+					}
+          <button type="button" class="bk-steps-btn bk-steps-btn--reset" aria-label="Reset trial" title="Reset trial (R)">
+            ${RESET_ICON}
+          </button>
+          ${
+						hasAnyHint
+							? `<button type="button" class="bk-steps-btn bk-steps-btn--hint" aria-label="Step Hint" title="Show hint" ${firstStep.hintHtml ? "" : 'style="display:none;"'}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </button>`
+							: ""
+					}
+        </div>
+
+        <div class="bk-steps-progress">
+          <div class="bk-steps-dots">${stepDots}</div>
+        </div>
       </div>
     </div>
-    <div class="bk-steps-instruction"${initialInstruction ? "" : ' style="display:none;"'}>
-      <span class="bk-steps-instruction-badge">What to do</span>
-      <span class="bk-steps-instruction-text">${initialInstruction}</span>
-    </div>
-    <div class="bk-steps-hint-popover" hidden>
-      <div class="bk-steps-hint-header">
-        <span class="bk-steps-hint-label">💡 Hint</span>
-        <button type="button" class="bk-steps-hint-close" aria-label="Close hint">&times;</button>
+
+    <aside class="bk-sim-inspector" aria-label="Step-by-step inspector">
+      <div class="bk-steps-banner">
+        <div class="bk-steps-banner-row">
+          <div class="bk-steps-title-group">
+            <h4 class="bk-steps-step-title">${escHtml(firstStep.title)}</h4>
+            ${firstStep.targetHtml ? `<span class="bk-steps-step-target">${firstStep.targetHtml}</span>` : ""}
+          </div>
+        </div>
+        <div class="bk-steps-instruction"${initialInstruction ? "" : ' style="display:none;"'}>
+          <span class="bk-steps-instruction-text">${initialInstruction}</span>
+        </div>
+        <div class="bk-steps-hint-popover" hidden>
+          <div class="bk-steps-hint-header">
+            <span class="bk-steps-hint-label">Hint</span>
+            <button type="button" class="bk-steps-hint-close" aria-label="Close hint">&times;</button>
+          </div>
+          <div class="bk-steps-hint-content">${firstStep.hintHtml || ""}</div>
+        </div>
       </div>
-      <div class="bk-steps-hint-content">${firstStep.hintHtml || ""}</div>
-    </div>
+
+        <div class="bk-sr-only bk-steps-announcement" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div class="bk-steps-feedback" hidden>
+          <div class="bk-steps-feedback-badge">Step Complete</div>
+          <div class="bk-steps-feedback-msg"></div>
+          <button type="button" class="bk-steps-feedback-next">Next Step &rarr;</button>
+          <button type="button" class="bk-steps-feedback-restart" style="display:none;">Restart Steps &#8635;</button>
+        </div>
+
+      ${inspectorContent}
+
+    </aside>
   </div>
 
-  ${controlsHtml}
-
-  <div class="bk-embed-frame bk-steps-frame bk-embed-interactive" ${frameHeightAttr}>
-    <div class="bk-embed-overlay" tabindex="0" role="button" aria-label="Activate step-by-step simulation">
-      <span class="bk-embed-overlay-text">Click to interact</span>
-    </div>
-    <iframe srcdoc="${stepsIframeDoc(simSrc, propsJson, block.dependencies)}"
-      sandbox="allow-scripts"
-      allow="autoplay"
-      style="width:100%;height:100%;border:none;display:block;background:transparent;">
-    </iframe>
-
-    <div class="bk-steps-feedback" hidden>
-      <div class="bk-steps-feedback-badge">Step Complete</div>
-      <div class="bk-steps-feedback-msg"></div>
-      <button type="button" class="bk-steps-feedback-next">Next Step &rarr;</button>
-      <button type="button" class="bk-steps-feedback-restart" style="display:none;">Restart Steps &#8635;</button>
-    </div>
-  </div>
-
-  <div class="bk-steps-controls">
-    <div class="bk-steps-nav">
-      <button type="button" class="bk-steps-btn bk-steps-btn--prev" aria-label="Previous step" title="Previous step (Left Arrow)" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-      </button>
-      <button type="button" class="bk-steps-btn bk-steps-btn--play is-active" aria-label="Pause / Play" title="Pause / Play (Space)">
-        <svg class="bk-icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-        <svg class="bk-icon-play" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-      </button>
-      <button type="button" class="bk-steps-btn bk-steps-btn--next" aria-label="Next step" title="Next step (Right Arrow)" ${steps.length <= 1 ? "disabled" : ""}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </button>
-    </div>
-
-    <span class="bk-steps-divider" aria-hidden="true"></span>
-
-    <div class="bk-steps-tools">
-      ${
-				hasAnyAudio
-					? `<button type="button" class="bk-steps-btn bk-steps-btn--audio is-active" aria-label="Audio Narration" title="Toggle audio narration">
-        <svg class="bk-icon-audio" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
-      </button>`
-					: ""
-			}
-      <button type="button" class="bk-steps-btn bk-steps-btn--reset" aria-label="Reset trial" title="Reset trial (R)">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-      </button>
-      ${
-				hasAnyHint
-					? `<button type="button" class="bk-steps-btn bk-steps-btn--hint" aria-label="Step Hint" title="Show hint" ${firstStep.hintHtml ? "" : 'style="display:none;"'}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-      </button>`
-					: ""
-			}
-    </div>
-
-    <div class="bk-steps-progress">
-      <div class="bk-steps-dots">${stepDots}</div>
-    </div>
-  </div>
-
+  ${telemetrySchemaScript}
   ${block.caption ? `<figcaption class="bk-caption">${mdInline(block.caption)}</figcaption>` : ""}
+  <script type="application/json" class="bk-steps-default-props">${escapeScriptJson(block.props ?? {})}</script>
   <script type="application/json" class="bk-steps-data">${stepsJson}</script>
 </figure>`;
 
