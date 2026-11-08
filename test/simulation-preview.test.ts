@@ -5,7 +5,7 @@ import { renderSimulation } from "../src/renderer/blocks/simulation.js";
 
 const chrome =
 	process.env.PUPPETEER_EXECUTABLE_PATH ||
-	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+	await puppeteer.executablePath();
 
 test.skipIf(!existsSync(chrome))(
 	"simulation preview expands explicitly and returns to a paused thumbnail",
@@ -57,7 +57,7 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 			0,
 			{},
 		);
-		const browser = await puppeteer.launch({
+		const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 			executablePath: chrome,
 			headless: true,
 		});
@@ -197,8 +197,8 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 			await page.screenshot({ path: "/tmp/mr-simulation-expanded.png" });
 			await page.keyboard.press("Escape");
 			await page.setViewport({ width: 390, height: 844 });
-			await preview.click();
-			await page.waitForSelector(".bk-object--maximized", { timeout: 4000 });
+   expect(await page.$(".bk-object--maximized")).toBeNull();
+   expect(await page.$eval('[aria-label="Expand simulation"]', el => getComputedStyle(el).display)).toBe("none");
 			await page.screenshot({ path: "/tmp/mr-simulation-mobile.png" });
 		} finally {
 			await browser.close();

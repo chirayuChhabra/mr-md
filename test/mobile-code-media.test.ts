@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import puppeteer from "puppeteer";
 import { renderMedia } from "../src/renderer/blocks/media.js";
-import { isPhoneDevice, isTouchDevice } from "../src/client/cm-editor.js";
 
 const chrome =
 	process.env.PUPPETEER_EXECUTABLE_PATH ||
@@ -27,8 +26,8 @@ describe("Mobile & Touch Code / Media Experience", () => {
 		expect(result.html).toContain('preload="metadata"');
 	});
 
-	test("mobile-code.css defines 16px font on coarse pointer and suppresses phone maximize", () => {
-		const css = readFileSync("src/styles/mobile-code.css", "utf8");
+	test("theme.css defines 16px font on coarse pointer and suppresses phone maximize", () => {
+		const css = readFileSync("src/styles/theme.css", "utf8");
 
 		// Touch font size (16px prevents iOS Safari autozoom)
 		expect(css).toContain("pointer: coarse");
@@ -67,7 +66,7 @@ describe("Mobile & Touch Code / Media Experience", () => {
 					hasTouch: true,
 				});
 
-				const mobileCss = readFileSync("src/styles/mobile-code.css", "utf8");
+				const mobileCss = readFileSync("src/styles/theme.css", "utf8");
 				const themeCss = readFileSync("src/styles/theme.css", "utf8");
 
 				await page.setContent(`

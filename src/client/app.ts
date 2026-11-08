@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { bkIsPhone } from "./device.js";
+import { bkIsPhone, bkWatchDevice } from "./device.js";
 import { bkInitInspectors } from "./inspector.js";
 import {
 	bkInitInteractiveFrames,
@@ -48,9 +48,6 @@ function wireOnce() {
 	bkWireWorldPortals();
 	bkWireSteps();
 
-	const mql = window.matchMedia?.(
-		"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
-	);
 	const onDeviceChange = () => {
 		if (bkIsPhone()) {
 			bkCollapseLab();
@@ -61,8 +58,7 @@ function wireOnce() {
 		bkInitWorldPortals();
 		bkInitInteractiveFrames();
 	};
-	mql?.addEventListener?.("change", onDeviceChange);
-	window.addEventListener("resize", onDeviceChange);
+	bkWatchDevice(onDeviceChange);
 }
 
 function initOnPageLoad() {

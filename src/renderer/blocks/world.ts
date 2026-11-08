@@ -150,6 +150,7 @@ export function renderWorld(
 	const html = `
 <figure id="${escAttr(id)}" class="bk-object bk-object--world bk-object--${escAttr(accent)}" data-world-block="true" data-portal="${escAttr(portalType)}" data-world-title="${escAttr(label)}">
   <div class="bk-phone-sim-notice">
+    <div class="bk-phone-sim-label">${escHtml(label)}</div>
     <div class="bk-phone-sim-notice-title">Open this simulation on a larger screen</div>
     <div class="bk-phone-sim-notice-body">Continue on a tablet or desktop to interact with it.</div>
   </div>

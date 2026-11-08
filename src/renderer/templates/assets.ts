@@ -6,11 +6,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export function pageCSS(): string {
-	return ["theme.css", "mobile-code.css"]
-		.map((file) =>
-			fs.readFileSync(path.join(__dirname, "../../styles", file), "utf-8"),
-		)
-		.join("\n");
+	return fs.readFileSync(
+		path.join(__dirname, "../../styles/theme.css"),
+		"utf-8",
+	);
 }
 
 export function clientScript(): string {

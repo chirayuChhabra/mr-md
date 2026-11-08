@@ -7,7 +7,7 @@ import { renderWorld } from "../src/renderer/blocks/world.js";
 
 const chrome =
 	process.env.PUPPETEER_EXECUTABLE_PATH ||
-	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+	await puppeteer.executablePath();
 
 describe("Mobile/Tablet Simulation Policy & Structure", () => {
 	test("renderSimulation renders .bk-phone-sim-notice and template/slot for deferred iframe loading", () => {
@@ -92,18 +92,6 @@ test.skipIf(!existsSync(chrome))(
 							path: "mobile-tablet-fixture",
 							namespace: "fixture",
 						}));
-						build.onResolve({ filter: /device/ }, () => ({
-							path: "mock-device",
-							namespace: "mock-device",
-						}));
-						build.onLoad({ filter: /.*/, namespace: "mock-device" }, () => ({
-							loader: "ts",
-							contents: `
-export function bkIsPhone() {
-	return window.matchMedia("(max-width: 767px), (max-height: 500px) and (pointer: coarse)").matches;
-}
-`,
-						}));
 						build.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
 							loader: "ts",
 							resolveDir: process.cwd(),
@@ -117,6 +105,11 @@ import { bkIsPhone } from './src/client/device.js';
 
 window.bkIsPhone = bkIsPhone;
 window.bkExpandLab = bkExpandLab;
+import { bkWatchDevice } from './src/client/device.ts';
+bkWatchDevice(() => {
+ if (bkIsPhone()) bkCollapseLab();
+ bkInitSimControls(); bkInitSteps(); bkInitWorldPortals();
+});
 window.bkCollapseLab = bkCollapseLab;
 window.bkEnterWorld = bkEnterWorld;
 
@@ -262,7 +255,9 @@ ${worldBlock.html}
 			await page.waitForFunction(() => !document.querySelector(".bk-object--maximized"));
 			expect(await page.$(".bk-object--maximized")).toBeNull();
 
-			// Iframes unmount on phone
+			// Media-query change callbacks may follow the resize callback.
+   await page.waitForFunction(() => document.querySelectorAll(".bk-sim-frame-slot iframe, .bk-steps-frame-slot iframe, .bk-world-frame-slot iframe").length === 0);
+   // Iframes unmount on phone
 			const mountedIframesAfterPhoneResize = await page.evaluate(() => {
 				return document.querySelectorAll(".bk-sim-frame-slot iframe, .bk-steps-frame-slot iframe, .bk-world-frame-slot iframe").length;
 			});

@@ -586,10 +586,33 @@ export function bkMountSteps(card: HTMLElement): void {
 	if (slot && template && !slot.querySelector("iframe")) {
 		const clone = template.content.cloneNode(true);
 		slot.appendChild(clone);
+		slot.querySelector("iframe")?.addEventListener(
+			"load",
+			() => {
+				const state = getStepsState(card);
+				if (state) {
+					const props = card.__bkResumeProps;
+					updateStepsStep(card, state.currentIndex, false);
+					if (props) {
+						syncHostControls(card, props);
+						card
+							.querySelector("iframe")
+							?.contentWindow?.postMessage(
+								{ type: "bk:set-props", props },
+								"*",
+							);
+						delete card.__bkResumeProps;
+					}
+				}
+			},
+			{ once: true },
+		);
 	}
 }
 
 export function bkUnmountSteps(card: HTMLElement): void {
+	if (card.querySelector(".bk-steps-frame-slot iframe"))
+		card.__bkResumeProps = { ...bkGetCurrentProps(card) };
 	const slot = card.querySelector(".bk-steps-frame-slot");
 	if (slot) {
 		const iframe = slot.querySelector("iframe");
@@ -628,10 +651,6 @@ export function bkWireSteps() {
 	if (wiredStepsDocument === document) return;
 	wiredStepsDocument = document;
 	bkInitSteps();
-
-	window.addEventListener("resize", () => {
-		bkSyncAllSteps();
-	});
 
 	// Listen for simulation activation from interactive.ts or iframe
 	const handleActivationEvent = (e: Event) => {

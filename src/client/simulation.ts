@@ -162,12 +162,6 @@ export function bkInitSimControls() {
 }
 
 export function bkWireSimControls() {
-	if (!window.__bk_sim_controls_wired) {
-		window.__bk_sim_controls_wired = true;
-		window.addEventListener("resize", () => {
-			bkSyncAllSimulations();
-		});
-	}
 	bkSyncAllSimulations();
 	const handler = (e) => {
 		const target = e.target;

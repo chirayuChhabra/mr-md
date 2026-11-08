@@ -1532,7 +1532,8 @@ export function bkExitWorld(figure, options = {}) {
 		document.querySelector(".bk-world-fullscreen.bk-world--flying");
 
 	if (!fullscreen && !fig) return;
-	if (fullscreen?.classList?.contains("bk-world--exiting")) return;
+	if (fullscreen?.classList?.contains("bk-world--exiting") && !bkIsPhone())
+		return;
 
 	if (!options?.fromPopstate && worldHistoryPushed) {
 		worldHistoryPushed = false;
@@ -1604,6 +1605,11 @@ export function bkExitWorld(figure, options = {}) {
 			fig?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
 		} catch (_) {}
 	};
+
+	if (bkIsPhone()) {
+		cleanup();
+		return;
+	}
 
 	const transition = resolveTransitionForFigure(fig);
 	const portal = fig?.querySelector(".bk-world-portal");
@@ -1736,6 +1742,7 @@ function setupWorldPortal(figure) {
 		},
 
 		startLoop() {
+			if (bkIsPhone()) return;
 			if (this.animId) return;
 			this.resize();
 			let lastTime = performance.now();
@@ -2052,7 +2059,7 @@ export function bkInitWorldPortals() {
 
 	const figures = document.querySelectorAll("figure.bk-object--world");
 	figures.forEach((figure) => {
-		if (registeredPortals.has(figure)) return;
+		if (bkIsPhone() || registeredPortals.has(figure)) return;
 		setupWorldPortal(figure);
 		worldObserver.observe(figure);
 	});
