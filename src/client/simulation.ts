@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { bkIsPhone } from "./device.js";
 import { bkResumeSimulationIfPaused } from "./workspace.js";
 
 function parseTypedVal(rawAttr, fallback) {
@@ -101,14 +102,73 @@ export function bkGetCurrentProps(figure) {
 	return figure.__bkCurrentProps;
 }
 
+export function bkMountSimulation(figure) {
+	if (bkIsPhone()) return;
+	const slot = figure.querySelector(".bk-sim-frame-slot");
+	const template = figure.querySelector(".bk-sim-frame-template");
+	if (slot && template && !slot.querySelector("iframe")) {
+		const clone = template.content.cloneNode(true);
+		slot.appendChild(clone);
+		const iframe = slot.querySelector("iframe");
+		const props = figure.__bkCurrentProps;
+		if (iframe && props) {
+			iframe.addEventListener(
+				"load",
+				() => {
+					iframe.contentWindow?.postMessage(
+						{ type: "bk:set-props", props },
+						"*",
+					);
+				},
+				{ once: true },
+			);
+		}
+	}
+}
+
+export function bkUnmountSimulation(figure) {
+	const slot = figure.querySelector(".bk-sim-frame-slot");
+	if (slot) {
+		const iframe = slot.querySelector("iframe");
+		if (iframe?.contentWindow) {
+			try {
+				iframe.contentWindow.postMessage({ type: "bk:pause" }, "*");
+			} catch (_) {}
+		}
+		slot.replaceChildren();
+	}
+}
+
+export function bkSyncAllSimulations() {
+	const isPhone = bkIsPhone();
+	document
+		.querySelectorAll(".bk-object:not(.bk-steps-object):not(.bk-object--world)")
+		.forEach((fig) => {
+			if (isPhone) {
+				bkUnmountSimulation(fig);
+			} else {
+				bkMountSimulation(fig);
+			}
+		});
+}
+
 export function bkInitSimControls() {
 	// Initialize all slider tracks
 	document
 		.querySelectorAll('input[type="range"][data-bk-prop]')
 		.forEach(updateSliderTrack);
+
+	bkSyncAllSimulations();
 }
 
 export function bkWireSimControls() {
+	if (!window.__bk_sim_controls_wired) {
+		window.__bk_sim_controls_wired = true;
+		window.addEventListener("resize", () => {
+			bkSyncAllSimulations();
+		});
+	}
+	bkSyncAllSimulations();
 	const handler = (e) => {
 		const target = e.target;
 		const presetSelect = target.closest?.("select[data-bk-preset-select]");

@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions, WorldBlock } from "../../types.js";
 import { escapeScriptJson } from "../markdown/index.js";
+import { mdInline } from "../markdown/sanitize.js";
 import { type NavItem, resolveContent } from "../utils.js";
 import { iframeDoc } from "./iframe.js";
 import { escAttr, escHtml } from "./utils.js";
@@ -148,6 +149,10 @@ export function renderWorld(
 
 	const html = `
 <figure id="${escAttr(id)}" class="bk-object bk-object--world bk-object--${escAttr(accent)}" data-world-block="true" data-portal="${escAttr(portalType)}" data-world-title="${escAttr(label)}">
+  <div class="bk-phone-sim-notice">
+    <div class="bk-phone-sim-notice-title">Open this simulation on a larger screen</div>
+    <div class="bk-phone-sim-notice-body">Continue on a tablet or desktop to interact with it.</div>
+  </div>
   ${cardInnerHtml}
 
   <!-- Fullscreen World Immersion Overlay (Under Topbar) -->
@@ -166,6 +171,7 @@ export function renderWorld(
     <div class="bk-world-frame-slot"></div>
   </div>
 
+  ${block.caption ? `<figcaption class="bk-caption">${mdInline(block.caption)}</figcaption>` : ""}
   <script type="application/json" class="bk-world-config">${escapeScriptJson(worldConfig)}</script>
 </figure>`.trim();
 

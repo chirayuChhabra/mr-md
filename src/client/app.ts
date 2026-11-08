@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+import { bkIsPhone } from "./device.js";
 import { bkInitInspectors } from "./inspector.js";
 import {
 	bkInitInteractiveFrames,
@@ -22,7 +23,12 @@ import {
 	bkWireScrollSpy,
 	bkWireSidebarToggle,
 } from "./ui.js";
-import { bkInitWorldPortals, bkWireWorldPortals } from "./world.js";
+import { bkCollapseLab } from "./workspace.js";
+import {
+	bkExitWorld,
+	bkInitWorldPortals,
+	bkWireWorldPortals,
+} from "./world.js";
 
 function wireOnce() {
 	if (window.__bk_wired_once) return;
@@ -41,6 +47,22 @@ function wireOnce() {
 	bkWireQuizzes();
 	bkWireWorldPortals();
 	bkWireSteps();
+
+	const mql = window.matchMedia?.(
+		"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
+	);
+	const onDeviceChange = () => {
+		if (bkIsPhone()) {
+			bkCollapseLab();
+			bkExitWorld();
+		}
+		bkInitSimControls();
+		bkInitSteps();
+		bkInitWorldPortals();
+		bkInitInteractiveFrames();
+	};
+	mql?.addEventListener?.("change", onDeviceChange);
+	window.addEventListener("resize", onDeviceChange);
 }
 
 function initOnPageLoad() {

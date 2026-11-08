@@ -1,4 +1,5 @@
 import { PAUSE_ICON, PLAY_ICON, RESET_ICON } from "../simulation-toolbar.js";
+import { bkIsPhone } from "./device.js";
 import { bkApplyPropsToControls } from "./simulation.js";
 
 export interface LabExpansionOptions {
@@ -473,6 +474,8 @@ export function bkExpandLab(
 		defaultTab?: "controls" | "telemetry";
 	},
 ): void {
+	if (bkIsPhone()) return;
+
 	const figure =
 		typeof target === "string"
 			? document.getElementById(target)
@@ -679,6 +682,13 @@ export function bkToggleExpandLab(
 		defaultTab?: "controls" | "telemetry";
 	},
 ): void {
+	if (bkIsPhone()) {
+		if (document.querySelector(".bk-object--maximized")) {
+			bkCollapseLab();
+		}
+		return;
+	}
+
 	if (!target) {
 		// Toggle via document topbar button
 		const currentMax = document.querySelector(".bk-object--maximized");
@@ -812,6 +822,10 @@ export function bkWireWorkspace(): void {
 			"[data-bk-expand-preview], .bk-object-maximize, .bk-sim-advanced-summary",
 		);
 		if (entry) {
+			if (bkIsPhone()) {
+				e.preventDefault();
+				return;
+			}
 			const figure = entry.closest(".bk-object");
 			if (
 				figure &&
@@ -849,6 +863,10 @@ export function bkWireWorkspace(): void {
 			"#bk-doc-telemetry-btn, .bk-doc-telemetry-btn",
 		) as HTMLElement;
 		if (toggleBtn) {
+			if (bkIsPhone()) {
+				e.preventDefault();
+				return;
+			}
 			bkToggleExpandLab(undefined, {
 				focusReturn: toggleBtn,
 				defaultTab: "telemetry",
@@ -1030,6 +1048,12 @@ export function bkWireWorkspace(): void {
 				figure,
 				!document.hidden && figure.dataset.bkPlaybackState !== "paused",
 			);
+	});
+
+	window.addEventListener("resize", () => {
+		if (bkIsPhone() && document.querySelector(".bk-object--maximized")) {
+			bkCollapseLab();
+		}
 	});
 
 	window.addEventListener("bk-page-loaded", () => {

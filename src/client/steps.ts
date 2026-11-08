@@ -1,5 +1,6 @@
 // @ts-nocheck
 import DOMPurify from "isomorphic-dompurify";
+import { bkIsPhone } from "./device.js";
 import { bkApplyPropsToControls, bkGetCurrentProps } from "./simulation.js";
 import { bkThemeColors } from "./theme.js";
 import { bkSyncLabPauseOverlay, bkWireWorkspace } from "./workspace.js";
@@ -578,14 +579,48 @@ function updateStepsStep(
 	}
 }
 
-export function bkInitSteps() {
+export function bkMountSteps(card: HTMLElement): void {
+	if (bkIsPhone()) return;
+	const slot = card.querySelector(".bk-steps-frame-slot");
+	const template = card.querySelector(".bk-steps-frame-template");
+	if (slot && template && !slot.querySelector("iframe")) {
+		const clone = template.content.cloneNode(true);
+		slot.appendChild(clone);
+	}
+}
+
+export function bkUnmountSteps(card: HTMLElement): void {
+	const slot = card.querySelector(".bk-steps-frame-slot");
+	if (slot) {
+		const iframe = slot.querySelector("iframe");
+		if (iframe?.contentWindow) {
+			try {
+				iframe.contentWindow.postMessage({ type: "bk:pause" }, "*");
+			} catch (_) {}
+		}
+		slot.replaceChildren();
+	}
+	stopSpeech();
+}
+
+export function bkSyncAllSteps(): void {
+	const isPhone = bkIsPhone();
 	document.querySelectorAll(".bk-steps-object").forEach((el) => {
 		const card = el as HTMLElement;
-		const state = getStepsState(card);
-		if (state) {
-			updateStepsStep(card, state.currentIndex, false);
+		if (isPhone) {
+			bkUnmountSteps(card);
+		} else {
+			bkMountSteps(card);
+			const state = getStepsState(card);
+			if (state) {
+				updateStepsStep(card, state.currentIndex, false);
+			}
 		}
 	});
+}
+
+export function bkInitSteps() {
+	bkSyncAllSteps();
 }
 
 export function bkWireSteps() {
@@ -594,8 +629,13 @@ export function bkWireSteps() {
 	wiredStepsDocument = document;
 	bkInitSteps();
 
+	window.addEventListener("resize", () => {
+		bkSyncAllSteps();
+	});
+
 	// Listen for simulation activation from interactive.ts or iframe
 	const handleActivationEvent = (e: Event) => {
+		if (bkIsPhone()) return;
 		const card = (e.target as HTMLElement)?.closest?.(
 			".bk-steps-object",
 		) as HTMLElement;

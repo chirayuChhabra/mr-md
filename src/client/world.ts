@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { bkIsPhone } from "./device.js";
 
 let activeWorldFigure = null;
 const registeredPortals = new Map();
@@ -1478,7 +1479,7 @@ function detachTopbarWorldControls() {
 }
 
 export function bkEnterWorld(figure) {
-	if (!figure) return;
+	if (!figure || bkIsPhone()) return;
 	activeWorldFigure = figure;
 	figure.classList.add("bk-world--active");
 	figure.classList.remove("bk-wormhole--charging");
@@ -2055,6 +2056,12 @@ export function bkInitWorldPortals() {
 		setupWorldPortal(figure);
 		worldObserver.observe(figure);
 	});
+
+	if (bkIsPhone()) {
+		registeredPortals.forEach((p) => {
+			p.stopLoop();
+		});
+	}
 }
 
 /**
@@ -2063,7 +2070,21 @@ export function bkInitWorldPortals() {
 export function bkWireWorldPortals() {
 	let _pointerDownTime = 0;
 
+	window.addEventListener("resize", () => {
+		if (bkIsPhone()) {
+			bkExitWorld();
+			registeredPortals.forEach((p) => {
+				p.stopLoop();
+			});
+		} else {
+			registeredPortals.forEach((p) => {
+				if (p.isVisible) p.startLoop();
+			});
+		}
+	});
+
 	document.addEventListener("pointerdown", (e) => {
+		if (bkIsPhone()) return;
 		if (e.button !== 0 && e.pointerType === "mouse") return;
 
 		const target = e.target;
