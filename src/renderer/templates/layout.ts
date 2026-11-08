@@ -107,7 +107,7 @@ export function renderLayout(
 })();
 </script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${escHtml(title)}</title>
 ${description ? `<meta name="description" content="${escHtml(description)}">` : ""}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.1/dist/katex.min.css">
@@ -115,35 +115,8 @@ ${description ? `<meta name="description" content="${escHtml(description)}">` : 
 
 ${opts.head ?? ""}
 ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=${Date.now()}">` : `<style>\n${safeFont ? `:root { --font-sans: ${safeFont}, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }` : ""}\n${pageCSS()}\n</style>`}
-<style>
-  .bk-mobile-coming-soon { display: none; }
-  @media (max-width: 1024px) {
-    body > :not(.bk-mobile-coming-soon) { display: none !important; }
-    body { margin: 0; }
-    .bk-mobile-coming-soon {
-      box-sizing: border-box; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh;
-      padding: max(28px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
-      background: #f3efe5; color: #202c27; font-family: Georgia, serif;
-    }
-    .bk-mobile-content { width: 100%; max-width: 560px; margin: auto; padding: 64px 0; }
-    .bk-mobile-content h1 { margin: 20px 0 24px; font: 400 clamp(3.4rem, 11vw, 6rem)/.98 Georgia, serif; letter-spacing: -.055em; }
-    .bk-mobile-content h1 em { color: #a35736; font-weight: 400; }
-    .bk-mobile-content p { max-width: 390px; margin: 0; color: #536158; font: 400 16px/1.7 system-ui, sans-serif; }
-  }
-  @media (max-width: 1024px) and (prefers-color-scheme: dark) {
-    .bk-mobile-coming-soon { background: #1c2521; color: #f3efe5; }
-    .bk-mobile-content h1 em { color: #e3a07b; }
-    .bk-mobile-content p { color: #c1cbc1; }
-  }
-</style>
 </head>
 <body class="bk-layout-${layout} bk-density-${density} bk-tone-${tone}">
-<main class="bk-mobile-coming-soon">
-  <div class="bk-mobile-content">
-    <h1>Coming<br><em>soon.</em></h1>
-    <p>Mr Markdown is getting ready for smaller screens. For now, open this page on a desktop to explore and learn.</p>
-  </div>
-</main>
 <div class="bk-shell" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}${_isChapter ? ' data-is-chapter="true"' : ""}>
 <script>
   (function() {

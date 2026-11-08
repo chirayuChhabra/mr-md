@@ -3951,11 +3951,91 @@ body.bk-is-scrolling .bk-embed-interactive.is-interactive iframe {
 	border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
 }
 
-@media (max-width: 800px) {
+/* ─── PHONE SIMULATION NOTICES & DEFENSE ──────────────────────────────────── */
+
+/* Simulation defense notice rendered or injected on phones */
+.bk-phone-sim-notice {
+	display: none;
+	box-sizing: border-box;
+	width: 100%;
+	padding: 24px 20px;
+	margin: 0;
+	background: color-mix(in srgb, var(--paper) 92%, var(--bg));
+	border-top: 1px solid var(--line);
+	border-bottom: 1px solid var(--line);
+	text-align: center;
+	color: var(--ink);
+}
+.bk-phone-sim-notice-title {
+	font-family: var(--font-sans);
+	font-size: 14px;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+	color: var(--ink);
+	margin-bottom: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+.bk-phone-sim-notice-text {
+	font-family: var(--font-sans);
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--muted);
+	max-width: 380px;
+	margin: 0 auto;
+}
+
+/* ─── TOUCH ERGONOMICS & BASE RESPONSIVE AUDIT ────────────────────────────── */
+
+/* Base touch adjustments for coarse pointer environments */
+@media (pointer: coarse) {
+	.bk-topbar-sidebar-toggle,
+	.bk-topbar-btn,
+	.bk-icon-btn,
+	.bk-segment-btn,
+	.bk-settings-button,
+	.bk-theme-toggle {
+		min-width: 44px;
+		min-height: 44px;
+	}
+	.bk-nav-item {
+		min-height: 44px;
+		display: flex;
+		align-items: center;
+		padding: 10px 14px;
+	}
+	.bk-run-btn,
+	.bk-reset-btn {
+		min-height: 40px;
+	}
+	/* Prevent sticky hover highlights on touched elements */
+	*:hover {
+		-webkit-tap-highlight-color: transparent;
+	}
+	button, a, input, select, summary {
+		-webkit-tap-highlight-color: transparent;
+		touch-action: manipulation;
+	}
+}
+
+/* Keep text selection and zoom available across all viewports */
+html, body {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+	touch-action: pan-x pan-y;
+}
+
+/* ─── TABLET & MOBILE SHELL (<= 1024px) ──────────────────────────────────── */
+
+@media (max-width: 1024px) {
 	.bk-shell {
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
+		height: 100dvh;
+		min-height: 100dvh;
 		position: relative;
 	}
 	.bk-sidebar-collapse,
@@ -3966,36 +4046,45 @@ body.bk-is-scrolling .bk-embed-interactive.is-interactive iframe {
 		position: sticky;
 		top: 0;
 		z-index: 90;
-		height: 48px;
-		padding: 0 14px;
+		height: calc(48px + env(safe-area-inset-top, 0px));
+		padding-top: env(safe-area-inset-top, 0px);
+		padding-left: max(16px, env(safe-area-inset-left, 16px));
+		padding-right: max(16px, env(safe-area-inset-right, 16px));
+		box-sizing: border-box;
 	}
 	.bk-backdrop {
-		top: 48px;
+		top: calc(48px + env(safe-area-inset-top, 0px));
 	}
 	.bk-body {
 		flex: 1;
-		height: calc(100vh - 48px);
+		height: calc(100vh - 48px - env(safe-area-inset-top, 0px));
+		height: calc(100dvh - 48px - env(safe-area-inset-top, 0px));
 		position: relative;
 		overflow: hidden;
 	}
+	/* Responsive drawer */
 	.bk-sidebar {
 		position: fixed;
-		top: 48px;
+		top: calc(48px + env(safe-area-inset-top, 0px));
 		bottom: 0;
 		left: 0;
-		width: 288px;
-		height: calc(100vh - 48px);
+		width: min(320px, 86vw);
+		height: calc(100vh - 48px - env(safe-area-inset-top, 0px));
+		height: calc(100dvh - 48px - env(safe-area-inset-top, 0px));
 		z-index: 100;
 		transform: translateX(-100%);
-		transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+		transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease;
 		background: var(--paper);
 		box-shadow: none;
 		border-right: 1px solid var(--line);
 		border-bottom: none;
+		padding-bottom: env(safe-area-inset-bottom, 0px);
+		padding-left: env(safe-area-inset-left, 0px);
+		box-sizing: border-box;
 	}
 	.bk-shell[data-mobile-open="true"] .bk-sidebar {
 		transform: translateX(0);
-		box-shadow: 0 0 50px rgba(0, 0, 0, 0.25);
+		box-shadow: 0 12px 48px rgba(0, 0, 0, 0.32);
 	}
 	.bk-shell[data-mobile-open="true"] .bk-backdrop {
 		opacity: 1;
@@ -4005,17 +4094,23 @@ body.bk-is-scrolling .bk-embed-interactive.is-interactive iframe {
 		flex: 1;
 		height: 100%;
 		overflow-y: auto;
+		overflow-x: hidden;
 		width: 100%;
 		min-width: 0;
-	}
-	.bk-sidebar-inner {
-		padding: 24px 0;
+		padding-bottom: env(safe-area-inset-bottom, 0px);
+		box-sizing: border-box;
 	}
 	.bk-content {
-		padding: 24px 18px 80px;
+		max-width: 100%;
+		width: 100%;
+		box-sizing: border-box;
+		padding: 36px 24px 96px;
+		padding-left: max(20px, env(safe-area-inset-left, 20px));
+		padding-right: max(20px, env(safe-area-inset-right, 20px));
+		padding-bottom: max(96px, calc(48px + env(safe-area-inset-bottom, 0px)));
 	}
-	.bk-hero h1 {
-		font-size: 32px;
+	.bk-columns {
+		grid-template-columns: 1fr;
 	}
 	.bk-home {
 		grid-template-columns: 1fr;
@@ -4026,49 +4121,305 @@ body.bk-is-scrolling .bk-embed-interactive.is-interactive iframe {
 	.bk-end-nav {
 		grid-template-columns: 1fr;
 	}
-	.bk-object {
-		margin-left: -18px;
-		margin-right: -18px;
-		max-width: none;
+}
+
+/* ─── TABLET SIMULATION INSPECTOR & CONTROLS (768px - 1024px) ────────────── */
+
+@media (min-width: 768px) and (max-width: 1024px) {
+	/* Maximized simulation workspace: fitting canvas & reachable inspector controls */
+	.bk-object--maximized .bk-sim-workspace {
+		flex-direction: column;
+		height: calc(100vh - 48px);
+		height: calc(100dvh - 48px);
+	}
+	.bk-object--maximized .bk-sim-stage {
+		flex: 1 1 54vh;
+		min-height: 280px;
+		height: 54vh;
+		width: 100%;
+	}
+	.bk-object--maximized .bk-sim-stage .bk-embed-frame {
+		width: 100%;
+		height: 100%;
+		max-height: 100%;
+		aspect-ratio: auto;
+	}
+	.bk-object--maximized .bk-sim-inspector {
+		flex: 0 0 46vh;
+		height: 46vh;
+		width: 100%;
+		max-width: 100%;
 		border-left: none;
-		border-right: none;
-		border-radius: 0;
+		border-top: 1px solid var(--line-strong, var(--line));
+		padding: 0;
+		padding-bottom: env(safe-area-inset-bottom, 0px);
 	}
-	.bk-object-header,
-	.bk-quiz-head {
-		padding-left: 18px;
-		padding-right: 18px;
+	.bk-object--maximized .bk-sim-controls {
+		padding: 16px 20px;
+		gap: 16px;
 	}
-	.bk-columns {
-		grid-template-columns: 1fr;
+	.bk-object--maximized .bk-sim-action-btn {
+		min-height: 44px;
+		min-width: 44px;
+		font-size: 14px;
 	}
-	.bk-chapter-stats-bar {
-		gap: 6px;
+	.bk-object--maximized .bk-sim-range-input {
+		height: 38px;
 	}
-	.bk-chapter-stat {
+}
+
+/* ─── PHONE EXPERIENCE: EXPLICIT POLICY ──────────────────────────────────── */
+/* Phone policy: (max-width: 767px), (max-height: 500px) and (pointer: coarse) */
+/* Or explicit attribute set by client device policy: html[data-is-phone="true"] */
+
+@media (max-width: 767px), ((max-height: 500px) and (pointer: coarse)) {
+	/* Phone shell and viewport sizing */
+	.bk-topbar {
+		height: calc(48px + env(safe-area-inset-top, 0px));
+		padding-left: max(12px, env(safe-area-inset-left, 12px));
+		padding-right: max(12px, env(safe-area-inset-right, 12px));
+	}
+	.bk-topbar-breadcrumbs {
+		max-width: calc(100vw - 140px);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.bk-topbar-crumb-link,
+	.bk-topbar-crumb-item,
+	.bk-topbar-crumb-current {
+		font-size: 12.5px;
+	}
+
+	/* Responsive reading typography - comfortable and legible */
+	.bk-content {
+		padding: 20px 14px 72px;
+		padding-left: max(14px, env(safe-area-inset-left, 14px));
+		padding-right: max(14px, env(safe-area-inset-right, 14px));
+		padding-bottom: max(80px, calc(44px + env(safe-area-inset-bottom, 0px)));
+		gap: 24px;
+	}
+	.bk-content > * {
+		max-width: 100%;
+		min-width: 0;
+		box-sizing: border-box;
+	}
+	.bk-hero {
+		padding: 8px 0 28px;
+	}
+	.bk-hero h1 {
+		font-size: clamp(26px, 8.5vw, 38px);
+		line-height: 1.1;
+		word-break: break-word;
+	}
+	.bk-deck {
+		font-size: 15.5px;
+		line-height: 1.55;
+		margin-top: 14px;
+	}
+	.bk-eyebrow {
+		margin-bottom: 12px;
+		font-size: 11px;
+	}
+	.bk-prose p,
+	.bk-content p {
+		font-size: 16px;
+		line-height: 1.65;
+		word-break: break-word;
+	}
+	.bk-prose h2 {
+		font-size: 22px;
+		line-height: 1.25;
+		margin-top: 28px;
+	}
+	.bk-prose h3 {
+		font-size: 18px;
+		line-height: 1.3;
+		margin-top: 22px;
+	}
+
+	/* Prevent horizontal scroll breakouts */
+	.bk-shell,
+	.bk-body,
+	.bk-main,
+	.bk-content {
+		max-width: 100vw;
+		overflow-x: hidden;
+	}
+	pre, code, .bk-code-scroll, .bk-code-block {
+		max-width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	table {
+		display: block;
+		max-width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	.katex-display {
+		max-width: 100%;
+		overflow-x: auto;
+		overflow-y: hidden;
+		-webkit-overflow-scrolling: touch;
+		padding: 4px 0;
+	}
+
+	/* Code runners: fully runnable & editable on phone, no horizontal cutoffs */
+	.bk-code-runner {
+		margin: 20px 0;
+		border-radius: 8px;
+		max-width: 100%;
+	}
+	.bk-runner-header {
+		padding: 8px 10px;
+		min-height: 44px;
+	}
+	.bk-runner-title {
 		font-size: 12px;
-		padding: 4px 10px;
 	}
+	.bk-run-btn {
+		height: 36px;
+		padding: 0 12px;
+		font-size: 13px;
+	}
+	.bk-reset-btn {
+		width: 36px;
+		height: 36px;
+	}
+	.bk-runner-output {
+		font-size: 12px;
+		max-height: 220px;
+	}
+
+	/* Objects: strictly inline on phones. Absolutely NO fullscreen or expanded objects! */
+	.bk-object {
+		margin: 22px 0;
+		border-radius: 8px;
+		max-width: 100%;
+		width: 100%;
+		position: static !important;
+		inset: auto !important;
+		z-index: 1 !important;
+	}
+	.bk-object--maximized {
+		position: static !important;
+		inset: auto !important;
+		width: 100% !important;
+		height: auto !important;
+		max-width: 100% !important;
+		max-height: none !important;
+		z-index: 1 !important;
+		display: block !important;
+		border-radius: 8px !important;
+	}
+	/* Hide maximize/fullscreen actions and buttons on phone */
+	.bk-object-maximize,
+	.bk-object-maximize[data-bk-lab-entry],
+	.bk-steps-object .bk-object-maximize,
+	.bk-expanded-back,
+	.bk-sim-telemetry-btn,
+	.bk-sim-inspector,
+	.bk-object--world .bk-world-fullscreen,
+	button[data-bk-expand-preview],
+	.bk-embed-overlay[data-bk-expand-preview] {
+		display: none !important;
+	}
+
+	/* Media and inline images: always inline, responsive, preserving aspect ratio */
+	.bk-media,
+	.bk-media img,
+	.bk-media video {
+		max-width: 100% !important;
+		position: relative !important;
+		height: auto !important;
+	}
+	.bk-media {
+		aspect-ratio: 16 / 9;
+		margin: 16px 0;
+	}
+	.bk-content img {
+		max-width: 100%;
+		height: auto;
+		display: block;
+		margin: 0 auto;
+	}
+
+	/* Simulation gating on phone:
+	   Simulations are not expanded/run on small phone viewports.
+	   Display the .bk-phone-sim-notice and defensively hide live interactive simulation iframe */
+	.bk-phone-sim-notice {
+		display: block;
+	}
+	.bk-embed-interactive:has(+ .bk-phone-sim-notice),
+	.bk-embed-interactive:has(.bk-phone-sim-notice),
+	.bk-object:has(.bk-phone-sim-notice) .bk-embed-frame iframe,
+	.bk-steps-frame:has(+ .bk-phone-sim-notice) iframe {
+		display: none !important;
+	}
+
+	/* Timeline and chapter layout on phone */
 	.bk-timeline-card {
-		gap: 1.25rem;
+		gap: 1rem;
 	}
 	.bk-timeline-node {
-		width: 34px;
-		height: 34px;
-	}
-	.bk-timeline-node-index {
-		font-size: 11.5px;
+		width: 32px;
+		height: 32px;
 	}
 	.bk-timeline-content {
-		padding: 1.5rem;
-		border-radius: 14px;
+		padding: 1.15rem;
+		border-radius: 10px;
 	}
 	.bk-timeline-title {
-		font-size: 1.35rem;
+		font-size: 1.2rem;
 	}
 	.bk-chapter-timeline::before {
-		left: 17px;
+		left: 15px;
 	}
+
+	/* Settings / theme popover sheet on phone */
+	.bk-theme-panel {
+		left: 12px;
+		right: 12px;
+		bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+		width: calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+		max-width: 360px;
+		box-sizing: border-box;
+		border-radius: 12px;
+	}
+	.bk-segment-btn {
+		width: 36px;
+		height: 36px;
+	}
+}
+
+/* Also enforce phone styling defense when data-is-phone="true" is set on root */
+html[data-is-phone="true"] .bk-object-maximize,
+html[data-is-phone="true"] .bk-object-maximize[data-bk-lab-entry],
+html[data-is-phone="true"] .bk-steps-object .bk-object-maximize,
+html[data-is-phone="true"] .bk-expanded-back,
+html[data-is-phone="true"] .bk-sim-telemetry-btn,
+html[data-is-phone="true"] .bk-sim-inspector,
+html[data-is-phone="true"] .bk-object--world .bk-world-fullscreen,
+html[data-is-phone="true"] button[data-bk-expand-preview],
+html[data-is-phone="true"] .bk-embed-overlay[data-bk-expand-preview] {
+	display: none !important;
+}
+
+html[data-is-phone="true"] .bk-object--maximized {
+	position: static !important;
+	inset: auto !important;
+	width: 100% !important;
+	height: auto !important;
+	max-width: 100% !important;
+	max-height: none !important;
+	z-index: 1 !important;
+	display: block !important;
+	border-radius: 8px !important;
+}
+
+html[data-is-phone="true"] .bk-phone-sim-notice {
+	display: block;
 }
 
 @media (prefers-reduced-motion: no-preference) {
