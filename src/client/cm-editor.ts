@@ -31,6 +31,30 @@ import {
 } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { tags } from "@lezer/highlight";
+// @ts-expect-error: Provided by reader worker in src/client/device.ts (shared policy)
+import { bkIsPhone } from "./device.js";
+
+/**
+ * Shared policy: phone if matchMedia("(max-width: 767px), (max-height: 500px) and (pointer: coarse)").
+ */
+export function isPhoneDevice(): boolean {
+	if (typeof bkIsPhone === "function") {
+		try {
+			return bkIsPhone();
+		} catch {
+			// fallback
+		}
+	}
+	if (typeof window === "undefined" || !window.matchMedia) return false;
+	return window.matchMedia(
+		"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
+	).matches;
+}
+
+export function isTouchDevice(): boolean {
+	if (typeof window === "undefined" || !window.matchMedia) return false;
+	return window.matchMedia("(pointer: coarse), (hover: none)").matches;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. Theme-Aware CodeMirror Syntax Highlighting Style
@@ -163,6 +187,38 @@ export const mrMdEditorTheme = EditorView.theme({
 	".cm-selectionBackground, ::selection": {
 		backgroundColor:
 			"color-mix(in srgb, var(--accent) 35%, transparent) !important",
+	},
+	"@media (pointer: coarse)": {
+		"&": {
+			fontSize: "16px",
+			lineHeight: "1.5",
+		},
+		".cm-content": {
+			fontSize: "16px",
+			lineHeight: "1.5",
+		},
+		".cm-gutters": {
+			fontSize: "16px",
+			lineHeight: "1.5",
+		},
+		".cm-gutterElement:not([style*='hidden']):not([style*='visibility: hidden'])":
+			{
+				height: "24px !important",
+				minHeight: "24px !important",
+				lineHeight: "24px !important",
+			},
+		".cm-line": {
+			lineHeight: "24px !important",
+			minHeight: "24px !important",
+		},
+	},
+	"@media (max-width: 767px), ((max-height: 500px) and (pointer: coarse))": {
+		"&": {
+			maxHeight: "340px",
+		},
+		".cm-scroller": {
+			padding: "10px 0",
+		},
 	},
 });
 
@@ -899,6 +955,7 @@ export function createCodeMirrorEditor(
 
 	if (!isEditable) {
 		extensions.push(EditorState.readOnly.of(true));
+		extensions.push(EditorView.editable.of(false));
 	}
 
 	// Add language parser
@@ -967,6 +1024,13 @@ export function createCodeMirrorEditor(
 			}
 		});
 		observer.observe(runner);
+	}
+
+	// Remeasure CodeMirror layout when mobile soft keyboard shows/hides
+	if (typeof window !== "undefined" && window.visualViewport) {
+		window.visualViewport.addEventListener("resize", () => {
+			view.requestMeasure();
+		});
 	}
 
 	return view;

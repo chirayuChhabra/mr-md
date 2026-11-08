@@ -5,6 +5,25 @@ import {
 } from "../renderer/markdown/runner-highlighter.js";
 import { BkAutocomplete, isInsideStringOrComment } from "./autocomplete.js";
 import { createCodeMirrorEditor } from "./cm-editor.js";
+// @ts-expect-error: Provided by reader worker in src/client/device.ts (shared policy)
+import { bkIsPhone } from "./device.js";
+
+/**
+ * Shared policy: phone if matchMedia("(max-width: 767px), (max-height: 500px) and (pointer: coarse)").
+ */
+export function isPhone(): boolean {
+	if (typeof bkIsPhone === "function") {
+		try {
+			return bkIsPhone();
+		} catch {
+			// fallback
+		}
+	}
+	if (typeof window === "undefined" || !window.matchMedia) return false;
+	return window.matchMedia(
+		"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
+	).matches;
+}
 
 // Wandbox compiler mapping for compiled languages
 const WANDBOX_COMPILERS: Record<string, string> = {
@@ -489,7 +508,11 @@ function autoSizeEditor(
 	) as HTMLElement | null;
 	if (!codeArea) return;
 	textarea.style.height = "auto";
-	const targetHeight = Math.min(Math.max(textarea.scrollHeight, 100), 480);
+	const maxHeight = isPhone() ? 340 : 480;
+	const targetHeight = Math.min(
+		Math.max(textarea.scrollHeight, 100),
+		maxHeight,
+	);
 	codeArea.style.height = `${targetHeight}px`;
 	textarea.style.height = `${targetHeight}px`;
 }
@@ -1339,6 +1362,27 @@ export function bkInitCodeRunners(): void {
 			executeRunnerBlock(runner);
 		}
 	});
+
+	if (typeof window !== "undefined" && !window.__bk_runners_resize_wired) {
+		window.__bk_runners_resize_wired = true;
+		const onViewportChange = () => {
+			document
+				.querySelectorAll<HTMLElement>(".bk-code-runner")
+				.forEach((runner) => {
+					const textarea = runner.querySelector(
+						".bk-runner-editor",
+					) as HTMLTextAreaElement | null;
+					if (textarea) autoSizeEditor(runner, textarea);
+					if (runner.__bk_cm_view) runner.__bk_cm_view.requestMeasure();
+				});
+		};
+		window.addEventListener("resize", onViewportChange, { passive: true });
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener("resize", onViewportChange, {
+				passive: true,
+			});
+		}
+	}
 }
 
 // Wire global click events
@@ -1347,11 +1391,21 @@ export function bkWireCodeRunners(): void {
 		const target = e.target as HTMLElement | null;
 		if (!target) return;
 
+		// On phone, keep code runner interactions inline and prevent accidental container expand
+		if (isPhone() && target.closest(".bk-code-runner")) {
+			const figure = target.closest(".bk-object");
+			if (figure?.classList.contains("bk-object--maximized")) {
+				figure.classList.remove("bk-object--maximized");
+				figure.classList.remove("bk-object--expanded");
+			}
+		}
+
 		// 1. Run / Compile / Stop / Check Answer button
 		const runBtn = target.closest(".bk-run-btn") as HTMLButtonElement | null;
 		if (runBtn) {
 			const runner = runBtn.closest(".bk-code-runner") as HTMLElement | null;
 			if (runner) {
+				e.stopPropagation();
 				executeRunnerBlock(runner);
 				return;
 			}
@@ -1362,6 +1416,7 @@ export function bkWireCodeRunners(): void {
 		if (hintBtn) {
 			const runner = hintBtn.closest(".bk-code-runner") as HTMLElement | null;
 			if (runner) {
+				e.stopPropagation();
 				const hintEl = runner.querySelector(
 					".bk-runner-hint",
 				) as HTMLElement | null;
@@ -1381,6 +1436,7 @@ export function bkWireCodeRunners(): void {
 		if (resetBtn) {
 			const runner = resetBtn.closest(".bk-code-runner") as HTMLElement | null;
 			if (runner) {
+				e.stopPropagation();
 				const textarea = runner.querySelector(
 					".bk-runner-editor",
 				) as HTMLTextAreaElement | null;
@@ -1425,6 +1481,7 @@ export function bkWireCodeRunners(): void {
 		if (clearBtn) {
 			const runner = clearBtn.closest(".bk-code-runner") as HTMLElement | null;
 			if (runner) {
+				e.stopPropagation();
 				const logsEl = runner.querySelector(".bk-runner-logs");
 				if (logsEl) logsEl.innerHTML = "";
 				const statusEl = runner.querySelector(".bk-runner-status");
@@ -1446,6 +1503,7 @@ export function bkWireCodeRunners(): void {
 		if (copyBtn) {
 			const runner = copyBtn.closest(".bk-code-runner") as HTMLElement | null;
 			if (runner) {
+				e.stopPropagation();
 				const textarea = runner.querySelector(
 					".bk-runner-editor",
 				) as HTMLTextAreaElement | null;

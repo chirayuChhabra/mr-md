@@ -25,7 +25,7 @@ export function renderMedia(
 		};
 	}
 
-	const media = `<video src="${escAttr(src)}" ${block.poster ? `poster="${escAttr(resolveAssetSrc(block.poster, options))}"` : ""} ${block.controls !== false ? "controls" : ""} playsinline></video>`;
+	const media = `<video src="${escAttr(src)}" ${block.poster ? `poster="${escAttr(resolveAssetSrc(block.poster, options))}"` : ""} ${block.controls !== false ? "controls" : ""} playsinline webkit-playsinline preload="metadata"></video>`;
 
 	return {
 		html: blockChrome(

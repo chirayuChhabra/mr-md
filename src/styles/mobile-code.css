@@ -1,0 +1,204 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Mr. Markdown Mobile & Touch Code / Media Stylesheet
+   Companion styles for mobile phones, tablets, and touch devices.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* 1. Prevent iOS Safari auto-zoom on input/editor focus (requires >= 16px font-size) */
+@media (pointer: coarse) {
+  .bk-code-runner .bk-runner-editor,
+  .bk-code-runner .cm-editor,
+  .bk-code-runner .cm-content,
+  .bk-code-runner .cm-line,
+  .bk-code-runner .cm-gutters,
+  .bk-code-runner .cm-gutterElement {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+
+  .bk-code-runner .cm-gutterElement:not([style*="hidden"]):not([style*="visibility: hidden"]) {
+    height: 24px !important;
+  }
+
+  .bk-code-runner .bk-runner-lines {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Tablet & Touch Reachable Controls */
+  .bk-sim-tabs [data-bk-scroll-more] {
+    min-height: 40px;
+    padding: 8px 16px;
+    touch-action: manipulation;
+  }
+
+  .bk-sim-tab {
+    min-height: 40px;
+    padding: 8px 14px;
+    touch-action: manipulation;
+  }
+}
+
+/* 2. Phone Experience: Shared Policy (max-width: 767px), (max-height: 500px) and (pointer: coarse) */
+@media (max-width: 767px), (max-height: 500px) and (pointer: coarse) {
+  /* Prevent horizontal breakout on narrow mobile screens */
+  .bk-code-runner {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* Header adjustments for phone */
+  .bk-runner-header {
+    padding: 8px 10px;
+    min-height: 44px;
+    flex-wrap: wrap;
+    gap: 8px;
+    box-sizing: border-box;
+  }
+
+  .bk-runner-header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .bk-runner-title {
+    font-size: 12px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bk-runner-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  /* Minimum 34-44px touch targets on phone for reliable tapping */
+  .bk-run-btn {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    border-radius: 6px;
+    touch-action: manipulation;
+  }
+
+  .bk-hint-btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
+    touch-action: manipulation;
+  }
+
+  .bk-reset-btn,
+  .bk-runner-header .bk-copy-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    touch-action: manipulation;
+  }
+
+  /* Editor sizing for mobile */
+  .bk-runner-editor-wrapper {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bk-code-runner .cm-editor {
+    max-height: 320px;
+  }
+
+  .bk-code-runner .cm-scroller {
+    padding: 10px 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bk-code-runner .cm-content {
+    padding: 0 10px 0 4px;
+  }
+
+  .bk-code-runner .cm-gutters {
+    padding: 0 4px 0 0;
+    min-width: 38px;
+  }
+
+  /* Output section */
+  .bk-runner-output {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .bk-runner-output-header {
+    padding: 8px 12px;
+    min-height: 36px;
+  }
+
+  .bk-clear-btn {
+    padding: 4px 10px;
+    min-height: 30px;
+    min-width: 44px;
+    font-size: 12px;
+    touch-action: manipulation;
+  }
+
+  .bk-runner-logs {
+    padding: 10px 12px;
+    max-height: 220px;
+    font-size: 13px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Strictly inline objects on phones: hide maximize/expand buttons completely */
+  .bk-object:has(.bk-media) .bk-object-maximize,
+  .bk-object:has(.bk-media--image) .bk-object-maximize,
+  .bk-object:has(.bk-media--video) .bk-object-maximize,
+  .bk-media .bk-object-maximize,
+  .bk-object-maximize {
+    display: none !important;
+  }
+
+  /* Inline media display without distortion or cropped overflow */
+  .bk-media {
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: auto;
+    height: auto;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bk-media img,
+  .bk-media video {
+    position: static;
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
+    display: block;
+  }
+
+  .bk-audio-box {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .bk-audio-box audio {
+    width: 100%;
+  }
+}
