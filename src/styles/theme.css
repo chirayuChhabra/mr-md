@@ -4024,7 +4024,7 @@ body.bk-is-scrolling .bk-embed-interactive.is-interactive iframe {
 html, body {
 	-webkit-text-size-adjust: 100%;
 	text-size-adjust: 100%;
-	touch-action: pan-x pan-y;
+	touch-action: auto;
 }
 
 /* ─── TABLET & MOBILE SHELL (<= 1024px) ──────────────────────────────────── */

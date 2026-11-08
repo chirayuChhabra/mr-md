@@ -83,7 +83,7 @@
 
   /* Minimum 34-44px touch targets on phone for reliable tapping */
   .bk-run-btn {
-    height: 34px;
+    height: 44px;
     padding: 0 12px;
     font-size: 12.5px;
     border-radius: 6px;
@@ -91,7 +91,7 @@
   }
 
   .bk-hint-btn {
-    height: 34px;
+    height: 44px;
     padding: 0 10px;
     font-size: 12px;
     touch-action: manipulation;
@@ -99,10 +99,10 @@
 
   .bk-reset-btn,
   .bk-runner-header .bk-copy-btn {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -150,7 +150,7 @@
 
   .bk-clear-btn {
     padding: 4px 10px;
-    min-height: 30px;
+    min-height: 44px;
     min-width: 44px;
     font-size: 12px;
     touch-action: manipulation;

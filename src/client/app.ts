@@ -5,6 +5,7 @@ import {
 	bkInitInteractiveFrames,
 	bkWireInteractiveFrames,
 } from "./interactive.js";
+import { bkInitMedia, bkWireMedia } from "./media.js";
 import { bkWireQuizzes } from "./quiz.js";
 import { bkInitRouter } from "./router.js";
 import { bkInitCodeRunners, bkWireCodeRunners } from "./runner.js";
@@ -28,6 +29,7 @@ function wireOnce() {
 	window.__bk_wired_once = true;
 
 	bkInitRouter();
+	bkWireMedia();
 	bkWireMaximizeControls();
 	bkWireSidebarToggle();
 	bkWireThemeControls();
@@ -42,6 +44,7 @@ function wireOnce() {
 }
 
 function initOnPageLoad() {
+	bkInitMedia();
 	bkInitCodeCopy();
 	bkInitCodeRunners();
 	bkInitSimControls();

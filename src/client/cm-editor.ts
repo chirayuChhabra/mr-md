@@ -31,25 +31,12 @@ import {
 } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { tags } from "@lezer/highlight";
-// @ts-expect-error: Provided by reader worker in src/client/device.ts (shared policy)
 import { bkIsPhone } from "./device.js";
 
 /**
  * Shared policy: phone if matchMedia("(max-width: 767px), (max-height: 500px) and (pointer: coarse)").
  */
-export function isPhoneDevice(): boolean {
-	if (typeof bkIsPhone === "function") {
-		try {
-			return bkIsPhone();
-		} catch {
-			// fallback
-		}
-	}
-	if (typeof window === "undefined" || !window.matchMedia) return false;
-	return window.matchMedia(
-		"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
-	).matches;
-}
+export const isPhoneDevice = bkIsPhone;
 
 export function isTouchDevice(): boolean {
 	if (typeof window === "undefined" || !window.matchMedia) return false;
@@ -1024,13 +1011,6 @@ export function createCodeMirrorEditor(
 			}
 		});
 		observer.observe(runner);
-	}
-
-	// Remeasure CodeMirror layout when mobile soft keyboard shows/hides
-	if (typeof window !== "undefined" && window.visualViewport) {
-		window.visualViewport.addEventListener("resize", () => {
-			view.requestMeasure();
-		});
 	}
 
 	return view;

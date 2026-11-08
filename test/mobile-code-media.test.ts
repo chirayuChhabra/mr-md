@@ -6,7 +6,7 @@ import { isPhoneDevice, isTouchDevice } from "../src/client/cm-editor.js";
 
 const chrome =
 	process.env.PUPPETEER_EXECUTABLE_PATH ||
-	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+	await puppeteer.executablePath();
 
 describe("Mobile & Touch Code / Media Experience", () => {
 	test("renderMedia generates video with playsinline, webkit-playsinline and preload", () => {

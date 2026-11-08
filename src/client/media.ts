@@ -1,23 +1,10 @@
-// @ts-expect-error: Provided by reader worker in src/client/device.ts (shared policy)
 import { bkIsPhone } from "./device.js";
 
 /**
  * Shared helper to determine if current device context is a phone.
  * Uses shared policy: phone if matchMedia("(max-width: 767px), (max-height: 500px) and (pointer: coarse)").
  */
-export function isPhoneDevice(): boolean {
-	if (typeof bkIsPhone === "function") {
-		try {
-			return bkIsPhone();
-		} catch {
-			// fallback on runtime error
-		}
-	}
-	if (typeof window === "undefined" || !window.matchMedia) return false;
-	return window.matchMedia(
-		"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
-	).matches;
-}
+export const isPhoneDevice = bkIsPhone;
 
 /**
  * Wire media elements for mobile and touch experiences:

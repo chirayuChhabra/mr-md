@@ -1,4 +1,3 @@
-// @ts-expect-error: Provided by reader worker in src/client/device.ts (shared policy)
 import { bkIsPhone } from "./device.js";
 
 interface InspectorBinding {

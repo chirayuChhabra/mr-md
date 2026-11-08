@@ -5,25 +5,12 @@ import {
 } from "../renderer/markdown/runner-highlighter.js";
 import { BkAutocomplete, isInsideStringOrComment } from "./autocomplete.js";
 import { createCodeMirrorEditor } from "./cm-editor.js";
-// @ts-expect-error: Provided by reader worker in src/client/device.ts (shared policy)
 import { bkIsPhone } from "./device.js";
 
 /**
  * Shared policy: phone if matchMedia("(max-width: 767px), (max-height: 500px) and (pointer: coarse)").
  */
-export function isPhone(): boolean {
-	if (typeof bkIsPhone === "function") {
-		try {
-			return bkIsPhone();
-		} catch {
-			// fallback
-		}
-	}
-	if (typeof window === "undefined" || !window.matchMedia) return false;
-	return window.matchMedia(
-		"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
-	).matches;
-}
+export const isPhone = bkIsPhone;
 
 // Wandbox compiler mapping for compiled languages
 const WANDBOX_COMPILERS: Record<string, string> = {
