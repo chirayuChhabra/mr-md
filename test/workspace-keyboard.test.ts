@@ -4,7 +4,7 @@ import puppeteer from "puppeteer";
 import { renderSimulation } from "../src/renderer/blocks/simulation.js";
 import { renderSteps } from "../src/renderer/blocks/steps.js";
 
-const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || await puppeteer.executablePath();
 
 test.skipIf(!existsSync(chrome))("fullscreen keyboard works from host, transport and iframe, including paused step navigation", async () => {
  const bundle = await Bun.build({entrypoints:["keyboard-fixture"],target:"browser",plugins:[{name:"fixture",setup(build){
@@ -15,7 +15,7 @@ test.skipIf(!existsSync(chrome))("fullscreen keyboard works from host, transport
  const src=`const sim=defineSimulation({props:{speed:2}});window.resets=0;sim.onReset(()=>{window.resets++});bkSetup(800,450,(ctx)=>{ctx.fillStyle=bkColor('bg');ctx.fillRect(0,0,800,450)});`;
  const block=renderSimulation({type:"simulation",src,props:{speed:2},tunables:{speed:{type:"range",min:0,max:10}}},0,{}).html;
  const steps=renderSteps({type:"steps",src,props:{speed:2},tunables:{speed:{type:"range",min:0,max:10}},voice:false,audio:false,steps:[{title:"First"},{title:"Second"},{title:"Third"}]},1,{}).html;
- const browser=await puppeteer.launch({executablePath:chrome,headless:true});
+ const browser=await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"], executablePath:chrome,headless:true});
  try {
   const page=await browser.newPage();
   page.on('pageerror', err => console.error('PAGE ERROR:', err));

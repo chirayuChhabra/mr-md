@@ -4,10 +4,10 @@ import puppeteer from "puppeteer";
 import { renderSimulationControls } from "../src/renderer/markdown/controls.js";
 import { renderInspectorTabs, renderSimulationTelemetry } from "../src/renderer/markdown/telemetry.js";
 
-const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || await puppeteer.executablePath();
 
 test.skipIf(!existsSync(chrome))("inspector keeps headings compact and readout values aligned beneath unequal labels", async () => {
- const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
+ const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],  executablePath: chrome, headless: true });
  try {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800 });
@@ -32,7 +32,7 @@ test.skipIf(!existsSync(chrome))("inspector keeps headings compact and readout v
 test.skipIf(!existsSync(chrome))("overflow cue follows the active panel and offers navigation without a scrollbar", async () => {
  const bundle = await Bun.build({ entrypoints: ['src/client/inspector.ts'], target: 'browser', format: 'esm' });
  expect(bundle.success).toBe(true);
- const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
+ const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],  executablePath: chrome, headless: true });
  try {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 700 });

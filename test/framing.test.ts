@@ -4,7 +4,7 @@ import puppeteer, { type Browser } from "puppeteer";
 import { iframeDoc } from "../src/renderer/blocks/iframe.js";
 import { stepsIframeDoc } from "../src/renderer/blocks/steps-iframe.js";
 
-const installedChrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const installedChrome = await puppeteer.executablePath();
 const CHROME_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || (fs.existsSync(installedChrome) ? installedChrome : undefined);
 
 describe("Canvas Framing & Viewport Runtime Contract", () => {
@@ -176,7 +176,7 @@ describe("Canvas Framing & Viewport Runtime Contract", () => {
 				browser = await puppeteer.launch({
 					headless: true,
 					executablePath: CHROME_PATH,
-					args: ["--no-sandbox", "--disable-setuid-sandbox"],
+					args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 				});
 
 				const page = await browser.newPage();
@@ -240,7 +240,7 @@ describe("Canvas Framing & Viewport Runtime Contract", () => {
 				browser = await puppeteer.launch({
 					headless: true,
 					executablePath: CHROME_PATH,
-					args: ["--no-sandbox", "--disable-setuid-sandbox"],
+					args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 				});
 
 				const page = await browser.newPage();

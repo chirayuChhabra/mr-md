@@ -6,7 +6,7 @@ import { renderSteps } from "../src/renderer/blocks/steps.js";
 
 const chrome =
 	process.env.PUPPETEER_EXECUTABLE_PATH ||
-	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+	await puppeteer.executablePath();
 
 test.skipIf(!existsSync(chrome))(
 	"simulation consistency: both block and steps hide inline controls, expand consistently with matching playback toolbar, and have NO selector above view",
@@ -133,7 +133,7 @@ window.bkSetup(800, 450, (ctx) => {
 </html>
 `;
 
-		const browser = await puppeteer.launch({
+		const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 			executablePath: chrome,
 			headless: true,
 		});

@@ -5,7 +5,7 @@ import * as path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 import { iframeDoc } from "../src/renderer/blocks/iframe.js";
 
-const installedChrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const installedChrome = await puppeteer.executablePath();
 const CHROME_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || (fs.existsSync(installedChrome) ? installedChrome : undefined);
 const SIM_JS_PATH = path.resolve(__dirname, "../mr-markdown-documentation/sims/oscillator.js");
 const SIM_CONFIG_PATH = path.resolve(__dirname, "../mr-markdown-documentation/sims/oscillator.config.json");
@@ -36,7 +36,7 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		browser = await puppeteer.launch({
 			headless: true,
 			executablePath: CHROME_PATH,
-			args: ["--no-sandbox", "--disable-setuid-sandbox"],
+			args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 		});
 	});
 

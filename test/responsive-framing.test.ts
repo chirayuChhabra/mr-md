@@ -4,11 +4,11 @@ import puppeteer from "puppeteer";
 import { iframeDoc } from "../src/renderer/blocks/iframe.js";
 import { stepsIframeDoc } from "../src/renderer/blocks/steps-iframe.js";
 
-const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || await puppeteer.executablePath();
 
 for (const [kind, renderFrame] of [["block", iframeDoc], ["steps", stepsIframeDoc]] as const) {
  test.skipIf(!existsSync(chrome))(`${kind}: default canvas layout fills preview and expanded aspect ratios without distortion`, async () => {
-  const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
+  const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],  executablePath: chrome, headless: true });
   try {
    const page = await browser.newPage();
    await page.setViewport({width:1600,height:1100,deviceScaleFactor:2});
@@ -43,7 +43,7 @@ for (const [kind, renderFrame] of [["block", iframeDoc], ["steps", stepsIframeDo
 
 
 test.skipIf(!existsSync(chrome))("QCD keeps pointer picking accurate after preview expands", async () => {
- const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
+ const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],  executablePath: chrome, headless: true });
  try {
   const page = await browser.newPage();
   await page.setViewport({width:1500,height:1100,deviceScaleFactor:2});

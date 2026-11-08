@@ -5,7 +5,7 @@ import { renderSteps } from "../src/renderer/blocks/steps.js";
 
 const chrome =
 	process.env.PUPPETEER_EXECUTABLE_PATH ||
-	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+	await puppeteer.executablePath();
 
 test.skipIf(!existsSync(chrome))(
 	"guided trials restore authored defaults and preserve progress when closing",
@@ -69,7 +69,7 @@ ctx.fillStyle=window.bkColor('text');ctx.fillRect(80+window.__trial.distance,200
 			0,
 			{},
 		);
-		const browser = await puppeteer.launch({
+		const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 			executablePath: chrome,
 			headless: true,
 		});

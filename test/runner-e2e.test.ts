@@ -22,7 +22,7 @@ beforeAll(async () => {
 
 	browser = await puppeteer.launch({
 		headless: true,
-		args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--disable-web-security"],
+		args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--disable-web-security"],
 	});
 	page = await browser.newPage();
 	await page.setViewport({ width: 1280, height: 800 });
