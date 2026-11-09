@@ -51,7 +51,6 @@ timeline.update(3,{speed:3},false,snapshot('present',3));`});
   expect(await page.evaluate(() => (window as any).timeline.getBranches().length)).toBe(1);
   expect(await page.$$eval('.bk-timeline-fork-edge', nodes => nodes.length)).toBe(0);
   expect(errors).toEqual([]);
-  await page.screenshot({path:'/tmp/mr-md-timeline.png'});
  } finally {await browser.close()}
 },30000);
 
