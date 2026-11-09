@@ -797,7 +797,7 @@ function restoreBranchSamples(r: MeasurementRuntime, branchId: string) {
 }
 
 function handleBranchingInteraction(r: MeasurementRuntime, reason?: string) {
-	if (!r.timeline?.isAtPast()) return;
+	if (r.isRestoringSnapshot || !r.timeline?.isAtPast()) return;
 	const forkTime = r.time;
 	rememberBranchSamples(r);
 	const newBranchId = r.timeline.branchOnContinuation(reason);

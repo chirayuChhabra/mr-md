@@ -157,6 +157,7 @@ export function createMeasurementTimeline(
 	let restoredEntryId: string | null = null;
 	let pastSnapshotTime = 0;
 	let currentRestoreRequestId = 0;
+	let restorePending = false;
 	let selectedNodeId: string | null = null;
 	let nextOrder = 1;
 	const nodeOrder = new Map<string, number>();
@@ -514,6 +515,7 @@ export function createMeasurementTimeline(
 			return;
 		}
 		const request = ++currentRestoreRequestId;
+		restorePending = true;
 		try {
 			const restored = await options.onRestoreSnapshot(
 				branch.presentPoint.snapshot,
@@ -536,11 +538,14 @@ export function createMeasurementTimeline(
 			delete liveHead.dataset.state;
 		} catch {
 			showFeedback("Could not return to present.", "warning");
+		} finally {
+			if (request === currentRestoreRequestId) restorePending = false;
 		}
 	};
 
 	const continueFromSnapshot = (_reason?: string): string | null => {
-		if (!isAtPastSnapshot || !activeRestoredSnapshot) return null;
+		if (restorePending || !isAtPastSnapshot || !activeRestoredSnapshot)
+			return null;
 		const current = branches.get(activeBranchId);
 		if (!current) return null;
 		current.presentPoint = {
@@ -592,9 +597,11 @@ export function createMeasurementTimeline(
 		}
 
 		const reqId = ++currentRestoreRequestId;
+		restorePending = true;
 		setSnapshotPending(entry?.id || snapshot.id, true);
 
 		const finishRestore = () => {
+			restorePending = false;
 			setSnapshotPending(entry?.id || snapshot.id, false);
 			isAtPastSnapshot = true;
 			restoredEntryId = entry?.id || null;
@@ -640,6 +647,7 @@ export function createMeasurementTimeline(
 		};
 
 		const handleFail = () => {
+			restorePending = false;
 			setSnapshotPending(entry?.id || snapshot.id, false);
 			showFeedback("Simulation could not restore this snapshot.", "danger");
 		};
@@ -991,6 +999,7 @@ export function createMeasurementTimeline(
 
 	const reset = (isInitial = false) => {
 		currentRestoreRequestId++;
+		restorePending = false;
 		started = false;
 		empty.hidden = false;
 		startNode.hidden = true;

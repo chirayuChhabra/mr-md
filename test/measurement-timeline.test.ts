@@ -607,3 +607,25 @@ test("renaming a snapshot updates its selected details and rejects empty labels"
 	);
 	timeline.dispose();
 });
+
+test("continuation waits for the latest restore acknowledgement", async () => {
+ const doc = new JSDOM("<div></div>").window.document;
+ let acknowledge!: (ok: boolean) => void;
+ const snapshot = (id: string, time: number) => ({id,time,timestamp:time,label:id,props:{},telemetry:{},isExact:true});
+ const first = snapshot("first", 1);
+ const second = snapshot("second", 2);
+ const timeline = createMeasurementTimeline(doc.querySelector("div")!, {
+  schema:{}, onRestoreSnapshot: state => state.id === "first" ? true : new Promise<boolean>(resolve => {acknowledge=resolve}),
+ });
+ timeline.start(0, {});
+ timeline.restoreSnapshot(first);
+ const pending = timeline.restoreSnapshot(second);
+ expect(timeline.continueFromSnapshot()).toBeNull();
+ expect(timeline.isAtPast()).toBe(true);
+ acknowledge(true);
+ expect(await pending).toBe(true);
+ expect(timeline.continueFromSnapshot()).toBe("main");
+ expect(timeline.isAtPast()).toBe(false);
+ expect(timeline.getBranches()[0].presentPoint?.time).toBe(2);
+ timeline.dispose();
+});
