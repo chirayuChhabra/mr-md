@@ -20,6 +20,7 @@ export interface MeasurementTimelineEntry {
 	branchId?: string;
 }
 
+// Retained for consumers of the existing export and telemetry contract.
 export interface TimelineBranch {
 	id: string;
 	name: string;
@@ -86,7 +87,6 @@ export function createMeasurementTimeline(
 	graphContainer.setAttribute("aria-label", "Simulation timeline");
 
 	let updateConnections = () => {};
-	const closeBranchMenu = (_restoreFocus = false) => {};
 	const ResizeObserverCtor = doc.defaultView?.ResizeObserver;
 	const graphObserver = ResizeObserverCtor
 		? new ResizeObserverCtor(() => updateConnections())
@@ -151,17 +151,13 @@ export function createMeasurementTimeline(
 	let supportsExactSnapshot: boolean | null = null;
 	let feedbackTimer: ReturnType<typeof setTimeout> | null = null;
 
-	let branchCounter = 0;
-	let activeBranchId = "main";
+	const activeBranchId = "main";
 	let isAtPastSnapshot = false;
 	let activeRestoredSnapshot: SimulationSnapshot | null = null;
 	let restoredEntryId: string | null = null;
 	let pastSnapshotTime = 0;
 	let currentRestoreRequestId = 0;
 	let selectedNodeId: string | null = null;
-	let focusMode = false;
-	const branchLanes = new Map<string, number>([["main", 0]]);
-	let nextLane = 1;
 	let nextOrder = 1;
 	const nodeOrder = new Map<string, number>();
 
@@ -336,58 +332,6 @@ export function createMeasurementTimeline(
 		}
 	};
 
-	const setBranchPending = (branchId: string, pending: boolean) => {
-		for (const el of Array.from(
-			container.querySelectorAll(`[data-branch-id="${branchId}"]`),
-		) as HTMLElement[]) {
-			if (pending) {
-				el.dataset.pending = "true";
-				el.setAttribute("aria-busy", "true");
-			} else {
-				delete el.dataset.pending;
-				el.removeAttribute("aria-busy");
-			}
-		}
-	};
-
-	const isRestoredHead = (
-		branch: TimelineBranch,
-		snapshot: SimulationSnapshot,
-		entryId?: string | null,
-	): boolean => {
-		if (branch.presentPoint && snapshot.time < branch.presentPoint.time)
-			return false;
-		if (entryId === "start") {
-			return branch.entries.length === 0;
-		}
-		if (entryId === "present") {
-			return true;
-		}
-
-		if (entryId) {
-			const index = branch.entries.findIndex((e) => e.id === entryId);
-			if (index >= 0) {
-				return index === branch.entries.length - 1;
-			}
-		}
-
-		const reversedEntries = [...branch.entries].reverse();
-		const match = reversedEntries.find((e) => e.snapshot?.id === snapshot.id);
-		if (match) {
-			return branch.entries.indexOf(match) === branch.entries.length - 1;
-		}
-
-		if (branch.presentPoint?.snapshot?.id === snapshot.id) {
-			return true;
-		}
-
-		if (branch.startPoint?.snapshot?.id === snapshot.id) {
-			return branch.entries.length === 0;
-		}
-
-		return false;
-	};
-
 	const updatePastHint = () => {
 		if (!isAtPastSnapshot || !activeRestoredSnapshot) {
 			pastHint.hidden = true;
@@ -398,204 +342,20 @@ export function createMeasurementTimeline(
 		pastHint.hidden = false;
 		pastHint.replaceChildren();
 
-		const currentBranch = branches.get(activeBranchId);
-		const atHead = currentBranch
-			? isRestoredHead(currentBranch, activeRestoredSnapshot, restoredEntryId)
-			: false;
-
 		const hintText = doc.createElement("span");
 		hintText.className = "bk-timeline-past-hint-text";
-		hintText.textContent = atHead
-			? "Continue from this moment."
-			: "Continue from this moment.";
+		hintText.textContent = "Continue from this moment.";
 
 		const returnBtn = doc.createElement("button");
 		returnBtn.type = "button";
 		returnBtn.className = "bk-timeline-return-btn";
 		returnBtn.textContent = "Back to live";
-		returnBtn.title = "Return to present without branching";
+		returnBtn.title = "Return to the preserved live state";
 		returnBtn.addEventListener("click", () => {
 			returnToPresent();
 		});
 
 		pastHint.append(hintText, returnBtn);
-	};
-
-	const canDeleteBranch = (
-		branchId: string,
-	): { allowed: boolean; reason?: string } => {
-		if (branchId === "main") {
-			return { allowed: false, reason: "Main timeline cannot be deleted." };
-		}
-		if (!branches.has(branchId)) {
-			return { allowed: false, reason: "Branch not found." };
-		}
-		const childBranches = [...branches.values()].filter(
-			(b) => b.parentBranchId === branchId,
-		);
-		if (childBranches.length > 0) {
-			return {
-				allowed: false,
-				reason: `Cannot delete branch with active child branches (${childBranches.map((b) => b.name).join(", ")} depend on it).`,
-			};
-		}
-		if (branchId === activeBranchId) {
-			const targetBranch = branches.get(branchId)!;
-			const fallbackId =
-				targetBranch.parentBranchId && branches.has(targetBranch.parentBranchId)
-					? targetBranch.parentBranchId
-					: "main";
-			const fallbackBranch = branches.get(fallbackId)!;
-			const fallbackSnapshot =
-				fallbackBranch.presentPoint?.snapshot ||
-				fallbackBranch.entries
-					.slice()
-					.reverse()
-					.find((e) => e.snapshot)?.snapshot ||
-				fallbackBranch.startPoint?.snapshot;
-
-			if (!options.onRestoreSnapshot) {
-				return {
-					allowed: false,
-					reason:
-						"Cannot delete active branch: simulation does not support snapshot restoration.",
-				};
-			}
-			if (supportsExactSnapshot === false) {
-				return {
-					allowed: false,
-					reason:
-						"Cannot delete active branch: simulation has not registered snapshot handlers.",
-				};
-			}
-			if (!fallbackSnapshot) {
-				return {
-					allowed: false,
-					reason: `Cannot delete active branch: no restorable state available on fallback ${fallbackBranch.name}.`,
-				};
-			}
-		}
-		return { allowed: true };
-	};
-
-	const deleteBranch = (branchId: string): Promise<boolean> | boolean => {
-		const check = canDeleteBranch(branchId);
-		if (!check.allowed) {
-			showFeedback(check.reason || "Cannot delete branch.", "warning");
-			return false;
-		}
-
-		const targetBranch = branches.get(branchId)!;
-
-		if (branchId === activeBranchId) {
-			const fallbackId =
-				targetBranch.parentBranchId && branches.has(targetBranch.parentBranchId)
-					? targetBranch.parentBranchId
-					: "main";
-			const fallbackBranch = branches.get(fallbackId)!;
-			const fallbackSnapshot =
-				fallbackBranch.presentPoint?.snapshot ||
-				fallbackBranch.entries
-					.slice()
-					.reverse()
-					.find((e) => e.snapshot)?.snapshot ||
-				fallbackBranch.startPoint?.snapshot;
-
-			if (
-				!fallbackSnapshot ||
-				!options.onRestoreSnapshot ||
-				supportsExactSnapshot === false
-			) {
-				showFeedback(
-					`Cannot safely delete ${targetBranch.name}: no restorable fallback available.`,
-					"danger",
-				);
-				return false;
-			}
-
-			const reqId = ++currentRestoreRequestId;
-			setBranchPending(branchId, true);
-
-			const finishActiveDelete = () => {
-				setBranchPending(branchId, false);
-				branches.delete(branchId);
-				activeBranchId = fallbackId;
-				isAtPastSnapshot = false;
-				activeRestoredSnapshot = null;
-				restoredEntryId = null;
-				selectedNodeId = null;
-				updatePastHint();
-				detailsPanel.hidden = true;
-				notifySnapshotViewChange(false, fallbackBranch.presentPoint?.time);
-				renderGraph();
-				if (fallbackBranch.presentPoint) {
-					setPoint(
-						liveHead,
-						fallbackBranch.presentPoint.playing ? "Present" : "Paused",
-						fallbackBranch.presentPoint.time,
-						fallbackBranch.presentPoint.values,
-					);
-					delete liveHead.dataset.state;
-				}
-				showFeedback(
-					`Deleted ${targetBranch.name}; restored ${fallbackBranch.name}.`,
-					"neutral",
-				);
-			};
-
-			const handleActiveDeleteFail = () => {
-				setBranchPending(branchId, false);
-				showFeedback(
-					`Could not safely restore ${fallbackBranch.name}. Branch deletion cancelled.`,
-					"danger",
-				);
-			};
-
-			try {
-				const result = options.onRestoreSnapshot(fallbackSnapshot);
-				if (typeof result === "object" && result !== null && "then" in result) {
-					return (result as Promise<boolean | void>)
-						.then((ok) => {
-							if (reqId !== currentRestoreRequestId) return false;
-							if (ok === false) {
-								handleActiveDeleteFail();
-								return false;
-							}
-							finishActiveDelete();
-							return true;
-						})
-						.catch(() => {
-							if (reqId !== currentRestoreRequestId) return false;
-							handleActiveDeleteFail();
-							return false;
-						});
-				} else {
-					if (result === false) {
-						handleActiveDeleteFail();
-						return false;
-					}
-					finishActiveDelete();
-					return true;
-				}
-			} catch {
-				handleActiveDeleteFail();
-				return false;
-			}
-		}
-
-		branches.delete(branchId);
-		if (
-			selectedNodeId &&
-			!branches
-				.get(activeBranchId)
-				?.entries.some((e) => e.id === selectedNodeId)
-		) {
-			selectedNodeId = null;
-			detailsPanel.hidden = true;
-		}
-		renderGraph();
-		showFeedback(`Deleted ${targetBranch.name}.`, "neutral");
-		return true;
 	};
 
 	const renderNodeDetails = (entry: MeasurementTimelineEntry) => {
@@ -634,11 +394,6 @@ export function createMeasurementTimeline(
 		const actionsRow = doc.createElement("div");
 		actionsRow.className = "bk-timeline-actions-row";
 
-		const currentBranch = branches.get(activeBranchId);
-		const isHead = currentBranch
-			? isRestoredHead(currentBranch, entry.snapshot || ({} as any), entry.id)
-			: false;
-
 		if (
 			entry.snapshot &&
 			isAtPastSnapshot &&
@@ -648,9 +403,7 @@ export function createMeasurementTimeline(
 			continueBtn.type = "button";
 			continueBtn.className = "bk-timeline-action-btn bk-timeline-continue-btn";
 			continueBtn.textContent = "Resume";
-			continueBtn.title = isHead
-				? "Resume from the selected moment"
-				: "Resume from the selected moment";
+			continueBtn.title = "Resume from the selected moment";
 
 			continueBtn.addEventListener("click", () => {
 				const CustomEventCtor =
@@ -660,116 +413,20 @@ export function createMeasurementTimeline(
 					bubbles: true,
 					composed: true,
 					detail: {
-						reason: isHead ? "Resumed simulation" : "Branched from snapshot",
+						reason: "Resumed from snapshot",
 					},
 				});
 				container.dispatchEvent(evt);
 
 				// Fallback for standalone tests without full runtime wiring
 				if (isAtPastSnapshot) {
-					branchOnContinuation(
-						isHead ? "Resumed simulation" : "Branched from snapshot",
-					);
+					continueFromSnapshot();
 				}
 			});
 			actionsRow.append(continueBtn);
 		}
 
-		if (entry.branchId && entry.branchId !== activeBranchId) {
-			const switchBtn = doc.createElement("button");
-			switchBtn.type = "button";
-			switchBtn.className = "bk-timeline-action-btn";
-			switchBtn.textContent = "Switch";
-			switchBtn.title = `Switch to ${branches.get(entry.branchId)?.name || "branch"}`;
-			switchBtn.addEventListener("click", () => {
-				selectBranch(entry.branchId!);
-			});
-			actionsRow.append(switchBtn);
-		}
-
-		if (entry.branchId && entry.branchId !== "main") {
-			const delBtn = doc.createElement("button");
-			delBtn.type = "button";
-			delBtn.className = "bk-timeline-action-btn bk-timeline-delete-btn";
-			delBtn.dataset.action = "delete";
-			delBtn.textContent = "Delete branch";
-
-			const check = canDeleteBranch(entry.branchId);
-			if (!check.allowed) {
-				delBtn.disabled = true;
-				delBtn.title = check.reason || "Cannot delete branch";
-				delBtn.setAttribute("aria-describedby", `del-reason-${entry.branchId}`);
-
-				const note = doc.createElement("div");
-				note.className = "bk-timeline-action-note";
-				note.id = `del-reason-${entry.branchId}`;
-				note.textContent = check.reason || "Cannot delete branch";
-
-				actionsRow.append(delBtn);
-				actions.append(actionsRow, note);
-			} else {
-				delBtn.title = "Delete this branch and remove its timeline";
-				let confirming = false;
-				const cancelBtn = doc.createElement("button");
-				cancelBtn.type = "button";
-				cancelBtn.className = "bk-timeline-action-btn";
-				cancelBtn.textContent = "Cancel";
-				const resetConfirmation = () => {
-					confirming = false;
-					delete delBtn.dataset.confirm;
-					delBtn.textContent = "Delete branch";
-					delBtn.removeAttribute("aria-label");
-					cancelBtn.remove();
-				};
-				cancelBtn.addEventListener("click", () => {
-					resetConfirmation();
-					delBtn.focus();
-				});
-				delBtn.addEventListener("keydown", (event) => {
-					if (event.key === "Escape" && confirming) {
-						event.preventDefault();
-						resetConfirmation();
-					}
-				});
-
-				delBtn.addEventListener("click", async () => {
-					if (!confirming) {
-						confirming = true;
-						delBtn.dataset.confirm = "true";
-						delBtn.textContent = "Confirm delete";
-						delBtn.setAttribute(
-							"aria-label",
-							`Confirm deletion of branch ${branches.get(entry.branchId!)?.name || ""}`,
-						);
-						actionsRow.append(cancelBtn);
-						return;
-					}
-
-					delBtn.disabled = true;
-					cancelBtn.disabled = true;
-					const targetId = entry.branchId!;
-					const ok = await deleteBranch(targetId);
-					if (ok) {
-						const retained =
-							graphRows.querySelector<HTMLElement>(
-								'.bk-snapshot-row[data-selected="true"]',
-							) ||
-							graphHeader.querySelector<HTMLElement>("button") ||
-							graphRows.querySelector<HTMLElement>(".bk-snapshot-row") ||
-							container;
-						retained?.focus();
-					} else {
-						delBtn.disabled = false;
-						cancelBtn.disabled = false;
-						resetConfirmation();
-					}
-				});
-				actionsRow.append(delBtn);
-				actions.append(actionsRow);
-			}
-		} else {
-			actions.append(actionsRow);
-		}
+		actions.append(actionsRow);
 
 		if (
 			entry.snapshot &&
@@ -882,7 +539,7 @@ export function createMeasurementTimeline(
 		}
 	};
 
-	const branchOnContinuation = (_reason?: string): string | null => {
+	const continueFromSnapshot = (_reason?: string): string | null => {
 		if (!isAtPastSnapshot || !activeRestoredSnapshot) return null;
 		const current = branches.get(activeBranchId);
 		if (!current) return null;
@@ -957,14 +614,6 @@ export function createMeasurementTimeline(
 					restoredEntryId = "present";
 				}
 			}
-			if (
-				entry?.branchId &&
-				entry.branchId !== activeBranchId &&
-				branches.has(entry.branchId)
-			) {
-				activeBranchId = entry.branchId;
-				renderGraph();
-			}
 			activeRestoredSnapshot = snapshot;
 			pastSnapshotTime = snapshot.time;
 			updateGraphHeader(false);
@@ -979,25 +628,15 @@ export function createMeasurementTimeline(
 			const tip = currentBranch?.presentPoint;
 			setPoint(
 				liveHead,
-				tip ? "Branch head" : `Restored (${stamp(snapshot.time)})`,
+				tip ? "Present" : `Restored (${stamp(snapshot.time)})`,
 				tip?.time ?? snapshot.time,
 				tip?.values ?? snapshot.telemetry ?? {},
 			);
 			liveHead.dataset.state = "restored";
-			const atHead = currentBranch
-				? isRestoredHead(currentBranch, snapshot, restoredEntryId)
-				: false;
-			if (atHead) {
-				showFeedback(
-					`Restored head snapshot at ${stamp(snapshot.time)}. Interactions extend existing branch.`,
-					"success",
-				);
-			} else {
-				showFeedback(
-					`Restored snapshot at ${stamp(snapshot.time)}. Interactions will fork a new branch.`,
-					"success",
-				);
-			}
+			showFeedback(
+				`Restored snapshot at ${stamp(snapshot.time)}. Resume or edit controls to continue from this moment.`,
+				"neutral",
+			);
 		};
 
 		const handleFail = () => {
@@ -1029,115 +668,6 @@ export function createMeasurementTimeline(
 					return false;
 				}
 				finishRestore();
-				return true;
-			}
-		} catch (_) {
-			handleFail();
-			return false;
-		}
-	};
-
-	const selectBranch = (targetId: string): Promise<boolean> | boolean => {
-		const targetBranch = branches.get(targetId);
-		if (!targetBranch) return false;
-		if (targetId === activeBranchId) return true;
-
-		const targetSnapshot =
-			targetBranch.presentPoint?.snapshot ||
-			targetBranch.entries
-				.slice()
-				.reverse()
-				.find((e) => e.snapshot)?.snapshot ||
-			targetBranch.startPoint?.snapshot;
-
-		if (!options.onRestoreSnapshot) {
-			showFeedback(
-				"Cannot switch branch: simulation does not support snapshot restoration.",
-				"warning",
-			);
-			return false;
-		}
-		if (supportsExactSnapshot === false) {
-			showFeedback(
-				"Cannot switch branch: simulation has not registered snapshot handlers.",
-				"warning",
-			);
-			return false;
-		}
-		if (!targetSnapshot) {
-			showFeedback(
-				`Cannot switch to ${targetBranch.name}: no restorable snapshot available.`,
-				"warning",
-			);
-			return false;
-		}
-
-		const reqId = ++currentRestoreRequestId;
-		setBranchPending(targetId, true);
-
-		const finishSwitch = () => {
-			setBranchPending(targetId, false);
-			activeBranchId = targetId;
-			isAtPastSnapshot = false;
-			activeRestoredSnapshot = null;
-			restoredEntryId = null;
-			selectedNodeId = null;
-			updatePastHint();
-			detailsPanel.hidden = true;
-			notifySnapshotViewChange(false, targetBranch.presentPoint?.time);
-
-			renderGraph();
-
-			if (targetBranch.presentPoint) {
-				setPoint(
-					liveHead,
-					targetBranch.presentPoint.playing ? "Present" : "Paused",
-					targetBranch.presentPoint.time,
-					targetBranch.presentPoint.values,
-				);
-				delete liveHead.dataset.state;
-			}
-
-			showFeedback(`Switched to ${targetBranch.name}`, "neutral");
-		};
-
-		const handleFail = () => {
-			setBranchPending(targetId, false);
-			showFeedback(
-				`Simulation could not switch to ${targetBranch.name}.`,
-				"danger",
-			);
-		};
-
-		try {
-			const result = options.onRestoreSnapshot(targetSnapshot, {
-				title: targetBranch.name,
-				time: targetSnapshot.time,
-				snapshot: targetSnapshot,
-				branchId: targetId,
-			});
-			if (typeof result === "object" && result !== null && "then" in result) {
-				return (result as Promise<boolean | void>)
-					.then((ok) => {
-						if (reqId !== currentRestoreRequestId) return false;
-						if (ok === false) {
-							handleFail();
-							return false;
-						}
-						finishSwitch();
-						return true;
-					})
-					.catch(() => {
-						if (reqId !== currentRestoreRequestId) return false;
-						handleFail();
-						return false;
-					});
-			} else {
-				if (result === false) {
-					handleFail();
-					return false;
-				}
-				finishSwitch();
 				return true;
 			}
 		} catch (_) {
@@ -1187,149 +717,62 @@ export function createMeasurementTimeline(
 	});
 
 	const renderGraph = () => {
-		closeBranchMenu();
 		updateGraphHeader(false);
 		const focusedId = (doc.activeElement as HTMLElement | null)?.dataset.id;
 		const scrollTop = graphContainer.scrollTop;
 		graphRows.replaceChildren();
 
-		const allBranches = [...branches.values()];
-
-		let visibleBranches = allBranches;
-		const activeChain = new Set<string>();
-		let curr: TimelineBranch | undefined = branches.get(activeBranchId);
-		while (curr) {
-			activeChain.add(curr.id);
-			curr = curr.parentBranchId
-				? branches.get(curr.parentBranchId)
-				: undefined;
-		}
-
-		if (focusMode && activeBranchId) {
-			visibleBranches = allBranches.filter((b) => activeChain.has(b.id));
-		}
-
-		for (const branch of visibleBranches) {
-			if (!branchLanes.has(branch.id)) branchLanes.set(branch.id, nextLane++);
-		}
-
-		const activeBranch = branches.get(activeBranchId);
-		const activeLane = branchLanes.get(activeBranchId) ?? 0;
-
-		if (visibleBranches.length < allBranches.length) {
-			const summary = doc.createElement("div");
-			summary.className = "bk-timeline-branch-summary";
-			const countHidden = allBranches.length - visibleBranches.length;
-			const summaryText = doc.createElement("span");
-			summaryText.textContent = `${countHidden} inactive ${countHidden === 1 ? "branch" : "branches"} hidden`;
-			const showAllBtn = doc.createElement("button");
-			showAllBtn.type = "button";
-			showAllBtn.className = "bk-timeline-summary-btn";
-			showAllBtn.dataset.action = "show-all";
-			showAllBtn.textContent = "Show all";
-			showAllBtn.addEventListener("click", () => {
-				focusMode = false;
-				renderGraph();
-			});
-			summary.append(summaryText, showAllBtn);
-			graphRows.append(summary);
-		}
+		const activeBranch = branches.get(activeBranchId)!;
+		const activeLane = 0;
 
 		type GraphNode = {
 			entry: MeasurementTimelineEntry;
 			lane: number;
 			parent?: string;
-			branch: TimelineBranch;
 		};
 		const nodes: GraphNode[] = [];
 		const seen = new Set<string>();
-		const snapshotOwners = new Map<string, string>();
 
 		const remember = (
 			entry: MeasurementTimelineEntry,
 			lane: number,
-			branch: TimelineBranch,
 			parent?: string,
 		) => {
 			const id = entry.id!;
 			if (seen.has(id)) return;
 			seen.add(id);
 			if (!nodeOrder.has(id)) nodeOrder.set(id, nextOrder++);
-			nodes.push({ entry, lane, parent, branch });
-			if (entry.snapshot && !snapshotOwners.has(entry.snapshot.id)) {
-				snapshotOwners.set(entry.snapshot.id, id);
-			}
+			nodes.push({ entry, lane, parent });
 		};
 
-		visibleBranches.forEach((branch) => {
-			const lane = branchLanes.get(branch.id) ?? 0;
-			let parent =
-				branch.forkEntryId ||
-				(branch.forkSnapshotId
-					? snapshotOwners.get(branch.forkSnapshotId)
-					: undefined);
-
-			if (
-				!branch.parentBranchId &&
-				branch.startPoint &&
-				options.config?.start !== false
-			) {
-				nodeOrder.set("start", 0);
-				remember(
-					{
-						id: "start",
-						title: "Start",
-						time: branch.startPoint.time,
-						snapshot: branch.startPoint.snapshot,
-						branchId: branch.id,
-						kind: "snapshot",
-					},
-					lane,
-					branch,
-				);
-				parent = "start";
-			}
-
-			for (const entry of branch.entries) {
-				if (seen.has(entry.id!)) continue;
-				remember(entry, lane, branch, parent);
-				parent = entry.id;
-			}
-			if (
-				branch.id !== activeBranchId &&
-				branch.presentPoint?.snapshot &&
-				options.config?.present !== false
-			) {
-				remember(
-					{
-						id: `tip-${branch.id}`,
-						title: branch.name,
-						time: branch.presentPoint.time,
-						snapshot: branch.presentPoint.snapshot,
-						branchId: branch.id,
-						kind: "snapshot",
-					},
-					lane,
-					branch,
-					parent,
-				);
-			}
-		});
+		let parent: string | undefined;
+		if (activeBranch.startPoint && options.config?.start !== false) {
+			nodeOrder.set("start", 0);
+			remember(
+				{
+					id: "start",
+					title: "Start",
+					time: activeBranch.startPoint.time,
+					snapshot: activeBranch.startPoint.snapshot,
+					branchId: "main",
+					kind: "snapshot",
+				},
+				0,
+			);
+			parent = "start";
+		}
+		for (const entry of activeBranch.entries) {
+			remember(entry, 0, parent);
+			parent = entry.id;
+		}
 
 		nodes.sort(
 			(a, b) => nodeOrder.get(b.entry.id!)! - nodeOrder.get(a.entry.id!)!,
 		);
 
-		const maxLanes =
-			Math.max(
-				...visibleBranches.map((branch) => branchLanes.get(branch.id) || 0),
-			) + 1;
-		const laneWidth = 12;
-		const mainX = 24;
-		const laneX = (lane: number) => mainX + lane * laneWidth;
-		// The track gutter has room for ordinary branch counts; more tracks scroll together.
-		const gutter = Math.max(64, laneX(maxLanes - 1) + 20);
-		const layoutRow = (row: HTMLElement, lane: number) => {
+		const laneX = (_lane: number) => 24;
+		const gutter = 64;
+		const layoutRow = (row: HTMLElement) => {
 			row.style.padding = `4px 0 4px ${gutter}px`;
 			const content = row.querySelector<HTMLElement>(".bk-snapshot-content");
 			if (!content) return;
@@ -1355,7 +798,7 @@ export function createMeasurementTimeline(
 			if (liveDot) {
 				liveDot.style.left = `${laneX(activeLane)}px`;
 			}
-			layoutRow(liveHead, activeLane);
+			layoutRow(liveHead);
 			graphRows.append(liveHead);
 		} else {
 			liveHead.hidden = true;
@@ -1368,33 +811,24 @@ export function createMeasurementTimeline(
 				? activeBranch.entries[activeBranch.entries.length - 1].id
 				: "start") || "start";
 
-		for (const { entry, lane, branch } of nodes) {
+		for (const { entry, lane } of nodes) {
 			const row = doc.createElement("button");
 			row.type = "button";
 			row.className = "bk-snapshot-row";
 			row.dataset.id = entry.id;
 			row.dataset.lane = String(lane);
-			row.dataset.branchId = branch.id;
+			row.dataset.branchId = "main";
 			row.dataset.kind = entry.kind || (entry.snapshot ? "snapshot" : "event");
 			row.dataset.time = String(entry.time);
 			row.dataset.tone = entry.tone || "neutral";
 			if (entry.key) row.dataset.key = entry.key;
 			row.setAttribute("aria-label", `${entry.title}, ${stamp(entry.time)}`);
 
-			const isFork = Boolean(entry.id?.startsWith("fork-"));
 			const isStart = entry.id === "start";
-			const isHead =
-				entry.id === activeBranchHeadId && branch.id === activeBranchId;
-			const role = isFork
-				? "fork"
-				: isStart
-					? "start"
-					: isHead
-						? "head"
-						: "node";
+			const isHead = entry.id === activeBranchHeadId;
+			const role = isStart ? "start" : isHead ? "head" : "node";
 			row.dataset.nodeRole = role;
 			if (isHead) row.dataset.head = "true";
-			if (isFork) row.dataset.fork = "true";
 
 			if (entry.id === selectedNodeId) {
 				row.dataset.selected = "true";
@@ -1415,18 +849,13 @@ export function createMeasurementTimeline(
 
 			const meta = doc.createElement("span");
 			meta.className = "bk-snapshot-meta";
-			meta.textContent =
-				branch.id !== "main" && role !== "fork" && entry.title !== branch.name
-					? `${stamp(entry.time)} · ${branch.name}`
-					: stamp(entry.time);
-			meta.title = branch.name;
+			meta.textContent = stamp(entry.time);
 
 			if (role !== "node") {
 				const badge = doc.createElement("span");
 				badge.className = "bk-snapshot-role";
 				badge.dataset.role = role;
-				badge.textContent =
-					role === "head" ? "Latest saved" : role === "fork" ? "Fork" : "Start";
+				badge.textContent = role === "head" ? "Latest saved" : "Start";
 				meta.append(badge);
 			}
 
@@ -1439,7 +868,7 @@ export function createMeasurementTimeline(
 				content.append(thumbnail);
 			}
 			row.append(dot, content);
-			layoutRow(row, lane);
+			layoutRow(row);
 
 			row.addEventListener("click", () => {
 				if (entry.snapshot?.isExact) {
@@ -1485,10 +914,9 @@ export function createMeasurementTimeline(
 			for (const row of graphRows.querySelectorAll<HTMLElement>(
 				".bk-snapshot-row, .bk-timeline-live-head",
 			)) {
-				const lane = Number(row.dataset.lane || 0);
-				layoutRow(row, lane);
+				layoutRow(row);
 				const dot = row.querySelector<HTMLElement>(".bk-snapshot-dot");
-				if (dot) dot.style.left = `${laneX(lane)}px`;
+				if (dot) dot.style.left = `${laneX(0)}px`;
 			}
 			svg.replaceChildren();
 
@@ -1533,19 +961,8 @@ export function createMeasurementTimeline(
 				const to = positions.get(node.entry.id!);
 				if (!from || !to) continue;
 				const path = doc.createElementNS(ns, "path");
-				const bend = Math.min(24, Math.abs(from.y - to.y) / 2);
-				path.setAttribute(
-					"d",
-					from.x === to.x
-						? `M ${to.x} ${to.y} V ${from.y}`
-						: `M ${to.x} ${to.y} V ${from.y - bend * 2} C ${to.x} ${from.y - bend}, ${from.x} ${from.y - bend}, ${from.x} ${from.y}`,
-				);
-				path.setAttribute(
-					"class",
-					node.entry.id?.startsWith("fork-")
-						? "bk-timeline-fork-edge"
-						: "bk-timeline-rail-line",
-				);
+				path.setAttribute("d", `M ${to.x} ${to.y} V ${from.y}`);
+				path.setAttribute("class", "bk-timeline-rail-line");
 				path.dataset.parent = node.parent;
 				path.dataset.child = node.entry.id;
 				svg.append(path);
@@ -1593,9 +1010,6 @@ export function createMeasurementTimeline(
 		detailsPanel.replaceChildren();
 		pastHint.replaceChildren();
 
-		branchLanes.clear();
-		branchLanes.set("main", 0);
-		nextLane = 1;
 		branches.clear();
 		branches.set("main", {
 			id: "main",
@@ -1603,15 +1017,12 @@ export function createMeasurementTimeline(
 			forkTime: 0,
 			entries: [],
 		});
-		activeBranchId = "main";
-		branchCounter = 0;
 		nextOrder = 1;
 		nodeOrder.clear();
 		isAtPastSnapshot = false;
 		activeRestoredSnapshot = null;
 		restoredEntryId = null;
 		selectedNodeId = null;
-		focusMode = false;
 
 		updateGraphHeader(false);
 
@@ -1750,27 +1161,27 @@ export function createMeasurementTimeline(
 		},
 
 		switchBranch(branchId: string) {
-			if (branches.has(branchId)) {
-				return selectBranch(branchId);
-			}
+			return branchId === "main";
+		},
+
+		deleteBranch(_branchId: string) {
 			return false;
 		},
 
-		deleteBranch(branchId: string) {
-			return deleteBranch(branchId);
-		},
-
 		canDeleteBranch(branchId: string) {
-			return canDeleteBranch(branchId);
+			return {
+				allowed: false,
+				reason:
+					branchId === "main"
+						? "Main timeline cannot be deleted."
+						: "Branch not found.",
+			};
 		},
 
-		setFocusMode(focused: boolean) {
-			focusMode = focused;
-			renderGraph();
-		},
+		setFocusMode(_focused: boolean) {},
 
 		isFocusMode() {
-			return focusMode;
+			return false;
 		},
 
 		refreshLayout() {
@@ -1781,14 +1192,14 @@ export function createMeasurementTimeline(
 			return isAtPastSnapshot;
 		},
 
-		branchOnContinuation,
+		continueFromSnapshot,
+		branchOnContinuation: continueFromSnapshot,
 
 		showFeedback,
 
 		reset,
 
 		dispose() {
-			closeBranchMenu();
 			graphObserver?.disconnect();
 			if (feedbackTimer) clearTimeout(feedbackTimer);
 			container.replaceChildren();
