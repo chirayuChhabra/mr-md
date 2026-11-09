@@ -39,7 +39,9 @@ export function bkInitInspectors(): void {
 				? "settings"
 				: panel.classList.contains("bk-sim-tabpanel--timeline")
 					? "timeline"
-					: panel.classList.contains("bk-sim-tabpanel--graphs") ? "graphs" : "measurements";
+					: panel.classList.contains("bk-sim-tabpanel--graphs")
+						? "graphs"
+						: "measurements";
 			if (label)
 				label.textContent = atEnd ? "Back to top" : `More ${name} below`;
 			cue.setAttribute("aria-controls", panel.id);

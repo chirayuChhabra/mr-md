@@ -537,7 +537,13 @@ export type SimulationHostToIframeMessage =
 	| { type: "bk:world-exit" }
 	| { type: "bk:world-reset-camera" }
 	| { type: "bk:snapshot-query-capabilities" }
-	| { type: "bk:snapshot-capture"; id: string; time?: number; label?: string; includeImage?: boolean }
+	| {
+			type: "bk:snapshot-capture";
+			id: string;
+			time?: number;
+			label?: string;
+			includeImage?: boolean;
+	  }
 	| {
 			type: "bk:snapshot-restore";
 			id: string;
@@ -596,8 +602,8 @@ export type SimulationIframeToHostMessage =
 	  }
 	| {
 			type: "bk:snapshot-data";
-            imageDataUrl?: string;
-            imageError?: string;
+			imageDataUrl?: string;
+			imageError?: string;
 			telemetry?: Record<string, unknown>;
 			id: string;
 			success: boolean;

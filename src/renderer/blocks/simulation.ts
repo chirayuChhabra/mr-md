@@ -40,7 +40,12 @@ export function renderSimulation(
 		? renderSimulationTelemetry(id, block.telemetry!)
 		: "";
 
-	const inspectorContent = renderInspectorTabs(id, controlsHtml, telemetryHtml, block.telemetry);
+	const inspectorContent = renderInspectorTabs(
+		id,
+		controlsHtml,
+		telemetryHtml,
+		block.telemetry,
+	);
 
 	const inspectorHtml = inspectorContent
 		? `<aside class="bk-sim-inspector" aria-label="Simulation inspector">

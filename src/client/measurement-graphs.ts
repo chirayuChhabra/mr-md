@@ -111,7 +111,10 @@ export function createMeasurementGraphWorkspace(options: {
 	let cleaned = false;
 	let cursor: number | null = null;
 	let pinnedCursor: number | null = null;
-	let comparison: { label: string; data: Record<string, MeasurementGraphPoint[]> } | null = null;
+	let comparison: {
+		label: string;
+		data: Record<string, MeasurementGraphPoint[]>;
+	} | null = null;
 	const localCursors = new Map<string, number | null>();
 	const cursorListeners = new Set<(time: number | null) => void>();
 	let data: Record<string, MeasurementGraphPoint[]> = Object.create(null),
@@ -121,7 +124,10 @@ export function createMeasurementGraphWorkspace(options: {
 	const layer = doc.createElement("div");
 	layer.className = "bk-graph-layer";
 	const style = doc.createElement("style");
-	style.textContent = windowCss + chartCss + `
+	style.textContent =
+		windowCss +
+		chartCss +
+		`
 .bk-graph-comparison-label{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);pointer-events:auto;border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
 html[data-ui=neo] .bk-graph-window{border-radius:0!important;box-shadow:4px 4px 0 var(--line)}
 html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
@@ -518,7 +524,10 @@ html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
 		header.className = "bk-graph-window-header";
 		header.tabIndex = 0;
 		header.setAttribute("aria-label", `${spec.label} graph position`);
-		header.setAttribute("aria-description", "Drag to move, or use arrow keys. Resize from the bottom corner.");
+		header.setAttribute(
+			"aria-description",
+			"Drag to move, or use arrow keys. Resize from the bottom corner.",
+		);
 
 		title.textContent = spec.label;
 		value.className = "bk-graph-value";
@@ -572,31 +581,59 @@ html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
 		nodes.set(state.key, parts);
 		fit(state, parts);
 		windowResizeObserver?.observe(node);
-		header.addEventListener("pointerdown", event => {
-			if ((event.target as HTMLElement).closest("button") || event.button !== 0) return;
+		header.addEventListener("pointerdown", (event) => {
+			if ((event.target as HTMLElement).closest("button") || event.button !== 0)
+				return;
 			event.preventDefault();
 			header.focus();
 			header.setPointerCapture?.(event.pointerId);
-			parts.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: state.x || 0, top: state.y || 0 };
+			parts.drag = {
+				id: event.pointerId,
+				x: event.clientX,
+				y: event.clientY,
+				left: state.x || 0,
+				top: state.y || 0,
+			};
 			node.style.zIndex = String(++z);
 		});
-		header.addEventListener("pointermove", event => {
+		header.addEventListener("pointermove", (event) => {
 			const drag = parts.drag;
 			if (!drag || drag.id !== event.pointerId) return;
 			state.x = drag.left + event.clientX - drag.x;
 			state.y = drag.top + event.clientY - drag.y;
 			fit(state, parts);
 		});
-		const endDrag = () => { if (parts.drag) { parts.drag = undefined; notify(); } };
+		const endDrag = () => {
+			if (parts.drag) {
+				parts.drag = undefined;
+				notify();
+			}
+		};
 		header.addEventListener("pointerup", endDrag);
 		header.addEventListener("pointercancel", endDrag);
 		header.addEventListener("lostpointercapture", endDrag);
-		header.addEventListener("keydown", event => {
-			if (event.target !== header || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+		header.addEventListener("keydown", (event) => {
+			if (
+				event.target !== header ||
+				!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)
+			)
+				return;
 			event.preventDefault();
 			const step = event.shiftKey ? 32 : 8;
-			state.x = (state.x || 0) + (event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0);
-			state.y = (state.y || 0) + (event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0);
+			state.x =
+				(state.x || 0) +
+				(event.key === "ArrowLeft"
+					? -step
+					: event.key === "ArrowRight"
+						? step
+						: 0);
+			state.y =
+				(state.y || 0) +
+				(event.key === "ArrowUp"
+					? -step
+					: event.key === "ArrowDown"
+						? step
+						: 0);
 			fit(state, parts);
 			notify();
 		});
@@ -674,16 +711,21 @@ html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
 	synchronize();
 
 	return {
-        register(spec: MeasurementGraphSpec) {
-            byKey.set(spec.key, spec);
-            if (!specs.some(item => item.key === spec.key)) specs.push(spec);
-        },
+		register(spec: MeasurementGraphSpec) {
+			byKey.set(spec.key, spec);
+			if (!specs.some((item) => item.key === spec.key)) specs.push(spec);
+		},
 		open(key: string) {
 			if (!byKey.has(key)) return;
 			let state = states.get(key);
 			if (!state) {
 				const spec = byKey.get(key)!;
-                state = { key, x: 24 + states.size * 24, y: 80 + states.size * 24, ...(spec.yKey ? { axes: { x: spec.xAxis.key, y: spec.yKey } } : {}) };
+				state = {
+					key,
+					x: 24 + states.size * 24,
+					y: 80 + states.size * 24,
+					...(spec.yKey ? { axes: { x: spec.xAxis.key, y: spec.yKey } } : {}),
+				};
 				states.set(key, state);
 				create(state);
 			} else {
@@ -698,24 +740,26 @@ html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
 			layer.hidden = false;
 			notify();
 		},
-        remove(key: string) {
-            if (!key.startsWith("custom:")) return;
-            close(key);
-            byKey.delete(key);
-            const index = specs.findIndex(spec => spec.key === key);
-            if (index >= 0) specs.splice(index, 1);
-            delete data[key];
-            if (popup) {
-                try {
-                    popup.selected.delete(key);
-                    popup.cards.get(key)?.node.remove();
-                    popup.cards.delete(key);
-                    popup.inputs.get(key)?.closest("label")?.remove();
-                    popup.inputs.delete(key);
-                } catch { popup = null; }
-            }
-            updatePopup();
-        },
+		remove(key: string) {
+			if (!key.startsWith("custom:")) return;
+			close(key);
+			byKey.delete(key);
+			const index = specs.findIndex((spec) => spec.key === key);
+			if (index >= 0) specs.splice(index, 1);
+			delete data[key];
+			if (popup) {
+				try {
+					popup.selected.delete(key);
+					popup.cards.get(key)?.node.remove();
+					popup.cards.delete(key);
+					popup.inputs.get(key)?.closest("label")?.remove();
+					popup.inputs.delete(key);
+				} catch {
+					popup = null;
+				}
+			}
+			updatePopup();
+		},
 		close,
 		update(next: Record<string, MeasurementGraphPoint[]>) {
 			data = next;
@@ -738,7 +782,8 @@ html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
 		},
 		/** Set the shared time cursor in seconds, or clear it with null. */
 		setCursor(time: number | null) {
-			cursor = pinnedCursor = time !== null && Number.isFinite(time) ? time : null;
+			cursor = pinnedCursor =
+				time !== null && Number.isFinite(time) ? time : null;
 			for (const key of states.keys()) renderWindowPlot(key);
 		},
 		/** Subscribe to user inspection of time plots; returns an unsubscribe function. */
@@ -746,7 +791,12 @@ html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
 			cursorListeners.add(listener);
 			return () => cursorListeners.delete(listener);
 		},
-		setComparison(next: { label: string; data: Record<string, MeasurementGraphPoint[]> } | null) {
+		setComparison(
+			next: {
+				label: string;
+				data: Record<string, MeasurementGraphPoint[]>;
+			} | null,
+		) {
 			comparison = next;
 			layer.querySelector(".bk-graph-comparison-label")?.remove();
 			if (next) {
@@ -758,7 +808,8 @@ html[data-ui=playful] .bk-graph-window{border-radius:20px!important}
 				label.onclick = () => this.setComparison(null);
 				layer.prepend(label);
 			}
-			for (const parts of nodes.values()) delete (parts.plot as any).__chartScale;
+			for (const parts of nodes.values())
+				delete (parts.plot as any).__chartScale;
 			for (const key of states.keys()) renderWindowPlot(key);
 		},
 		getWindows: snapshot,

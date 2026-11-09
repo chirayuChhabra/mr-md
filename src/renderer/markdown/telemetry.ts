@@ -91,17 +91,37 @@ export function renderSimulationTelemetry(
 }
 
 function renderGraphControls(schema: SimulationTelemetry): string {
- const label = (key: string) => schema[key]?.label || key;
- const defaultY = Object.keys(schema).find(key => key !== "time") || Object.keys(schema)[0];
- const choices = Object.keys(schema).map(key => `<option value="${escAttr(key)}"${key === defaultY ? " selected" : ""}>${escHtml(label(key))}${schema[key].unit ? ` (${escHtml(schema[key].unit!)})` : ""}</option>`).join("");
- const authored = Object.entries(schema).filter(([, item]) => item.graph).map(([key, item]) => {
-  const title = typeof item.graph === "object" ? item.graph.label || label(key) : label(key);
-  return `<button type="button" class="bk-graph-choice" data-measurement-graph="${escAttr(key)}" aria-pressed="false">${escHtml(title)}</button>`;
- }).join("");
- return `<div class="bk-graph-controls">
+	const label = (key: string) => schema[key]?.label || key;
+	const defaultY =
+		Object.keys(schema).find((key) => key !== "time") || Object.keys(schema)[0];
+	const choices = Object.keys(schema)
+		.map(
+			(key) =>
+				`<option value="${escAttr(key)}"${key === defaultY ? " selected" : ""}>${escHtml(label(key))}${schema[key].unit ? ` (${escHtml(schema[key].unit!)})` : ""}</option>`,
+		)
+		.join("");
+	const authored = Object.entries(schema)
+		.filter(([, item]) => item.graph)
+		.map(([key, item]) => {
+			const title =
+				typeof item.graph === "object"
+					? item.graph.label || label(key)
+					: label(key);
+			return `<button type="button" class="bk-graph-choice" data-measurement-graph="${escAttr(key)}" aria-pressed="false">${escHtml(title)}</button>`;
+		})
+		.join("");
+	return `<div class="bk-graph-controls">
  ${authored ? `<section><h3>Lesson graphs</h3><div class="bk-graph-choice-list">${authored}</div></section>` : ""}
  <section><h3>Plot your own</h3><div class="bk-custom-graph-list"></div>
- <div class="bk-graph-axis-fields"><label><span>X axis</span><select data-graph-x><option value="time">Time (s)</option>${Object.keys(schema).filter(key => key !== "time").map(key => `<option value="${escAttr(key)}">${escHtml(label(key))}${schema[key].unit ? ` (${escHtml(schema[key].unit!)})` : ""}</option>`).join("")}</select></label>
+ <div class="bk-graph-axis-fields"><label><span>X axis</span><select data-graph-x><option value="time">Time (s)</option>${Object.keys(
+		schema,
+ )
+		.filter((key) => key !== "time")
+		.map(
+			(key) =>
+				`<option value="${escAttr(key)}">${escHtml(label(key))}${schema[key].unit ? ` (${escHtml(schema[key].unit!)})` : ""}</option>`,
+		)
+		.join("")}</select></label>
  <label><span>Y axis</span><select data-graph-y>${choices}</select></label></div>
  <button type="button" class="bk-graph-create" data-create-graph>Open graph</button>
  <p class="bk-graph-builder-status" role="status" hidden></p>
@@ -113,16 +133,21 @@ export function renderInspectorTabs(
 	id: string,
 	controlsHtml: string,
 	telemetryHtml: string,
- schema: SimulationTelemetry = {},
+	schema: SimulationTelemetry = {},
 ): string {
 	controlsHtml = controlsHtml.trim();
 	telemetryHtml = telemetryHtml.trim();
 	if (!controlsHtml && !telemetryHtml) return "";
 	const panels = [
 		{ key: "controls", label: "Settings", html: controlsHtml },
-        { key: "telemetry", label: "Measurements", html: telemetryHtml && Object.keys(schema).length
-            ? `<div class="bk-measurement-view-switch" role="group" aria-label="Measurement view"><button type="button" data-measurement-view="stats" aria-pressed="true">Stats</button><button type="button" data-measurement-view="graphs" aria-pressed="false">Graphs</button></div><div data-measurement-panel="stats">${telemetryHtml}</div><div data-measurement-panel="graphs" hidden>${renderGraphControls(schema)}</div>`
-            : telemetryHtml },
+		{
+			key: "telemetry",
+			label: "Measurements",
+			html:
+				telemetryHtml && Object.keys(schema).length
+					? `<div class="bk-measurement-view-switch" role="group" aria-label="Measurement view"><button type="button" data-measurement-view="stats" aria-pressed="true">Stats</button><button type="button" data-measurement-view="graphs" aria-pressed="false">Graphs</button></div><div data-measurement-panel="stats">${telemetryHtml}</div><div data-measurement-panel="graphs" hidden>${renderGraphControls(schema)}</div>`
+					: telemetryHtml,
+		},
 		{
 			key: "timeline",
 			label: "Timeline",

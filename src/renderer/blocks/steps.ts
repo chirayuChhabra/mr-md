@@ -139,7 +139,12 @@ export function renderSteps(
 	const telemetryHtml = hasTel
 		? renderSimulationTelemetry(id, block.telemetry!)
 		: "";
-	const inspectorContent = renderInspectorTabs(id, controlsHtml, telemetryHtml, block.telemetry);
+	const inspectorContent = renderInspectorTabs(
+		id,
+		controlsHtml,
+		telemetryHtml,
+		block.telemetry,
+	);
 	const telemetrySchemaScript = hasTel
 		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry)}</script>`
 		: "";

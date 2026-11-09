@@ -1,9 +1,12 @@
-import { validSnapshotImage, downloadSnapshotImage } from "./measurement-files.js";
 import type {
 	MeasurementTone,
 	SimulationSnapshot,
 	SimulationTelemetry,
 } from "../types.js";
+import {
+	downloadSnapshotImage,
+	validSnapshotImage,
+} from "./measurement-files.js";
 
 export interface MeasurementTimelineEntry {
 	id?: string;
@@ -83,7 +86,7 @@ export function createMeasurementTimeline(
 	graphContainer.setAttribute("aria-label", "Simulation timeline");
 
 	let updateConnections = () => {};
-	let closeBranchMenu = (_restoreFocus = false) => {};
+	const closeBranchMenu = (_restoreFocus = false) => {};
 	const ResizeObserverCtor = doc.defaultView?.ResizeObserver;
 	const graphObserver = ResizeObserverCtor
 		? new ResizeObserverCtor(() => updateConnections())
@@ -177,25 +180,27 @@ export function createMeasurementTimeline(
 	const stamp = (time: number) =>
 		`${Number.isFinite(time) ? Number(time.toFixed(2)) : 0} s`;
 
-    const renameSnapshot = (snapshotId: string, value: string): boolean => {
-        const name = value.trim().slice(0, 100);
-        if (!name) return false;
-        let renamed = false;
-        for (const branch of branches.values()) {
-            for (const entry of branch.entries) {
-                if (entry.snapshot?.id !== snapshotId) continue;
-                entry.title = name;
-                entry.snapshot.label = name;
-                renamed = true;
-            }
-        }
-        if (renamed) {
-            renderGraph();
-            const selected = [...branches.values()].flatMap(branch => branch.entries).find(entry => entry.id === selectedNodeId);
-            if (selected) renderNodeDetails(selected);
-        }
-        return renamed;
-    };
+	const renameSnapshot = (snapshotId: string, value: string): boolean => {
+		const name = value.trim().slice(0, 100);
+		if (!name) return false;
+		let renamed = false;
+		for (const branch of branches.values()) {
+			for (const entry of branch.entries) {
+				if (entry.snapshot?.id !== snapshotId) continue;
+				entry.title = name;
+				entry.snapshot.label = name;
+				renamed = true;
+			}
+		}
+		if (renamed) {
+			renderGraph();
+			const selected = [...branches.values()]
+				.flatMap((branch) => branch.entries)
+				.find((entry) => entry.id === selectedNodeId);
+			if (selected) renderNodeDetails(selected);
+		}
+		return renamed;
+	};
 
 	const formatSnapshotValues = (values: Record<string, unknown>) => {
 		const selected = options.getVisibleKeys?.() ?? [];
@@ -350,7 +355,8 @@ export function createMeasurementTimeline(
 		snapshot: SimulationSnapshot,
 		entryId?: string | null,
 	): boolean => {
-		if (branch.presentPoint && snapshot.time < branch.presentPoint.time) return false;
+		if (branch.presentPoint && snapshot.time < branch.presentPoint.time)
+			return false;
 		if (entryId === "start") {
 			return branch.entries.length === 0;
 		}
@@ -674,7 +680,7 @@ export function createMeasurementTimeline(
 			switchBtn.type = "button";
 			switchBtn.className = "bk-timeline-action-btn";
 			switchBtn.textContent = "Switch";
-            switchBtn.title = `Switch to ${branches.get(entry.branchId)?.name || "branch"}`;
+			switchBtn.title = `Switch to ${branches.get(entry.branchId)?.name || "branch"}`;
 			switchBtn.addEventListener("click", () => {
 				selectBranch(entry.branchId!);
 			});
@@ -748,9 +754,7 @@ export function createMeasurementTimeline(
 							graphRows.querySelector<HTMLElement>(
 								'.bk-snapshot-row[data-selected="true"]',
 							) ||
-							graphHeader.querySelector<HTMLElement>(
-								"button",
-							) ||
+							graphHeader.querySelector<HTMLElement>("button") ||
 							graphRows.querySelector<HTMLElement>(".bk-snapshot-row") ||
 							container;
 						retained?.focus();
@@ -767,44 +771,61 @@ export function createMeasurementTimeline(
 			actions.append(actionsRow);
 		}
 
-        if (entry.snapshot && [...branches.values()].some(branch => branch.entries.some(item => item.id === entry.id))) {
-            const rename = doc.createElement("button");
-            rename.type = "button";
-            rename.className = "bk-timeline-action-btn";
-            rename.textContent = "Rename";
-            rename.setAttribute("aria-label", "Rename snapshot");
-            rename.addEventListener("click", () => {
-                const form = doc.createElement("form");
-                form.className = "bk-timeline-rename";
-                const input = doc.createElement("input");
-                input.value = entry.title;
-                input.maxLength = 100;
-                input.setAttribute("aria-label", "Snapshot name");
-                const save = doc.createElement("button");
-                save.type = "submit";
-                save.className = "bk-timeline-action-btn";
-                save.textContent = "Save name";
-                form.append(input, save);
-                form.addEventListener("submit", event => {
-                    event.preventDefault(); renameSnapshot(entry.snapshot!.id, input.value);
-                });
-                form.addEventListener("keydown", event => {
-                    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); renderNodeDetails(entry); }
-                });
-                top.replaceWith(form);
-                input.focus(); input.select();
-            });
-            actionsRow.append(rename);
-            if (validSnapshotImage(entry.snapshot.imageDataUrl)) {
-                const image = doc.createElement("button");
-                image.type = "button";
-                image.className = "bk-timeline-action-btn";
-                image.textContent = "Image";
-                image.setAttribute("aria-label", "Download snapshot image");
-                image.addEventListener("click", () => downloadSnapshotImage(doc, entry.snapshot!.imageDataUrl!, entry.title));
-                actionsRow.append(image);
-            }
-        }
+		if (
+			entry.snapshot &&
+			[...branches.values()].some((branch) =>
+				branch.entries.some((item) => item.id === entry.id),
+			)
+		) {
+			const rename = doc.createElement("button");
+			rename.type = "button";
+			rename.className = "bk-timeline-action-btn";
+			rename.textContent = "Rename";
+			rename.setAttribute("aria-label", "Rename snapshot");
+			rename.addEventListener("click", () => {
+				const form = doc.createElement("form");
+				form.className = "bk-timeline-rename";
+				const input = doc.createElement("input");
+				input.value = entry.title;
+				input.maxLength = 100;
+				input.setAttribute("aria-label", "Snapshot name");
+				const save = doc.createElement("button");
+				save.type = "submit";
+				save.className = "bk-timeline-action-btn";
+				save.textContent = "Save name";
+				form.append(input, save);
+				form.addEventListener("submit", (event) => {
+					event.preventDefault();
+					renameSnapshot(entry.snapshot!.id, input.value);
+				});
+				form.addEventListener("keydown", (event) => {
+					if (event.key === "Escape") {
+						event.preventDefault();
+						event.stopPropagation();
+						renderNodeDetails(entry);
+					}
+				});
+				top.replaceWith(form);
+				input.focus();
+				input.select();
+			});
+			actionsRow.append(rename);
+			if (validSnapshotImage(entry.snapshot.imageDataUrl)) {
+				const image = doc.createElement("button");
+				image.type = "button";
+				image.className = "bk-timeline-action-btn";
+				image.textContent = "Image";
+				image.setAttribute("aria-label", "Download snapshot image");
+				image.addEventListener("click", () =>
+					downloadSnapshotImage(
+						doc,
+						entry.snapshot!.imageDataUrl!,
+						entry.title,
+					),
+				);
+				actionsRow.append(image);
+			}
+		}
 		if (actionsRow.children.length > 0) {
 			detailsPanel.append(actions);
 		}
@@ -862,20 +883,31 @@ export function createMeasurementTimeline(
 	};
 
 	const branchOnContinuation = (_reason?: string): string | null => {
-        if (!isAtPastSnapshot || !activeRestoredSnapshot) return null;
-        const current = branches.get(activeBranchId);
-        if (!current) return null;
-        current.presentPoint = { time: activeRestoredSnapshot.time, values: { ...(activeRestoredSnapshot.telemetry || {}) }, playing: false, snapshot: activeRestoredSnapshot };
-        isAtPastSnapshot = false;
-        activeRestoredSnapshot = null;
-        restoredEntryId = null;
-        updatePastHint();
-        detailsPanel.hidden = true;
-        notifySnapshotViewChange(false, current.presentPoint.time);
-        if (options.config?.present !== false) setPoint(liveHead, "Paused", current.presentPoint.time, current.presentPoint.values);
-        renderGraph();
-        return activeBranchId;
-    };
+		if (!isAtPastSnapshot || !activeRestoredSnapshot) return null;
+		const current = branches.get(activeBranchId);
+		if (!current) return null;
+		current.presentPoint = {
+			time: activeRestoredSnapshot.time,
+			values: { ...(activeRestoredSnapshot.telemetry || {}) },
+			playing: false,
+			snapshot: activeRestoredSnapshot,
+		};
+		isAtPastSnapshot = false;
+		activeRestoredSnapshot = null;
+		restoredEntryId = null;
+		updatePastHint();
+		detailsPanel.hidden = true;
+		notifySnapshotViewChange(false, current.presentPoint.time);
+		if (options.config?.present !== false)
+			setPoint(
+				liveHead,
+				"Paused",
+				current.presentPoint.time,
+				current.presentPoint.values,
+			);
+		renderGraph();
+		return activeBranchId;
+	};
 
 	const attemptRestore = (
 		snapshot?: SimulationSnapshot,
@@ -925,7 +957,11 @@ export function createMeasurementTimeline(
 					restoredEntryId = "present";
 				}
 			}
-			if (entry?.branchId && entry.branchId !== activeBranchId && branches.has(entry.branchId)) {
+			if (
+				entry?.branchId &&
+				entry.branchId !== activeBranchId &&
+				branches.has(entry.branchId)
+			) {
 				activeBranchId = entry.branchId;
 				renderGraph();
 			}
@@ -1074,7 +1110,12 @@ export function createMeasurementTimeline(
 		};
 
 		try {
-			const result = options.onRestoreSnapshot(targetSnapshot, { title: targetBranch.name, time: targetSnapshot.time, snapshot: targetSnapshot, branchId: targetId });
+			const result = options.onRestoreSnapshot(targetSnapshot, {
+				title: targetBranch.name,
+				time: targetSnapshot.time,
+				snapshot: targetSnapshot,
+				branchId: targetId,
+			});
 			if (typeof result === "object" && result !== null && "then" in result) {
 				return (result as Promise<boolean | void>)
 					.then((ok) => {
@@ -1111,7 +1152,9 @@ export function createMeasurementTimeline(
 
 		headerState.dataset.state = isAtPastSnapshot
 			? "snapshot"
-			: branch?.presentPoint?.playing ? "live" : "paused";
+			: branch?.presentPoint?.playing
+				? "live"
+				: "paused";
 
 		headerState.textContent = isAtPastSnapshot
 			? `Snapshot · ${stamp(pastSnapshotTime)}`
@@ -1167,8 +1210,8 @@ export function createMeasurementTimeline(
 		}
 
 		for (const branch of visibleBranches) {
-            if (!branchLanes.has(branch.id)) branchLanes.set(branch.id, nextLane++);
-        }
+			if (!branchLanes.has(branch.id)) branchLanes.set(branch.id, nextLane++);
+		}
 
 		const activeBranch = branches.get(activeBranchId);
 		const activeLane = branchLanes.get(activeBranchId) ?? 0;
@@ -1252,8 +1295,24 @@ export function createMeasurementTimeline(
 				remember(entry, lane, branch, parent);
 				parent = entry.id;
 			}
-			if (branch.id !== activeBranchId && branch.presentPoint?.snapshot && options.config?.present !== false) {
-				remember({ id: `tip-${branch.id}`, title: branch.name, time: branch.presentPoint.time, snapshot: branch.presentPoint.snapshot, branchId: branch.id, kind: "snapshot" }, lane, branch, parent);
+			if (
+				branch.id !== activeBranchId &&
+				branch.presentPoint?.snapshot &&
+				options.config?.present !== false
+			) {
+				remember(
+					{
+						id: `tip-${branch.id}`,
+						title: branch.name,
+						time: branch.presentPoint.time,
+						snapshot: branch.presentPoint.snapshot,
+						branchId: branch.id,
+						kind: "snapshot",
+					},
+					lane,
+					branch,
+					parent,
+				);
 			}
 		});
 
@@ -1261,24 +1320,27 @@ export function createMeasurementTimeline(
 			(a, b) => nodeOrder.get(b.entry.id!)! - nodeOrder.get(a.entry.id!)!,
 		);
 
-        const maxLanes = Math.max(...visibleBranches.map(branch => branchLanes.get(branch.id) || 0)) + 1;
-        const laneWidth = 12;
-        const mainX = 24;
-        const laneX = (lane: number) => mainX + lane * laneWidth;
-        // The track gutter has room for ordinary branch counts; more tracks scroll together.
-        const gutter = Math.max(64, laneX(maxLanes - 1) + 20);
-        const layoutRow = (row: HTMLElement, lane: number) => {
-            row.style.padding = `4px 0 4px ${gutter}px`;
-            const content = row.querySelector<HTMLElement>(".bk-snapshot-content");
-            if (!content) return;
-            content.style.width = "100%";
-            content.style.marginLeft = "0";
-            content.style.textAlign = "left";
-            const meta = content.querySelector<HTMLElement>(".bk-snapshot-meta");
-            if (meta) meta.style.justifyContent = "flex-start";
-        };
-        graphRows.style.setProperty("--snapshot-gutter", `${gutter}px`);
-        graphRows.style.minWidth = `${gutter + 180}px`;
+		const maxLanes =
+			Math.max(
+				...visibleBranches.map((branch) => branchLanes.get(branch.id) || 0),
+			) + 1;
+		const laneWidth = 12;
+		const mainX = 24;
+		const laneX = (lane: number) => mainX + lane * laneWidth;
+		// The track gutter has room for ordinary branch counts; more tracks scroll together.
+		const gutter = Math.max(64, laneX(maxLanes - 1) + 20);
+		const layoutRow = (row: HTMLElement, lane: number) => {
+			row.style.padding = `4px 0 4px ${gutter}px`;
+			const content = row.querySelector<HTMLElement>(".bk-snapshot-content");
+			if (!content) return;
+			content.style.width = "100%";
+			content.style.marginLeft = "0";
+			content.style.textAlign = "left";
+			const meta = content.querySelector<HTMLElement>(".bk-snapshot-meta");
+			if (meta) meta.style.justifyContent = "flex-start";
+		};
+		graphRows.style.setProperty("--snapshot-gutter", `${gutter}px`);
+		graphRows.style.minWidth = `${gutter + 180}px`;
 
 		const ns = "http://www.w3.org/2000/svg";
 		const svg = doc.createElementNS(ns, "svg");
@@ -1353,9 +1415,10 @@ export function createMeasurementTimeline(
 
 			const meta = doc.createElement("span");
 			meta.className = "bk-snapshot-meta";
-			meta.textContent = branch.id !== "main" && role !== "fork" && entry.title !== branch.name
-				? `${stamp(entry.time)} · ${branch.name}`
-				: stamp(entry.time);
+			meta.textContent =
+				branch.id !== "main" && role !== "fork" && entry.title !== branch.name
+					? `${stamp(entry.time)} · ${branch.name}`
+					: stamp(entry.time);
 			meta.title = branch.name;
 
 			if (role !== "node") {
@@ -1368,13 +1431,13 @@ export function createMeasurementTimeline(
 			}
 
 			content.append(title, meta);
-            if (validSnapshotImage(entry.snapshot?.imageDataUrl)) {
-                const thumbnail = doc.createElement("img");
-                thumbnail.className = "bk-snapshot-thumbnail";
-                thumbnail.src = entry.snapshot.imageDataUrl;
-                thumbnail.alt = `Saved view at ${stamp(entry.time)}`;
-                content.append(thumbnail);
-            }
+			if (validSnapshotImage(entry.snapshot?.imageDataUrl)) {
+				const thumbnail = doc.createElement("img");
+				thumbnail.className = "bk-snapshot-thumbnail";
+				thumbnail.src = entry.snapshot.imageDataUrl;
+				thumbnail.alt = `Saved view at ${stamp(entry.time)}`;
+				content.append(thumbnail);
+			}
 			row.append(dot, content);
 			layoutRow(row, lane);
 
@@ -1416,15 +1479,17 @@ export function createMeasurementTimeline(
 			graphRows.append(row);
 		}
 
-        updateConnections = () => {
-            graphRows.style.setProperty("--snapshot-gutter", `${gutter}px`);
-            graphRows.style.minWidth = `${gutter + 180}px`;
-            for (const row of graphRows.querySelectorAll<HTMLElement>(".bk-snapshot-row, .bk-timeline-live-head")) {
-                const lane = Number(row.dataset.lane || 0);
-                layoutRow(row, lane);
-                const dot = row.querySelector<HTMLElement>(".bk-snapshot-dot");
-                if (dot) dot.style.left = `${laneX(lane)}px`;
-            }
+		updateConnections = () => {
+			graphRows.style.setProperty("--snapshot-gutter", `${gutter}px`);
+			graphRows.style.minWidth = `${gutter + 180}px`;
+			for (const row of graphRows.querySelectorAll<HTMLElement>(
+				".bk-snapshot-row, .bk-timeline-live-head",
+			)) {
+				const lane = Number(row.dataset.lane || 0);
+				layoutRow(row, lane);
+				const dot = row.querySelector<HTMLElement>(".bk-snapshot-dot");
+				if (dot) dot.style.left = `${laneX(lane)}px`;
+			}
 			svg.replaceChildren();
 
 			if (!liveHead.hidden) {
@@ -1653,15 +1718,29 @@ export function createMeasurementTimeline(
 		},
 
 		setInspectedTime(time: number | null) {
-			const rows = [...graphRows.querySelectorAll<HTMLElement>(".bk-snapshot-row")];
-			const closest = time === null ? null : rows.reduce<HTMLElement | null>((best, row) => !best || Math.abs(Number(row.dataset.time) - time) < Math.abs(Number(best.dataset.time) - time) ? row : best, null);
-			for (const row of rows) row.toggleAttribute("data-inspected", row === closest);
+			const rows = [
+				...graphRows.querySelectorAll<HTMLElement>(".bk-snapshot-row"),
+			];
+			const closest =
+				time === null
+					? null
+					: rows.reduce<HTMLElement | null>(
+							(best, row) =>
+								!best ||
+								Math.abs(Number(row.dataset.time) - time) <
+									Math.abs(Number(best.dataset.time) - time)
+									? row
+									: best,
+							null,
+						);
+			for (const row of rows)
+				row.toggleAttribute("data-inspected", row === closest);
 		},
 		getActiveBranchId() {
 			return activeBranchId;
 		},
 
-        renameSnapshot,
+		renameSnapshot,
 		getBranches() {
 			return Array.from(branches.values());
 		},

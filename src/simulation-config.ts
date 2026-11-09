@@ -132,7 +132,9 @@ export const simulationConfigSchema = z
 						}),
 					)
 					.optional(),
-				initialTab: z.enum(["controls", "telemetry", "timeline", "graphs"]).optional(),
+				initialTab: z
+					.enum(["controls", "telemetry", "timeline", "graphs"])
+					.optional(),
 				notifications: z
 					.object({
 						enabled: z.boolean().optional(),

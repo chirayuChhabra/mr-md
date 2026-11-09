@@ -91,7 +91,12 @@ export function renderMeasurementGraph(
 	const empty = container.querySelector(".bk-graph-empty");
 	if (empty) empty.remove();
 
-	const domainValues = [...values, ...(options.comparison || []).filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))];
+	const domainValues = [
+		...values,
+		...(options.comparison || []).filter(
+			(point) => Number.isFinite(point.x) && Number.isFinite(point.y),
+		),
+	];
 	let rawXMin = values[0].x,
 		rawXMax = values[0].x,
 		rawYMin = values[0].y,
@@ -309,7 +314,13 @@ export function renderMeasurementGraph(
 		const comparison = doc.createElementNS(ns, "polyline");
 		comparison.setAttribute("class", "bk-chart-comparison");
 		comparison.setAttribute("fill", "none");
-		comparison.setAttribute("points", options.comparison.filter(point => Number.isFinite(point.x) && Number.isFinite(point.y)).map(point => `${sx(point.x)},${sy(point.y)}`).join(" "));
+		comparison.setAttribute(
+			"points",
+			options.comparison
+				.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+				.map((point) => `${sx(point.x)},${sy(point.y)}`)
+				.join(" "),
+		);
 		svg.append(comparison);
 	}
 	svg.querySelector(".bk-chart-cursor")?.remove();

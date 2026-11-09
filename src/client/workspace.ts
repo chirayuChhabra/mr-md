@@ -138,8 +138,6 @@ export function syncSnapshotViewingState(
 	if (viewing) {
 		figure.dataset.bkSnapshotViewing = "true";
 		figure.setAttribute("data-snapshot-viewing", "true");
-
-
 	} else {
 		delete figure.dataset.bkSnapshotViewing;
 		figure.removeAttribute("data-bk-snapshot-viewing");
@@ -157,9 +155,9 @@ export function syncSnapshotViewingState(
 
 		// 2. Restore host controls
 		figure
-			.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
-				"[data-bk-viewing-disabled]",
-			)
+			.querySelectorAll<
+				HTMLInputElement | HTMLSelectElement | HTMLButtonElement
+			>("[data-bk-viewing-disabled]")
 			.forEach((ctrl) => {
 				ctrl.disabled = false;
 				ctrl.removeAttribute("data-bk-viewing-disabled");
@@ -206,7 +204,9 @@ export function bkSyncLabPauseOverlay(figure: HTMLElement): void {
 		overlay.innerHTML = `<span class="bk-sim-pause-title" role="status">Paused</span>`;
 		(figure.querySelector(".bk-steps-controls") || preview).append(overlay);
 	}
-	const playbackControls = figure.querySelector(".bk-sim-playback, .bk-sim-stage > .bk-steps-controls");
+	const playbackControls = figure.querySelector(
+		".bk-sim-playback, .bk-sim-stage > .bk-steps-controls",
+	);
 	if (playbackControls && overlay.parentElement !== playbackControls) {
 		playbackControls.append(overlay);
 	}
@@ -218,7 +218,11 @@ export function bkSyncLabPauseOverlay(figure: HTMLElement): void {
 		figure.classList.contains("bk-object--maximized") &&
 		figure.dataset.bkPlaybackState === "paused";
 	overlay.hidden = !isPaused;
-	if (overlay.hidden && doc.activeElement && overlay.contains(doc.activeElement)) {
+	if (
+		overlay.hidden &&
+		doc.activeElement &&
+		overlay.contains(doc.activeElement)
+	) {
 		figure
 			.querySelector<HTMLElement>("[data-bk-playback], .bk-steps-btn--play")
 			?.focus();
@@ -381,7 +385,12 @@ export function bkSetLabPlayback(figure: HTMLElement, playing: boolean): void {
 		(figure.dataset.bkSnapshotViewing === "true" ||
 			figure.getAttribute("data-snapshot-viewing") === "true")
 	) {
-		figure.dispatchEvent(new CustomEvent("bk:snapshot-continue", { bubbles: true, detail: { reason: "Playback resumed" } }));
+		figure.dispatchEvent(
+			new CustomEvent("bk:snapshot-continue", {
+				bubbles: true,
+				detail: { reason: "Playback resumed" },
+			}),
+		);
 	}
 	if (playing) {
 		delete figure.dataset.bkPausedSnapshot;
@@ -413,14 +422,19 @@ function ensurePlaybackControls(figure: HTMLElement): void {
 	}
 	let captureEnabled = true;
 	try {
-		const config = JSON.parse(figure.querySelector(".bk-measurements-config")?.textContent || "{}");
-		captureEnabled = config.timeline !== false && config.timeline?.capture !== false;
+		const config = JSON.parse(
+			figure.querySelector(".bk-measurements-config")?.textContent || "{}",
+		);
+		captureEnabled =
+			config.timeline !== false && config.timeline?.capture !== false;
 	} catch {}
-	const hasTimeline = captureEnabled && Boolean(
-		figure.querySelector(
-			".bk-measurement-history, .bk-sim-telemetry-schema, .bk-sim-telemetry",
-		),
-	);
+	const hasTimeline =
+		captureEnabled &&
+		Boolean(
+			figure.querySelector(
+				".bk-measurement-history, .bk-sim-telemetry-schema, .bk-sim-telemetry",
+			),
+		);
 	const captureBtnHtml = hasTimeline
 		? `<button type="button" class="bk-steps-btn bk-sim-capture-btn" data-bk-capture-snapshot aria-label="Capture snapshot" title="Capture snapshot" disabled>${CAPTURE_ICON}<span class="bk-sr-only">Capture snapshot</span></button>`
 		: "";
@@ -508,13 +522,23 @@ function restoreLabEntry(btn: HTMLElement): void {
 	btn.title = isLab ? "Open lab" : "Expand Lab";
 }
 
-export function bkSelectMeasurementView(figure: Element, view: "stats" | "graphs"): void {
-    for (const button of figure.querySelectorAll<HTMLElement>("[data-measurement-view]")) {
-        button.setAttribute("aria-pressed", String(button.dataset.measurementView === view));
-    }
-    for (const panel of figure.querySelectorAll<HTMLElement>("[data-measurement-panel]")) {
-        panel.hidden = panel.dataset.measurementPanel !== view;
-    }
+export function bkSelectMeasurementView(
+	figure: Element,
+	view: "stats" | "graphs",
+): void {
+	for (const button of figure.querySelectorAll<HTMLElement>(
+		"[data-measurement-view]",
+	)) {
+		button.setAttribute(
+			"aria-pressed",
+			String(button.dataset.measurementView === view),
+		);
+	}
+	for (const panel of figure.querySelectorAll<HTMLElement>(
+		"[data-measurement-panel]",
+	)) {
+		panel.hidden = panel.dataset.measurementPanel !== view;
+	}
 }
 
 export function bkSelectInspectorTab(
@@ -529,7 +553,10 @@ export function bkSelectInspectorTab(
 				(target as HTMLElement);
 
 	if (!figure) return;
-    if (tabKey === "graphs") { bkSelectMeasurementView(figure, "graphs"); tabKey = "telemetry"; }
+	if (tabKey === "graphs") {
+		bkSelectMeasurementView(figure, "graphs");
+		tabKey = "telemetry";
+	}
 
 	const tablist = figure.querySelector(".bk-sim-tablist");
 	if (!tablist) return;
@@ -743,7 +770,9 @@ export function bkExpandLab(
 	// Select default tab (Controls by default, or as requested)
 	const rememberedTab = inspectorTabMemory.get(figure);
 	const defaultTab =
-		rememberedTab === "telemetry" || rememberedTab === "timeline" || rememberedTab === "graphs"
+		rememberedTab === "telemetry" ||
+		rememberedTab === "timeline" ||
+		rememberedTab === "graphs"
 			? rememberedTab
 			: "controls";
 	bkSelectInspectorTab(figure, options?.defaultTab || defaultTab);
@@ -881,7 +910,10 @@ export function bkWireWorkspace(): void {
 	wiredDocument = document;
 
 	document.addEventListener("bk:snapshot-view-change", (event: Event) => {
-		const customEvent = event as CustomEvent<{ viewing: boolean; time?: number }>;
+		const customEvent = event as CustomEvent<{
+			viewing: boolean;
+			time?: number;
+		}>;
 		const figure =
 			(customEvent.target as HTMLElement)?.closest<HTMLElement>(".bk-object") ||
 			document.querySelector<HTMLElement>(".bk-object--maximized") ||
@@ -931,10 +963,11 @@ export function bkWireWorkspace(): void {
 					figure,
 					isControls
 						? "controls"
-						: nextTab.id.endsWith("-tab-graphs") ? "graphs"
-                        : nextTab.id.endsWith("-tab-timeline")
-							? "timeline"
-							: "telemetry",
+						: nextTab.id.endsWith("-tab-graphs")
+							? "graphs"
+							: nextTab.id.endsWith("-tab-timeline")
+								? "timeline"
+								: "telemetry",
 					true,
 				);
 			}
@@ -980,8 +1013,10 @@ export function bkWireWorkspace(): void {
 						detail: { reason: "Continuation" },
 					}),
 				);
-                bkSetLabPlayback(figure, true);
-                figure.querySelector<HTMLElement>("[data-bk-playback], .bk-steps-btn--play")?.focus({ preventScroll: true });
+				bkSetLabPlayback(figure, true);
+				figure
+					.querySelector<HTMLElement>("[data-bk-playback], .bk-steps-btn--play")
+					?.focus({ preventScroll: true });
 			}
 			return;
 		}
@@ -1016,12 +1051,20 @@ export function bkWireWorkspace(): void {
 		}
 
 		// Inspector tab button click
-        const measurementView = target.closest<HTMLElement>("[data-measurement-view]");
-        if (measurementView) {
-            const figure = measurementView.closest(".bk-object");
-            if (figure) bkSelectMeasurementView(figure, measurementView.dataset.measurementView === "graphs" ? "graphs" : "stats");
-            return;
-        }
+		const measurementView = target.closest<HTMLElement>(
+			"[data-measurement-view]",
+		);
+		if (measurementView) {
+			const figure = measurementView.closest(".bk-object");
+			if (figure)
+				bkSelectMeasurementView(
+					figure,
+					measurementView.dataset.measurementView === "graphs"
+						? "graphs"
+						: "stats",
+				);
+			return;
+		}
 		const tab = target.closest?.('[role="tab"]') as HTMLButtonElement | null;
 		if (tab && tab.closest(".bk-sim-tablist")) {
 			const figure = tab.closest(".bk-object");
@@ -1033,10 +1076,11 @@ export function bkWireWorkspace(): void {
 					figure,
 					isControls
 						? "controls"
-						: tab.id.endsWith("-tab-graphs") ? "graphs"
-                        : tab.id.endsWith("-tab-timeline")
-							? "timeline"
-							: "telemetry",
+						: tab.id.endsWith("-tab-graphs")
+							? "graphs"
+							: tab.id.endsWith("-tab-timeline")
+								? "timeline"
+								: "telemetry",
 					true,
 				);
 				return;
@@ -1078,7 +1122,13 @@ export function bkWireWorkspace(): void {
 			const figure = (document.querySelector(".bk-object--maximized") ||
 				target?.closest?.(".bk-object")) as HTMLElement | null;
 
-            if (e.key === "Escape" && target?.closest?.(".bk-timeline-menu, .bk-capture-name, .bk-timeline-rename")) return;
+			if (
+				e.key === "Escape" &&
+				target?.closest?.(
+					".bk-timeline-menu, .bk-capture-name, .bk-timeline-rename",
+				)
+			)
+				return;
 			if (
 				figure &&
 				e.key === "Escape" &&
@@ -1205,8 +1255,7 @@ export function bkWireWorkspace(): void {
 		"load",
 		(event) => {
 			const iframe = event.target;
-			if (!isHTMLElement(iframe) || iframe.tagName !== "IFRAME")
-				return;
+			if (!isHTMLElement(iframe) || iframe.tagName !== "IFRAME") return;
 			const figure = iframe.closest<HTMLElement>(".bk-object");
 			if (!figure?.querySelector(".bk-sim-preview")) return;
 			postPlayback(

@@ -7,13 +7,22 @@ import type {
 	SimulationTelemetryItem,
 } from "../types.js";
 import {
+	customGraphSpec,
+	pairGraphSamples,
+} from "./measurement-custom-graphs.js";
+import {
+	downloadMeasurementFile,
+	downloadSnapshotImage,
+	measurementFilename,
+	type TimelineExport,
+	validSnapshotImage,
+} from "./measurement-files.js";
+import {
 	createMeasurementGraphWorkspace,
 	type MeasurementGraphPoint,
 	type MeasurementGraphWindowState,
 	measurementGraphSpecs,
 } from "./measurement-graphs.js";
-import { customGraphSpec, pairGraphSamples } from "./measurement-custom-graphs.js";
-import { downloadMeasurementFile, downloadSnapshotImage, measurementFilename, validSnapshotImage, type TimelineExport } from "./measurement-files.js";
 import { matchesMeasurementCondition } from "./measurement-rules.js";
 import {
 	createMeasurementTimeline,
@@ -65,8 +74,8 @@ interface PendingControl {
 	timer: ReturnType<typeof setTimeout>;
 }
 export interface SnapshotSettlement {
- imageDataUrl?: string;
- imageError?: string;
+	imageDataUrl?: string;
+	imageError?: string;
 	success: boolean;
 	isExact?: boolean;
 	cancelled?: boolean;
@@ -207,46 +216,70 @@ function focusMeasurement(r: MeasurementRuntime, key: string) {
 	button?.focus({ preventScroll: true });
 	button?.scrollIntoView?.({ block: "nearest" });
 }
-function appendCustomGraphChoice(r: MeasurementRuntime, spec: ReturnType<typeof measurementGraphSpecs>[number]) {
-    const list = r.figure.querySelector(".bk-custom-graph-list");
-    if (!list || [...list.querySelectorAll<HTMLElement>("[data-measurement-graph]")].some(button => button.dataset.measurementGraph === spec.key)) return;
-    const button = r.figure.ownerDocument.createElement("button");
-    button.type = "button";
-    button.className = "bk-graph-choice";
-    button.dataset.measurementGraph = spec.key;
-    button.setAttribute("aria-pressed", "false");
-    button.textContent = spec.label;
-    const row = r.figure.ownerDocument.createElement("div");
-    row.className = "bk-custom-graph-item";
-    const remove = r.figure.ownerDocument.createElement("button");
-    remove.type = "button";
-    remove.className = "bk-custom-graph-remove";
-    remove.dataset.removeCustomGraph = spec.key;
-    remove.setAttribute("aria-label", `Remove plot ${spec.label}`);
-    remove.title = "Remove plot";
-    remove.textContent = "×";
-    row.append(button, remove);
-    list.append(row);
+function appendCustomGraphChoice(
+	r: MeasurementRuntime,
+	spec: ReturnType<typeof measurementGraphSpecs>[number],
+) {
+	const list = r.figure.querySelector(".bk-custom-graph-list");
+	if (
+		!list ||
+		[...list.querySelectorAll<HTMLElement>("[data-measurement-graph]")].some(
+			(button) => button.dataset.measurementGraph === spec.key,
+		)
+	)
+		return;
+	const button = r.figure.ownerDocument.createElement("button");
+	button.type = "button";
+	button.className = "bk-graph-choice";
+	button.dataset.measurementGraph = spec.key;
+	button.setAttribute("aria-pressed", "false");
+	button.textContent = spec.label;
+	const row = r.figure.ownerDocument.createElement("div");
+	row.className = "bk-custom-graph-item";
+	const remove = r.figure.ownerDocument.createElement("button");
+	remove.type = "button";
+	remove.className = "bk-custom-graph-remove";
+	remove.dataset.removeCustomGraph = spec.key;
+	remove.setAttribute("aria-label", `Remove plot ${spec.label}`);
+	remove.title = "Remove plot";
+	remove.textContent = "×";
+	row.append(button, remove);
+	list.append(row);
 }
 
 function createCustomGraph(r: MeasurementRuntime) {
-    const x = r.figure.querySelector<HTMLSelectElement>("[data-graph-x]")?.value || "time";
-    const y = r.figure.querySelector<HTMLSelectElement>("[data-graph-y]")?.value || "";
-    const status = r.figure.querySelector<HTMLElement>(".bk-graph-builder-status");
-    const result = customGraphSpec(r.schema, x, y);
-    const numeric = [x, y].every(key => key === "time" || r.values[key] === undefined || (typeof r.values[key] === "number" && Number.isFinite(r.values[key])));
-    if (!result.ok || !numeric) {
-        if (status) { status.hidden = false; status.textContent = result.ok ? "Choose numeric measurements for both axes." : result.message; }
-        return;
-    }
-    if (status) status.hidden = true;
-    const spec = result.spec;
-    if (!r.specs.some(item => item.key === spec.key)) {
-        r.graphs.register(spec);
-        appendCustomGraphChoice(r, spec);
-    }
-    r.graphs.open(spec.key);
-    r.graphs.update(graphData(r));
+	const x =
+		r.figure.querySelector<HTMLSelectElement>("[data-graph-x]")?.value ||
+		"time";
+	const y =
+		r.figure.querySelector<HTMLSelectElement>("[data-graph-y]")?.value || "";
+	const status = r.figure.querySelector<HTMLElement>(
+		".bk-graph-builder-status",
+	);
+	const result = customGraphSpec(r.schema, x, y);
+	const numeric = [x, y].every(
+		(key) =>
+			key === "time" ||
+			r.values[key] === undefined ||
+			(typeof r.values[key] === "number" && Number.isFinite(r.values[key])),
+	);
+	if (!result.ok || !numeric) {
+		if (status) {
+			status.hidden = false;
+			status.textContent = result.ok
+				? "Choose numeric measurements for both axes."
+				: result.message;
+		}
+		return;
+	}
+	if (status) status.hidden = true;
+	const spec = result.spec;
+	if (!r.specs.some((item) => item.key === spec.key)) {
+		r.graphs.register(spec);
+		appendCustomGraphChoice(r, spec);
+	}
+	r.graphs.open(spec.key);
+	r.graphs.update(graphData(r));
 }
 
 function syncGraphActions(r: MeasurementRuntime) {
@@ -472,84 +505,133 @@ function ensureCaptureButton(r: MeasurementRuntime): void {
 	syncCaptureButtonState(r);
 }
 
-function offerSnapshotSave(r: MeasurementRuntime, snapshot: SimulationSnapshot, imageError?: string) {
-    r.figure.querySelector<HTMLFormElement>(".bk-capture-name")?.requestSubmit();
-    const doc = r.figure.ownerDocument;
-    const form = doc.createElement("form");
-    form.className = "bk-capture-name";
-    form.setAttribute("aria-label", "Save snapshot image");
-    const cue = doc.createElement("p");
-    cue.className = "bk-capture-saved";
-    cue.setAttribute("role", "status");
-    cue.textContent = "Saved to timeline";
-    const label = doc.createElement("label");
-    label.textContent = "Name";
-    const input = doc.createElement("input");
-    input.name = "snapshot-name";
-    input.maxLength = 100;
-    input.value = `Snapshot ${Number(snapshot.time.toFixed(2))} s`;
-    input.setAttribute("aria-label", "Snapshot name");
-    label.append(input);
-    const actions = doc.createElement("div");
-    actions.className = "bk-capture-name-actions";
-    const save = doc.createElement("button");
-    save.type = "submit";
-    save.textContent = snapshot.imageDataUrl ? "Save image" : "Save name";
-    const dismiss = doc.createElement("button");
-    dismiss.type = "button";
-    dismiss.textContent = "×";
-    dismiss.setAttribute("aria-label", "Dismiss snapshot naming");
-    actions.append(save, dismiss);
-    form.append(cue, label, actions);
-    if (!snapshot.imageDataUrl) {
-        const error = doc.createElement("p");
-        error.className = "bk-capture-image-error";
-        error.textContent = imageError || "This scene could not be captured as an image.";
-        form.append(error);
-    }
-    const finish = () => {
-        const name = input.value.trim() || input.defaultValue || `Snapshot ${snapshot.time} s`;
-        r.timeline?.renameSnapshot(snapshot.id, name);
-        if (snapshot.imageDataUrl) {
-            try { downloadSnapshotImage(doc, snapshot.imageDataUrl, name); }
-            catch { cue.textContent = "Image download failed. Try Download image in Timeline."; return; }
-        }
-        form.remove();
-        r.figure.querySelector<HTMLElement>("[data-bk-capture-snapshot]")?.focus({ preventScroll: true });
-    };
-    form.addEventListener("submit", event => { event.preventDefault(); finish(); });
-    dismiss.addEventListener("click", finish);
-    form.addEventListener("keydown", event => {
-        if (event.key !== "Escape") return;
-        event.preventDefault(); event.stopPropagation(); finish();
-        r.figure.querySelector<HTMLElement>("[data-bk-capture-snapshot]")?.focus();
-    });
-    (r.figure.querySelector(".bk-sim-playback") || r.figure).append(form);
-    for (const button of r.figure.querySelectorAll<HTMLElement>("[data-bk-capture-snapshot]")) button.dataset.saved = "true";
-    const timer = setTimeout(() => {
-        for (const button of r.figure.querySelectorAll<HTMLElement>("[data-bk-capture-snapshot]")) delete button.dataset.saved;
-        r.timers.delete(timer);
-    }, 2200);
-    r.timers.add(timer);
-    input.focus({ preventScroll: true });
-    input.select();
+function offerSnapshotSave(
+	r: MeasurementRuntime,
+	snapshot: SimulationSnapshot,
+	imageError?: string,
+) {
+	r.figure.querySelector<HTMLFormElement>(".bk-capture-name")?.requestSubmit();
+	const doc = r.figure.ownerDocument;
+	const form = doc.createElement("form");
+	form.className = "bk-capture-name";
+	form.setAttribute("aria-label", "Save snapshot image");
+	const cue = doc.createElement("p");
+	cue.className = "bk-capture-saved";
+	cue.setAttribute("role", "status");
+	cue.textContent = "Saved to timeline";
+	const label = doc.createElement("label");
+	label.textContent = "Name";
+	const input = doc.createElement("input");
+	input.name = "snapshot-name";
+	input.maxLength = 100;
+	input.value = `Snapshot ${Number(snapshot.time.toFixed(2))} s`;
+	input.setAttribute("aria-label", "Snapshot name");
+	label.append(input);
+	const actions = doc.createElement("div");
+	actions.className = "bk-capture-name-actions";
+	const save = doc.createElement("button");
+	save.type = "submit";
+	save.textContent = snapshot.imageDataUrl ? "Save image" : "Save name";
+	const dismiss = doc.createElement("button");
+	dismiss.type = "button";
+	dismiss.textContent = "×";
+	dismiss.setAttribute("aria-label", "Dismiss snapshot naming");
+	actions.append(save, dismiss);
+	form.append(cue, label, actions);
+	if (!snapshot.imageDataUrl) {
+		const error = doc.createElement("p");
+		error.className = "bk-capture-image-error";
+		error.textContent =
+			imageError || "This scene could not be captured as an image.";
+		form.append(error);
+	}
+	const finish = () => {
+		const name =
+			input.value.trim() || input.defaultValue || `Snapshot ${snapshot.time} s`;
+		r.timeline?.renameSnapshot(snapshot.id, name);
+		if (snapshot.imageDataUrl) {
+			try {
+				downloadSnapshotImage(doc, snapshot.imageDataUrl, name);
+			} catch {
+				cue.textContent =
+					"Image download failed. Try Download image in Timeline.";
+				return;
+			}
+		}
+		form.remove();
+		r.figure
+			.querySelector<HTMLElement>("[data-bk-capture-snapshot]")
+			?.focus({ preventScroll: true });
+	};
+	form.addEventListener("submit", (event) => {
+		event.preventDefault();
+		finish();
+	});
+	dismiss.addEventListener("click", finish);
+	form.addEventListener("keydown", (event) => {
+		if (event.key !== "Escape") return;
+		event.preventDefault();
+		event.stopPropagation();
+		finish();
+		r.figure.querySelector<HTMLElement>("[data-bk-capture-snapshot]")?.focus();
+	});
+	(r.figure.querySelector(".bk-sim-playback") || r.figure).append(form);
+	for (const button of r.figure.querySelectorAll<HTMLElement>(
+		"[data-bk-capture-snapshot]",
+	))
+		button.dataset.saved = "true";
+	const timer = setTimeout(() => {
+		for (const button of r.figure.querySelectorAll<HTMLElement>(
+			"[data-bk-capture-snapshot]",
+		))
+			delete button.dataset.saved;
+		r.timers.delete(timer);
+	}, 2200);
+	r.timers.add(timer);
+	input.focus({ preventScroll: true });
+	input.select();
 }
 
 function exportTimeline(r: MeasurementRuntime) {
-    if (!r.timeline) return;
-    const label = r.figure.querySelector(".bk-object-title")?.textContent || "Timeline";
-    const quote = (value: unknown) => {
-        const text = String(value ?? "");
-        const safe = /^[=+@\t\r]/.test(text) ? "'" + text : text;
-        return `"${safe.replace(/"/g, '""')}"`;
-    };
-    try {
-        const entries = r.timeline.getBranches().flatMap(branch => branch.entries);
-        const rows = [["Time (s)", "Name", "Type", "Measurements"], ...entries.map(entry => [entry.time, entry.title, entry.kind || "event", Object.entries(entry.snapshot?.telemetry || {}).map(([key, value]) => `${r.schema[key]?.label || key}: ${value}${r.schema[key]?.unit ? ` ${r.schema[key].unit}` : ""}`).join("; ")])];
-        const blob = new Blob(["\ufeff", rows.map(row => row.map(quote).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
-        downloadMeasurementFile(r.figure.ownerDocument, blob, measurementFilename(`${label} timeline`, "csv"));
-        r.timeline.showFeedback("Timeline downloaded", "success");
-    } catch { r.timeline.showFeedback("Could not download the timeline.", "warning"); }
+	if (!r.timeline) return;
+	const label =
+		r.figure.querySelector(".bk-object-title")?.textContent || "Timeline";
+	const quote = (value: unknown) => {
+		const text = String(value ?? "");
+		const safe = /^[=+@\t\r]/.test(text) ? "'" + text : text;
+		return `"${safe.replace(/"/g, '""')}"`;
+	};
+	try {
+		const entries = r.timeline
+			.getBranches()
+			.flatMap((branch) => branch.entries);
+		const rows = [
+			["Time (s)", "Name", "Type", "Measurements"],
+			...entries.map((entry) => [
+				entry.time,
+				entry.title,
+				entry.kind || "event",
+				Object.entries(entry.snapshot?.telemetry || {})
+					.map(
+						([key, value]) =>
+							`${r.schema[key]?.label || key}: ${value}${r.schema[key]?.unit ? ` ${r.schema[key].unit}` : ""}`,
+					)
+					.join("; "),
+			]),
+		];
+		const blob = new Blob(
+			["\ufeff", rows.map((row) => row.map(quote).join(",")).join("\r\n")],
+			{ type: "text/csv;charset=utf-8" },
+		);
+		downloadMeasurementFile(
+			r.figure.ownerDocument,
+			blob,
+			measurementFilename(`${label} timeline`, "csv"),
+		);
+		r.timeline.showFeedback("Timeline downloaded", "success");
+	} catch {
+		r.timeline.showFeedback("Could not download the timeline.", "warning");
+	}
 }
 
 function captureManualSnapshot(r: MeasurementRuntime): void {
@@ -616,7 +698,8 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 				if (response.success && response.isExact) {
 					snapshot.isExact = true;
 					snapshot.state = response.state;
-                    if (validSnapshotImage(response.imageDataUrl)) snapshot.imageDataUrl = response.imageDataUrl;
+					if (validSnapshotImage(response.imageDataUrl))
+						snapshot.imageDataUrl = response.imageDataUrl;
 					if (response.telemetry && typeof response.telemetry === "object") {
 						snapshot.telemetry = { ...response.telemetry };
 					}
@@ -635,7 +718,7 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 					if (currentActiveBranchId === originatingBranchId) {
 						r.timeline?.record(entry);
 						markUnread(r, "timeline");
-                        offerSnapshotSave(r, snapshot, response.imageError);
+						offerSnapshotSave(r, snapshot, response.imageError);
 					} else {
 						// Record against originating branch if present; do not corrupt active branch!
 						const allBranches = r.timeline?.getBranches?.() || [];
@@ -651,8 +734,8 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 								branchId: originatingBranchId,
 							};
 							origBranch.entries.push(entryToSave);
-                            r.timeline?.refreshLayout();
-                            offerSnapshotSave(r, snapshot, response.imageError);
+							r.timeline?.refreshLayout();
+							offerSnapshotSave(r, snapshot, response.imageError);
 							r.timeline?.showFeedback?.(
 								"Snapshot recorded to originating branch",
 								"neutral",
@@ -678,7 +761,7 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 					id: reqId,
 					time: captureTime,
 					label: entry.title,
-                    includeImage: true,
+					includeImage: true,
 				},
 				"*",
 			);
@@ -704,9 +787,12 @@ function rememberBranchSamples(r: MeasurementRuntime) {
 function restoreBranchSamples(r: MeasurementRuntime, branchId: string) {
 	rememberBranchSamples(r);
 	const saved = r.branchSamples?.get(branchId);
-	r.samples = Object.fromEntries(Object.entries(saved || {}).map(([key, points]) =>
-		[key, points.map(point => ({ ...point }))]
-	));
+	r.samples = Object.fromEntries(
+		Object.entries(saved || {}).map(([key, points]) => [
+			key,
+			points.map((point) => ({ ...point })),
+		]),
+	);
 	r.sampleBranchId = branchId;
 }
 
@@ -999,7 +1085,10 @@ async function restoreSimulationSnapshot(
 	}
 	r.pendingControls.clear();
 
-	restoreBranchSamples(r, entry?.branchId || r.timeline?.getActiveBranchId() || "main");
+	restoreBranchSamples(
+		r,
+		entry?.branchId || r.timeline?.getActiveBranchId() || "main",
+	);
 	// Update host state to match restored snapshot
 	r.graphSnapshotTime = snapshot.time;
 	r.time = snapshot.time;
@@ -1017,7 +1106,12 @@ async function restoreSimulationSnapshot(
 			typeof y === "number" &&
 			Number.isFinite(y)
 		) {
-			r.latest[spec.key] = { time: snapshot.time, x, y, branchId: r.sampleBranchId };
+			r.latest[spec.key] = {
+				time: snapshot.time,
+				x,
+				y,
+				branchId: r.sampleBranchId,
+			};
 		}
 	}
 	if (snapshot.props && typeof snapshot.props === "object") {
@@ -1198,23 +1292,28 @@ function showNotification(
 function graphData(r: MeasurementRuntime) {
 	const data: Record<string, MeasurementGraphPoint[]> = Object.create(null);
 	for (const spec of [...r.specs, ...(r.historySpecs || [])]) {
-        const raw = (key: string) => {
-            const sourceKey = `history:${encodeURIComponent(key)}`;
-            const points = [...(r.samples[sourceKey] || [])];
-            const latest = r.latest[sourceKey];
-            if (latest && points.at(-1)?.time !== latest.time) points.push(latest);
-            return points;
-        };
-        const source = spec.yKey && spec.key.startsWith("custom:")
-            ? pairGraphSamples(spec.xAxis.key, raw(spec.xAxis.key), raw(spec.yKey))
-            : r.samples[spec.key] || [];
-		const points = source.filter(point =>
-			typeof r.graphSnapshotTime !== "number" || point.time <= r.graphSnapshotTime),
+		const raw = (key: string) => {
+			const sourceKey = `history:${encodeURIComponent(key)}`;
+			const points = [...(r.samples[sourceKey] || [])];
+			const latest = r.latest[sourceKey];
+			if (latest && points.at(-1)?.time !== latest.time) points.push(latest);
+			return points;
+		};
+		const source =
+			spec.yKey && spec.key.startsWith("custom:")
+				? pairGraphSamples(spec.xAxis.key, raw(spec.xAxis.key), raw(spec.yKey))
+				: r.samples[spec.key] || [];
+		const points = source.filter(
+				(point) =>
+					typeof r.graphSnapshotTime !== "number" ||
+					point.time <= r.graphSnapshotTime,
+			),
 			latest = r.latest[spec.key],
 			last = points.at(-1);
 		if (
 			latest &&
-			(typeof r.graphSnapshotTime !== "number" || latest.time <= r.graphSnapshotTime) &&
+			(typeof r.graphSnapshotTime !== "number" ||
+				latest.time <= r.graphSnapshotTime) &&
 			(!last ||
 				latest.time !== last.time ||
 				latest.x !== last.x ||
@@ -1439,7 +1538,7 @@ function resetRuntime(id: string) {
 	r.isRestoringSnapshot = false;
 	r.inFlightPresentSnapshot = false;
 	r.inFlightManualCapture = false;
-    r.figure.querySelector(".bk-capture-name")?.remove();
+	r.figure.querySelector(".bk-capture-name")?.remove();
 	r.lastPresentCapture = 0;
 	r.latestPresentSnapshot = undefined;
 	delete r.graphSnapshotTime;
@@ -1667,7 +1766,12 @@ function processMeasurements(
 			!Number.isFinite(y)
 		)
 			continue;
-		const point = { time: r.time, x, y, branchId: r.timeline?.getActiveBranchId() || "main" };
+		const point = {
+			time: r.time,
+			x,
+			y,
+			branchId: r.timeline?.getActiveBranchId() || "main",
+		};
 		r.latest[spec.key] = point;
 		r.samples[spec.key] ||= [];
 		const samples = r.samples[spec.key];
@@ -1938,8 +2042,13 @@ export function bkWireTelemetry(): void {
 						telemetry: event.data.telemetry,
 						time: event.data.time,
 						props: event.data.props,
-                        imageDataUrl: validSnapshotImage(event.data.imageDataUrl) ? event.data.imageDataUrl : undefined,
-                        imageError: typeof event.data.imageError === "string" ? event.data.imageError.slice(0, 300) : undefined,
+						imageDataUrl: validSnapshotImage(event.data.imageDataUrl)
+							? event.data.imageDataUrl
+							: undefined,
+						imageError:
+							typeof event.data.imageError === "string"
+								? event.data.imageError.slice(0, 300)
+								: undefined,
 						error: event.data.error,
 					});
 				}
@@ -2058,16 +2167,23 @@ function readPreferences(r: MeasurementRuntime): Preferences {
 				(graph, index) =>
 					graph &&
 					typeof graph.key === "string" &&
-                    ((Object.hasOwn(r.schema, graph.key) && Boolean(r.schema[graph.key].graph)) ||
-                     (graph.axes && typeof graph.axes.x === "string" && typeof graph.axes.y === "string" &&
-                      customGraphSpec(r.schema, graph.axes.x, graph.axes.y).ok &&
-                      graph.key === `custom:${encodeURIComponent(graph.axes.x)}:${encodeURIComponent(graph.axes.y)}`)) &&
+					((Object.hasOwn(r.schema, graph.key) &&
+						Boolean(r.schema[graph.key].graph)) ||
+						(graph.axes &&
+							typeof graph.axes.x === "string" &&
+							typeof graph.axes.y === "string" &&
+							customGraphSpec(r.schema, graph.axes.x, graph.axes.y).ok &&
+							graph.key ===
+								`custom:${encodeURIComponent(graph.axes.x)}:${encodeURIComponent(graph.axes.y)}`)) &&
 					graphs.findLastIndex((candidate) => candidate?.key === graph.key) ===
 						index,
 			)
 			.map((graph) => ({ ...graph })),
 		tab:
-			tab === "controls" || tab === "telemetry" || tab === "timeline" || tab === "graphs"
+			tab === "controls" ||
+			tab === "telemetry" ||
+			tab === "timeline" ||
+			tab === "graphs"
 				? tab
 				: r.config.initialTab,
 	};
@@ -2118,10 +2234,14 @@ export function bkInitTelemetry(): void {
 			storageKey: `bk:measurements:${window.location.pathname}:${id}`,
 			timers: new Set(),
 			specs: measurementGraphSpecs(schema),
-            historySpecs: Object.keys(schema).map(key => {
-                const result = customGraphSpec(schema, "time", key);
-                return result.ok ? { ...result.spec, key: `history:${encodeURIComponent(key)}` } : null;
-            }).filter(Boolean),
+			historySpecs: Object.keys(schema)
+				.map((key) => {
+					const result = customGraphSpec(schema, "time", key);
+					return result.ok
+						? { ...result.spec, key: `history:${encodeURIComponent(key)}` }
+						: null;
+				})
+				.filter(Boolean),
 			lastToast: -Infinity,
 			unreadValues: new Set(),
 			unreadEvents: 0,
@@ -2135,11 +2255,14 @@ export function bkInitTelemetry(): void {
 		} as MeasurementRuntime;
 		seedControls(r);
 		r.preferences = readPreferences(r);
-        for (const window of r.preferences.graphs) {
-            if (!window.axes) continue;
-            const result = customGraphSpec(schema, window.axes.x, window.axes.y);
-            if (result.ok) { r.specs.push(result.spec); appendCustomGraphChoice(r, result.spec); }
-        }
+		for (const window of r.preferences.graphs) {
+			if (!window.axes) continue;
+			const result = customGraphSpec(schema, window.axes.x, window.axes.y);
+			if (result.ok) {
+				r.specs.push(result.spec);
+				appendCustomGraphChoice(r, result.spec);
+			}
+		}
 		savePreferences(r);
 		const history = figure.querySelector<HTMLElement>(
 			".bk-measurement-history",
@@ -2153,11 +2276,14 @@ export function bkInitTelemetry(): void {
 				onSelect: (key) => focusMeasurement(r, key),
 				onCompareBranch: (branchId) => {
 					rememberBranchSamples(r);
-					const branch = r.timeline?.getBranches().find(branch => branch.id === branchId);
+					const branch = r.timeline
+						?.getBranches()
+						.find((branch) => branch.id === branchId);
 					const data = r.branchSamples?.get(branchId);
 					if (!branch || !data) return;
 					r.graphs.setComparison({ label: branch.name, data });
-					if (!r.graphs.getWindows().length && r.specs[0]) r.graphs.open(r.specs[0].key);
+					if (!r.graphs.getWindows().length && r.specs[0])
+						r.graphs.open(r.specs[0].key);
 				},
 				onRestoreSnapshot: (snapshot, entry) =>
 					restoreSimulationSnapshot(r, snapshot, entry),
@@ -2193,9 +2319,8 @@ export function bkInitTelemetry(): void {
 			} catch (_) {}
 		};
 		r.iframe?.addEventListener("load", r.load);
-		r.graphs.onCursorChange(time => r.timeline?.setInspectedTime(time));
+		r.graphs.onCursorChange((time) => r.timeline?.setInspectedTime(time));
 		r.click = (event: Event) => {
-
 			const action = (event.target as Element).closest<HTMLElement>(
 				"[data-bk-action], [data-bk-preset]",
 			);
@@ -2225,22 +2350,30 @@ export function bkInitTelemetry(): void {
 					handleBranchingInteraction(r, action.textContent?.trim() || "Action");
 				}
 			}
-            const removePlot = (event.target as Element).closest<HTMLElement>("[data-remove-custom-graph]");
-            if (removePlot) {
-                const key = removePlot.dataset.removeCustomGraph || "";
-                if (!key.startsWith("custom:")) return;
-                r.graphs.remove(key);
-                delete r.samples[key]; delete r.latest[key];
-                for (const data of r.branchSamples?.values() || []) delete data[key];
-                removePlot.closest(".bk-custom-graph-item")?.remove();
-                r.figure.querySelector<HTMLElement>("[data-create-graph]")?.focus({ preventScroll: true });
-                return;
-            }
-            if ((event.target as Element).closest("[data-export-timeline]")) { exportTimeline(r); return; }
-            if ((event.target as Element).closest("[data-create-graph]")) {
-                createCustomGraph(r);
-                return;
-            }
+			const removePlot = (event.target as Element).closest<HTMLElement>(
+				"[data-remove-custom-graph]",
+			);
+			if (removePlot) {
+				const key = removePlot.dataset.removeCustomGraph || "";
+				if (!key.startsWith("custom:")) return;
+				r.graphs.remove(key);
+				delete r.samples[key];
+				delete r.latest[key];
+				for (const data of r.branchSamples?.values() || []) delete data[key];
+				removePlot.closest(".bk-custom-graph-item")?.remove();
+				r.figure
+					.querySelector<HTMLElement>("[data-create-graph]")
+					?.focus({ preventScroll: true });
+				return;
+			}
+			if ((event.target as Element).closest("[data-export-timeline]")) {
+				exportTimeline(r);
+				return;
+			}
+			if ((event.target as Element).closest("[data-create-graph]")) {
+				createCustomGraph(r);
+				return;
+			}
 			const button = (event.target as Element).closest<HTMLElement>(
 				"[data-measurement-toggle], [data-measurement-graph], .bk-timeline-return-btn, [data-bk-capture-snapshot], [data-bk-continue-snapshot], .bk-timeline-continue-btn",
 			);
@@ -2267,10 +2400,11 @@ export function bkInitTelemetry(): void {
 			const key = button.dataset.measurementToggle;
 			if (key) updateVisibility(r, key);
 			const graph = button.dataset.measurementGraph;
-            if (graph && r.specs.some(spec => spec.key === graph)) {
-                if (r.preferences.graphs.some(window => window.key === graph)) r.graphs.close(graph);
-                else r.graphs.open(graph);
-            }
+			if (graph && r.specs.some((spec) => spec.key === graph)) {
+				if (r.preferences.graphs.some((window) => window.key === graph))
+					r.graphs.close(graph);
+				else r.graphs.open(graph);
+			}
 		};
 		r.input = (event: Event) => {
 			const input = (event.target as Element).closest<
@@ -2313,7 +2447,7 @@ export function bkInitTelemetry(): void {
 				}
 			}
 		};
-        figure.addEventListener("click", r.click);
+		figure.addEventListener("click", r.click);
 		figure.addEventListener("input", r.input);
 		figure.addEventListener("change", r.input);
 		r.snapshotViewListener = (e: Event) => {
@@ -2333,7 +2467,9 @@ export function bkInitTelemetry(): void {
 					r.figure.removeAttribute("data-snapshot-viewing");
 				}
 			}
-			r.graphs?.setCursor(customEvent.detail?.viewing ? customEvent.detail.time ?? null : null);
+			r.graphs?.setCursor(
+				customEvent.detail?.viewing ? (customEvent.detail.time ?? null) : null,
+			);
 			syncCaptureButtonState(r);
 		};
 		figure.addEventListener("bk:snapshot-view-change", r.snapshotViewListener);
@@ -2408,12 +2544,12 @@ export function getMeasurementRuntime(
 export {
 	addPendingSnapshotRequest,
 	arePropsEqual,
-	graphData,
-	restoreBranchSamples,
 	cancelAllPendingRequests,
 	captureManualSnapshot,
 	ensureCaptureButton,
+	graphData,
 	handleBranchingInteraction,
+	restoreBranchSamples,
 	restoreSimulationSnapshot,
 	scheduleViewUpdate,
 	settleRestoreRequest,
