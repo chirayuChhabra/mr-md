@@ -686,7 +686,7 @@ same name. Entries can be renamed later, and **Image** downloads the stored fram
 again. If image capture is unavailable, the exact state remains in Timeline and
 the naming form reports the image error.
 
-**Export** in Timeline downloads JSON containing the branches, named snapshots,
+**Export** in Timeline downloads JSON containing the timeline, named snapshots,
 exact states, embedded PNG images, measurement schema, and plot definitions.
 
 ### Controls, graphs, and timeline captures
@@ -751,20 +751,23 @@ Capture button, or `timeline: false` to disable history.
 Measurement `notifications` also define automatic captures. `toast: false`
 records the event silently. Readers select a node to restore its state.
 
-- **Returning to live**: Clicking **Back to live** in the Timeline panel returns the reader to the present moment of the active run without modifying history.
-- **Continuing from branch head**: If the reader inspects the active run's latest snapshot and resumes playback or adjusts controls, the run continues along the existing branch without creating a new branch rail.
-- **Forking from an ancestor milestone**: When a reader inspects an earlier historical checkpoint and interacts with the scene, modifies a control, or resumes playback, the framework automatically forks a new branch. The original future remains intact on its own rail and can be revisited at any time.
+Selecting a saved moment restores its exact state and pauses the simulation.
+**Back to live** returns to the state preserved before inspection. Resuming
+playback, changing a control, or interacting with the scene continues from the
+restored state on the same timeline. Unchanged controls keep inspection active.
 
-New snapshots appear at the top, with Start at the bottom. Each row shows its
-simulation time and branch; a new branch can therefore start at an earlier
-simulation time than the original future.
+Saved captures remain available after continuation. New captures appear at the
+top in recording order, with Start at the bottom. Their simulation times may
+move backward after a restore. Plot samples after the restored time are removed
+from the active run when it continues, so plots follow that run's measurements.
 
-> [!NOTE]
-> **Persistence scope**: Timeline snapshots, branches, and sample histories are maintained in memory for the duration of the current trial session. Clicking Reset (`R`) or reloading the page resets timeline history. Telemetry viewing preferences (open graphs, selected scene guides, and active tab) persist across resets in session storage.
+Timeline snapshots and sample histories stay in memory for the current trial.
+Reset (`R`) or a page reload clears that history. Open graphs, selected scene
+guides, and the active tab persist across resets in session storage.
 
 ### Simulation snapshot registration and author contract
 
-Simulations opt into exact, reversible state captures by registering snapshot handlers. This enables readers to click any milestone in the Timeline to inspect past simulation states, and branch off into new experimental runs.
+Simulations opt into exact, reversible state captures by registering snapshot handlers. This enables readers to click any milestone in the Timeline to inspect past simulation states and continue from them.
 
 #### Registering snapshot handlers
 
@@ -792,11 +795,11 @@ window.bkRegisterSnapshot({
 
 #### Author implementation responsibilities
 
-To guarantee glitch-free time travel and branching, simulations must adhere to the following contract:
+Snapshot handlers must follow this contract:
 
 1. **Synchronous execution**: `capture()` and `restore()` handlers must be strictly synchronous. Do not return unresolved Promises or defer state application to future ticks.
 2. **Cloneable state objects**: `capture()` must return a plain, serializable object composed of numbers, strings, booleans, plain objects, and arrays. Never return DOM elements, functions, circular structures, Three.js meshes, or WebGL buffers. The runtime clones state via `structuredClone` with a `JSON` fallback.
-3. **Seeded randomness and determinism**: Unseeded `Math.random()` calls will diverge on branch replay. If your model uses stochastic behavior (such as Brownian motion or Monte Carlo sampling), include the pseudo-random generator's seed or state index in `capture()` and re-seed it in `restore()`.
+3. **Seeded randomness and determinism**: Unseeded `Math.random()` calls will diverge after restoration. If your model uses stochastic behavior (such as Brownian motion or Monte Carlo sampling), include the pseudo-random generator's seed or state index in `capture()` and re-seed it in `restore()`.
 4. **Physics guard during restoration**: Inspect `window.__bkRestoring` during your setup/draw loop. When true, treat elapsed delta time as zero (`dt = 0`), pause physics advancement, and suppress `sim.publishTelemetry` calls to prevent publishing intermediate restoration frames.
 5. **In-place reset**: Register an `instance.onReset` or `window.bkOnReset` callback to reset all internal state variables and cancel any in-progress drag or interaction flags when a trial resets.
 
@@ -836,7 +839,7 @@ Communication between the mr-md host workspace and the simulation iframe follows
 | Iframe → Host | `bk:snapshot-restored` | `{ id: string, success: boolean, isExact: boolean, time?: number, props?: Record<string, unknown>, error?: string }` | Confirms snapshot restoration complete and state synchronized. |
 | Iframe → Host | `bk:telemetry` | `{ data: Record<string, unknown> }` | Delivers real-time numerical readings to host meters and graphs. |
 | Iframe → Host | `bk:telemetry-reset` | `{}` | Instructs host to clear trial history and graphs when starting a new run. |
-| Iframe → Host | `bk:scene-interaction` | `{}` | Reports a spatial interaction. The first spatial interaction with a restored snapshot creates a branch. |
+| Iframe → Host | `bk:scene-interaction` | `{}` | Reports a spatial interaction. The first spatial interaction with a restored snapshot continues the run from that state. |
 
 ### Inspector layout and live telemetry
 
