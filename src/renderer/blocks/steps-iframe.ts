@@ -3,6 +3,7 @@ import {
 	simulationAuthoringRuntime,
 	workspaceKeyboardBridge,
 } from "./simulation-runtime.js";
+import { snapshotRuntimeCode } from "./snapshot-runtime.js";
 import { escAttr } from "./utils.js";
 
 export function stepsIframeDoc(
@@ -46,6 +47,7 @@ window.__simProps = JSON.parse(document.getElementById("bk-sim-props").textConte
 window.__loop = false;
 window.bkSetupCalled = false;
 ${simulationAuthoringRuntime}
+${snapshotRuntimeCode}
 ${workspaceKeyboardBridge}
 window.__bkTheme = { colors: {}, theme: "light", palette: "ink", ui: "standard" };
 window.__bkStepCallbacks = [];

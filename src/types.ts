@@ -79,6 +79,7 @@ export interface SimulationBlock extends BaseBlock, CaptionedBlock {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: SimulationMeasurementsConfig;
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // iframe height, default 400
 	controls?: "interactive" | "observe";
@@ -96,6 +97,7 @@ export interface WorldBlock extends BaseBlock, CaptionedBlock {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: SimulationMeasurementsConfig;
 	dependencies?: string[]; // external CDN scripts loaded before the simulation
 	height?: number; // portal preview height, default 480
 	accent?: BlockAccent;
@@ -175,6 +177,7 @@ export interface StepsBlock extends BaseBlock, CaptionedBlock {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: SimulationMeasurementsConfig;
 	height?: number;
 	accent?: BlockAccent;
 	dependencies?: string[];
@@ -285,6 +288,8 @@ export interface SimulationOptions {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: SimulationMeasurementsConfig;
+	timeline?: boolean | SimulationTimelineConfig;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -313,6 +318,8 @@ export interface StepsOptions {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: SimulationMeasurementsConfig;
+	timeline?: boolean | SimulationTimelineConfig;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -335,6 +342,8 @@ export interface WorldOptions {
 	presets?: Record<string, SimulationPreset>;
 	advancedControls?: string[];
 	telemetry?: SimulationTelemetry;
+	measurements?: SimulationMeasurementsConfig;
+	timeline?: boolean | SimulationTimelineConfig;
 	height?: number;
 	label?: string;
 	caption?: string;
@@ -367,6 +376,70 @@ export interface SimulationControl {
 	group?: string;
 }
 
+export type MeasurementCondition =
+	| { op: "gt" | "gte" | "lt" | "lte"; value: number }
+	| { op: "eq" | "neq"; value: number | string | boolean };
+
+export type MeasurementTone =
+	| "neutral"
+	| "accent"
+	| "success"
+	| "warning"
+	| "danger";
+
+export interface MeasurementGraphOptions {
+	label?: string;
+	x?: { key?: string; label?: string; unit?: string };
+	y?: { label?: string; unit?: string };
+}
+
+export interface SimulationTimelineConfig {
+	/** Capture initial state snapshot at start of run. Default: `true` */
+	start?: boolean;
+	/** Track present live/paused state node. Default: `true` */
+	present?: boolean;
+	/** Record control changes in timeline with snapshot. Default: `true` */
+	controls?: boolean;
+	/** Show the manual Capture button. Automatic event snapshots remain enabled. Default: `true` */
+	capture?: boolean;
+}
+
+export interface SimulationMeasurementsConfig {
+	visible?: string[];
+	graphs?: Array<{
+		key: string;
+		minimized?: boolean;
+		x?: number;
+		y?: number;
+		width?: number;
+		height?: number;
+	}>;
+	initialTab?: "controls" | "telemetry" | "timeline" | "graphs";
+	notifications?: {
+		enabled?: boolean;
+		minInterval?: number;
+		duration?: number;
+		maxVisible?: number;
+	};
+	timeline?: boolean | SimulationTimelineConfig;
+}
+
+export interface MeasurementState {
+	when: MeasurementCondition;
+	tone: MeasurementTone;
+	label?: string;
+}
+
+export interface MeasurementNotification {
+	id: string;
+	when: MeasurementCondition;
+	message: string;
+	once?: boolean;
+	cooldown?: number;
+	tone?: MeasurementTone;
+	toast?: boolean;
+}
+
 /** Represents a declared telemetry quantity published by a simulation */
 export interface SimulationTelemetryItem {
 	label?: string;
@@ -375,6 +448,11 @@ export interface SimulationTelemetryItem {
 	group?: string;
 	description?: string;
 	display?: "metric" | "status" | "row";
+	states?: MeasurementState[];
+	notifications?: MeasurementNotification[];
+	graph?: boolean | MeasurementGraphOptions;
+	scene?: string;
+	changeThreshold?: number;
 }
 
 export type SimulationTelemetry = Record<string, SimulationTelemetryItem>;
@@ -429,6 +507,11 @@ export interface Chapter {
 // ─── Simulation Runtime Messages ─────────────────────────────────────────────
 
 export type SimulationHostToIframeMessage =
+	| { type: "bk:measurement-focus"; key: string | null; scene?: string }
+	| {
+			type: "bk:measurement-visibility";
+			measurements: Array<{ key: string; scene: string }>;
+	  }
 	| { type: "bk:play" }
 	| { type: "bk:pause" }
 	| { type: "bk:sim-play-state"; playing: boolean }
@@ -452,12 +535,42 @@ export type SimulationHostToIframeMessage =
 	| { type: "bk:theme-sync"; state: unknown }
 	| { type: "bk:world-enter" }
 	| { type: "bk:world-exit" }
-	| { type: "bk:world-reset-camera" };
+	| { type: "bk:world-reset-camera" }
+	| { type: "bk:snapshot-query-capabilities" }
+	| { type: "bk:snapshot-capture"; id: string; time?: number; label?: string; includeImage?: boolean }
+	| {
+			type: "bk:snapshot-restore";
+			id: string;
+			snapshot: SimulationSnapshot;
+			resumePlayback?: boolean;
+	  };
+
+export interface SimulationSnapshotCapabilities {
+	exactState: boolean;
+	customProps: boolean;
+	reason?: string;
+}
+
+export interface SimulationSnapshot<TState = unknown> {
+	imageDataUrl?: string;
+	id: string;
+	simId?: string;
+	branchId?: string;
+	time: number;
+	timestamp: number;
+	label: string;
+	props: Record<string, unknown>;
+	telemetry: Record<string, unknown>;
+	state?: TState;
+	isExact: boolean;
+	parentSnapshotId?: string | null;
+}
 
 export type SimulationIframeToHostMessage =
 	| { type: "bk:runtime-ready"; reset?: boolean }
 	| { type: "bk:reset-complete" }
 	| { type: "bk:telemetry"; data: Record<string, unknown> }
+	| { type: "bk:telemetry-reset" }
 	| { type: "bk:request-theme" }
 	| { type: "bk:workspace-close" }
 	| { type: "bk:workspace-focus"; direction: "forward" | "backward" }
@@ -473,7 +586,36 @@ export type SimulationIframeToHostMessage =
 			metaKey?: boolean;
 	  }
 	| { type: "bk:mousemove"; clientX: number; clientY: number }
-	| { type: "bk:world-exit" };
+	| { type: "bk:world-exit" }
+	| { type: "bk:scene-interaction" }
+	| {
+			type: "bk:snapshot-capabilities";
+			supported: boolean;
+			capabilities?: SimulationSnapshotCapabilities;
+			reason?: string;
+	  }
+	| {
+			type: "bk:snapshot-data";
+            imageDataUrl?: string;
+            imageError?: string;
+			telemetry?: Record<string, unknown>;
+			id: string;
+			success: boolean;
+			isExact: boolean;
+			state?: unknown;
+			props?: Record<string, unknown>;
+			time?: number;
+			error?: string;
+	  }
+	| {
+			type: "bk:snapshot-restored";
+			id: string;
+			success: boolean;
+			isExact: boolean;
+			time?: number;
+			props?: Record<string, unknown>;
+			error?: string;
+	  };
 
 export type SimulationMessage =
 	| SimulationHostToIframeMessage

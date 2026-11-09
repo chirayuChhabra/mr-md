@@ -6,7 +6,7 @@ import { renderInspectorTabs, renderSimulationTelemetry } from "../src/renderer/
 
 const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
-test.skipIf(!existsSync(chrome))("inspector keeps headings compact and readout values aligned beneath unequal labels", async () => {
+test.skipIf(!existsSync(chrome))("inspector keeps headings compact and aligns values in readable instrument rows", async () => {
  const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
  try {
   const page = await browser.newPage();
@@ -22,10 +22,18 @@ test.skipIf(!existsSync(chrome))("inspector keeps headings compact and readout v
   const offset = await page.evaluate(() => {
    document.querySelector('.bk-sim-tabpanel--controls')!.setAttribute('hidden', '');
    document.querySelector('.bk-sim-tabpanel--telemetry')!.removeAttribute('hidden');
-   const values = Array.from(document.querySelectorAll('.bk-telemetry-value'), el => el.getBoundingClientRect().top);
-   return Math.abs(values[0] - values[1]);
+   const rows = Array.from(document.querySelectorAll('.bk-telemetry-row'), el => el.getBoundingClientRect());
+   const values = Array.from(document.querySelectorAll('.bk-telemetry-value'), el => el.getBoundingClientRect());
+   const labels = Array.from(document.querySelectorAll('.bk-telemetry-label'), el => el.getBoundingClientRect());
+   return {
+    rightEdge: Math.abs(values[0].right - values[1].right),
+    rowsOverlap: rows[0].bottom > rows[1].top,
+    labelsOverlap: labels.some((label, index) => label.right > values[index].left),
+   };
   });
-  expect(offset).toBeLessThan(1);
+  expect(offset.rightEdge).toBeLessThan(1);
+  expect(offset.rowsOverlap).toBe(false);
+  expect(offset.labelsOverlap).toBe(false);
  } finally { await browser.close(); }
 });
 

@@ -24,6 +24,7 @@ update-*.py
 
 playground/*
 !playground/orbital-telemetry/
+!playground/measurements-lab/
 playground/**/out/
 
 .idea/

@@ -204,6 +204,7 @@ export function parseLesson(
 							presets: fileConfig?.presets,
 							advancedControls: fileConfig?.advancedControls,
 							telemetry: fileConfig?.telemetry,
+							measurements: fileConfig?.measurements,
 							height: fileConfig?.height,
 							accent: fileConfig?.accent ?? "blue",
 							dependencies: fileConfig?.dependencies,

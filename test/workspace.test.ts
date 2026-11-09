@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import { JSDOM } from "jsdom";
 import {
@@ -16,6 +17,10 @@ function fixture(run: (document: Document, messages: unknown[]) => void) {
 		`<body><header id="navigation"><button>Lesson</button></header><main><p id="already-inert" inert>Hidden</p><figure id="sim-0" class="bk-object"><div class="bk-object-header"><span class="bk-object-title">Orbit</span><div class="bk-object-actions"><button class="bk-object-maximize" data-bk-lab-entry>Open lab</button></div></div><div class="bk-sim-workspace"><div class="bk-sim-preview"><button data-bk-expand-preview>Expand</button><iframe></iframe></div><div class="bk-sim-controls" data-bk-default-props='{"speed":1,"enabled":true}'><input data-bk-prop="label" type="text" value="Orbit"><input data-bk-prop="speed" type="range" min="0" max="5" value="3"><input data-bk-prop="enabled" type="checkbox"></div></div></figure><figure id="sim-1" class="bk-object"><div class="bk-sim-workspace"><div class="bk-sim-preview"><iframe></iframe></div></div></figure></main></body>`,
 		{ pretendToBeVisual: true },
 	);
+	const style = dom.window.document.createElement("style");
+	const css = readFileSync(new URL("../src/styles/theme.css", import.meta.url), "utf8");
+	style.textContent = css.slice(css.indexOf(".bk-sim-pause-overlay[hidden]"), css.indexOf("@media (prefers-reduced-motion: reduce) { .bk-sim-scroll-cue"));
+	dom.window.document.head.append(style);
 	const names = [
 		"window",
 		"document",
@@ -185,7 +190,7 @@ describe("expanded simulation workspace", () => {
    expect(figure.querySelector<HTMLElement>(".bk-sim-pause-overlay")?.hidden).toBe(false);
    button.dispatchEvent(new window.KeyboardEvent("keydown", {key:" ",repeat:true,bubbles:true,cancelable:true}));
    expect(figure.dataset.bkPlaybackState).toBe("paused");
-   figure.querySelector<HTMLButtonElement>("[data-bk-resume]")!.click();
+   figure.querySelector<HTMLButtonElement>("[data-bk-playback]")!.click();
    expect(figure.dataset.bkPlaybackState).toBe("playing");
    expect(figure.querySelector<HTMLElement>(".bk-sim-pause-overlay")?.hidden).toBe(true);
   }));
@@ -324,4 +329,66 @@ describe("expanded simulation workspace", () => {
 			expect(isTextEditable(button)).toBe(false);
 		}));
 
+	test("paused status stays beside playback without covering the scene", () =>
+		fixture((document) => {
+			bkWireWorkspace();
+			const figure = document.getElementById("sim-0")!;
+			bkExpandLab(figure);
+			bkSetLabPlayback(figure, false);
+
+			const overlay = figure.querySelector<HTMLElement>(".bk-sim-pause-overlay")!;
+			expect(overlay).not.toBeNull();
+			expect(overlay.hidden).toBe(false);
+			expect(window.getComputedStyle(overlay).position).toBe("static");
+			expect(overlay.closest(".bk-steps-controls")).not.toBeNull();
+			expect(overlay.querySelector('[role="status"]')?.textContent).toBe("Paused");
+			expect(overlay.querySelector("button")).toBeNull();
+			figure.querySelector<HTMLButtonElement>("[data-bk-playback]")!.click();
+			expect(figure.dataset.bkPlaybackState).toBe("playing");
+			expect(overlay.hidden).toBe(true);
+			expect(window.getComputedStyle(overlay).display).toBe("none");
+		}));
+
+	test("normal and fullscreen pause/resume lifecycle maintains correct overlay visibility and playback state", () =>
+		fixture((document, messages) => {
+			bkWireWorkspace();
+			const figure = document.getElementById("sim-0")!;
+
+			// 1. In normal inline view (not maximized), pause overlay is always hidden
+			bkSetLabPlayback(figure, false);
+			const overlay = figure.querySelector<HTMLElement>(".bk-sim-pause-overlay");
+			if (overlay) {
+				expect(overlay.hidden).toBe(true);
+			}
+
+			// 2. Expand lab workspace
+			bkExpandLab(figure);
+			expect(figure.classList.contains("bk-object--maximized")).toBe(true);
+			const expandedOverlay = figure.querySelector<HTMLElement>(".bk-sim-pause-overlay")!;
+			expect(expandedOverlay.hidden).toBe(false);
+
+			// 3. Resume via resume button
+			const resumeBtn = figure.querySelector<HTMLButtonElement>("[data-bk-playback]")!;
+			resumeBtn.click();
+			expect(figure.dataset.bkPlaybackState).toBe("playing");
+			expect(expandedOverlay.hidden).toBe(true);
+			expect(messages).toContainEqual({ type: "bk:play" });
+
+			// 4. Pause again
+			bkSetLabPlayback(figure, false);
+			expect(figure.dataset.bkPlaybackState).toBe("paused");
+			expect(expandedOverlay.hidden).toBe(false);
+
+			// 5. Collapse back to normal inline layout
+			bkCollapseLab();
+			expect(figure.classList.contains("bk-object--maximized")).toBe(false);
+			expect(expandedOverlay.hidden).toBe(true);
+
+			// 6. Re-expand: preserved paused state is maintained and overlay is visible again
+			messages.length = 0;
+			bkExpandLab(figure);
+			expect(messages).not.toContainEqual({ type: "bk:play" });
+			expect(figure.dataset.bkPlaybackState).toBe("paused");
+			expect(expandedOverlay.hidden).toBe(false);
+		}));
 });

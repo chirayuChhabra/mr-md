@@ -37,7 +37,9 @@ export function bkInitInspectors(): void {
 			const label = cue.querySelector("[data-bk-scroll-label]");
 			const name = panel.classList.contains("bk-sim-tabpanel--controls")
 				? "settings"
-				: "measurements";
+				: panel.classList.contains("bk-sim-tabpanel--timeline")
+					? "timeline"
+					: panel.classList.contains("bk-sim-tabpanel--graphs") ? "graphs" : "measurements";
 			if (label)
 				label.textContent = atEnd ? "Back to top" : `More ${name} below`;
 			cue.setAttribute("aria-controls", panel.id);
