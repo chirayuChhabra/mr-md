@@ -117,8 +117,9 @@ ${opts.head ?? ""}
 ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=${Date.now()}">` : `<style>\n${safeFont ? `:root { --font-sans: ${safeFont}, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }` : ""}\n${pageCSS()}\n</style>`}
 <style>
   .bk-mobile-coming-soon { display: none; }
+  body:has(.bk-object--maximized) > .bk-mobile-coming-soon { display: none !important; }
   @media (max-width: 1024px) {
-    body > :not(.bk-mobile-coming-soon) { display: none !important; }
+    body:not(:has(.bk-object--maximized)) > :not(.bk-mobile-coming-soon) { display: none !important; }
     body { margin: 0; }
     .bk-mobile-coming-soon {
       box-sizing: border-box; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh;

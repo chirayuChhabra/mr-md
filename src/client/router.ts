@@ -136,7 +136,13 @@ export function bkInitRouter() {
 
 	document.addEventListener("click", (e) => {
 		const a = e.target.closest("a");
-		if (!a?.href) return;
+		if (
+			!a?.href ||
+			a.hasAttribute("download") ||
+			a.href.startsWith("blob:") ||
+			a.href.startsWith("data:")
+		)
+			return;
 		if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 		if (a.target === "_blank") return;
 

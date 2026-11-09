@@ -3,6 +3,7 @@ import {
 	simulationAuthoringRuntime,
 	workspaceKeyboardBridge,
 } from "./simulation-runtime.js";
+import { snapshotRuntimeCode } from "./snapshot-runtime.js";
 import { escAttr } from "./utils.js";
 
 export function iframeDoc(
@@ -32,6 +33,7 @@ window.__loop=${loop ?? false};
 window.__isWorld=${isWorld ? "true" : "false"};
 window.bkSetupCalled = false;
 ${simulationAuthoringRuntime}
+${snapshotRuntimeCode}
 ${isWorld ? "" : workspaceKeyboardBridge}
 window.__bkTheme = { colors: {}, theme: "light", palette: "ink", ui: "standard" };
 window.bkThemeMode = function() {

@@ -569,8 +569,9 @@ slug: telemetry-test
 			const html = renderInspectorTabs("sim-only-tel", "", telemetry);
 
 			expect(html).toContain(telemetry);
-			expect(html).not.toContain('role="tablist"');
+			expect(html).toContain('role="tablist"');
 			expect(html).toContain("Measurements");
+			expect(html).toContain("Timeline");
 		});
 
 		test("renderInspectorTabs renders nothing when controls and telemetry are empty", () => {

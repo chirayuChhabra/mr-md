@@ -1,0 +1,204 @@
+{
+  "$schema": "../../dist/simulation.schema.json",
+  "type": "block",
+  "label": "Damped spring",
+  "caption": "Drag the mass, release it, and compare its motion with the measurements.",
+  "voice": false,
+  "audio": false,
+  "props": {
+    "mass": 1,
+    "stiffness": 8,
+    "damping": 0.12
+  },
+  "tunables": {
+    "mass": {
+      "label": "Mass",
+      "unit": "kg",
+      "type": "range",
+      "min": 0.5,
+      "max": 3,
+      "step": 0.1
+    },
+    "stiffness": {
+      "label": "Spring stiffness",
+      "unit": "N/m",
+      "type": "range",
+      "min": 2,
+      "max": 16,
+      "step": 0.5
+    },
+    "damping": {
+      "label": "Damping",
+      "unit": "N\u00b7s/m",
+      "type": "range",
+      "min": 0,
+      "max": 0.8,
+      "step": 0.02
+    }
+  },
+  "telemetry": {
+    "time": {
+      "label": "Elapsed time",
+      "unit": "s",
+      "precision": 1,
+      "group": "Motion",
+      "graph": false,
+      "changeThreshold": 1
+    },
+    "displacement": {
+      "label": "Displacement",
+      "unit": "m",
+      "precision": 2,
+      "group": "Motion",
+      "scene": "displacement",
+      "graph": {
+        "label": "Displacement over time",
+        "x": {
+          "key": "time",
+          "label": "Time",
+          "unit": "s"
+        },
+        "y": {
+          "label": "Displacement",
+          "unit": "m"
+        }
+      },
+      "notifications": [
+        {
+          "id": "first-crossing",
+          "when": {
+            "op": "lt",
+            "value": 0
+          },
+          "message": "First crossing of equilibrium",
+          "tone": "neutral",
+          "toast": false
+        }
+      ]
+    },
+    "velocity": {
+      "label": "Velocity",
+      "unit": "m/s",
+      "precision": 2,
+      "group": "Motion",
+      "scene": "velocity",
+      "graph": {
+        "label": "Velocity versus displacement",
+        "x": {
+          "key": "displacement",
+          "label": "Displacement",
+          "unit": "m"
+        },
+        "y": {
+          "label": "Velocity",
+          "unit": "m/s"
+        }
+      },
+      "states": [
+        {
+          "when": {
+            "op": "gt",
+            "value": 0
+          },
+          "tone": "accent",
+          "label": "Moving right"
+        },
+        {
+          "when": {
+            "op": "lt",
+            "value": 0
+          },
+          "tone": "accent",
+          "label": "Moving left"
+        }
+      ]
+    },
+    "force": {
+      "label": "Net force",
+      "unit": "N",
+      "precision": 2,
+      "group": "Motion",
+      "scene": "force",
+      "graph": true,
+      "notifications": [
+        {
+          "id": "large-force",
+          "when": {
+            "op": "lt",
+            "value": -14
+          },
+          "message": "The restoring force now exceeds 14 N to the left.",
+          "tone": "warning",
+          "toast": true
+        }
+      ]
+    },
+    "energy": {
+      "label": "Mechanical energy",
+      "unit": "J",
+      "precision": 2,
+      "group": "Motion",
+      "scene": "energy",
+      "graph": {
+        "label": "Mechanical energy",
+        "x": {
+          "key": "time",
+          "label": "Time",
+          "unit": "s"
+        },
+        "y": {
+          "label": "Energy",
+          "unit": "J"
+        }
+      },
+      "notifications": [
+        {
+          "id": "settled",
+          "when": {
+            "op": "lt",
+            "value": 0.01
+          },
+          "message": "Motion has nearly settled. Most mechanical energy has dissipated.",
+          "tone": "success",
+          "toast": true
+        }
+      ]
+    }
+  },
+  "measurements": {
+    "visible": [
+      "displacement",
+      "force"
+    ],
+    "graphs": [
+      {
+        "key": "displacement",
+        "x": 24,
+        "y": 570,
+        "width": 420,
+        "height": 280
+      },
+      {
+        "key": "energy",
+        "minimized": true,
+        "x": 24,
+        "y": 80,
+        "width": 320,
+        "height": 280
+      }
+    ],
+    "initialTab": "telemetry",
+    "notifications": {
+      "enabled": true,
+      "minInterval": 20,
+      "duration": 5,
+      "maxVisible": 1
+    },
+    "timeline": {
+      "start": true,
+      "present": true,
+      "controls": true,
+      "capture": true
+    }
+  }
+}

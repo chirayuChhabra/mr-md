@@ -166,6 +166,8 @@ export function renderWorld(
     <div class="bk-world-frame-slot"></div>
   </div>
 
+  <script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry ?? {})}</script>
+  <script type="application/json" class="bk-measurements-config">${escapeScriptJson(block.measurements ?? {})}</script>
   <script type="application/json" class="bk-world-config">${escapeScriptJson(worldConfig)}</script>
 </figure>`.trim();
 
