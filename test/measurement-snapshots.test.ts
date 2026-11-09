@@ -254,7 +254,7 @@ test("timeline nodes show newest snapshots first", () => {
 	timeline.dispose();
 });
 
-test("branch continuation preserves original future history and allows switching", () => {
+test("linear continuation keeps saved future snapshots available for restoration", () => {
 	const doc = new JSDOM("<div></div>").window.document;
 	const container = doc.querySelector("div")!;
 	let restoredCount = 0;
@@ -307,37 +307,26 @@ test("branch continuation preserves original future history and allows switching
 	if (continueBtn) {
 		continueBtn.click();
 	} else {
-		timeline.branchOnContinuation("Alternate choice in branch");
+		timeline.branchOnContinuation("Alternate choice");
 	}
 
 	// Continuation: user modifies control or resumes simulation at t=1.2
 	timeline.record({
-		title: "Alternate choice in branch",
+		title: "Alternate choice",
 		time: 1.2,
 		kind: "control",
 	});
 
-	// Verify branching occurred
-	expect(timeline.getBranches()).toHaveLength(2);
-	expect(timeline.getActiveBranchId()).toBe("branch-1");
-
-	// Main branch must still preserve Checkpoint 3 (original future preserved!)
-	const mainBranch = timeline.getBranches().find((b) => b.id === "main")!;
-	expect(mainBranch.entries.map((e) => e.title)).toContain("Checkpoint 3");
-
-	// Branch 1 has Checkpoint 1 and Alternate choice, but not Checkpoint 3
-	const branch1 = timeline.getBranches().find((b) => b.id === "branch-1")!;
-	expect(branch1.entries.map((e) => e.title)).toContain("Checkpoint 1");
-	expect(branch1.entries.map((e) => e.title)).toContain(
-		"Alternate choice in branch",
-	);
-	expect(branch1.entries.map((e) => e.title)).not.toContain("Checkpoint 3");
-
-	// User switches back to main branch
-	timeline.switchBranch("main");
+	expect(timeline.getBranches()).toHaveLength(1);
 	expect(timeline.getActiveBranchId()).toBe("main");
-	expect(container.querySelector('[aria-label*="Checkpoint 3"]')).not.toBeNull();
-
+	expect(timeline.isAtPast()).toBe(false);
+	expect(timeline.getBranches()[0].entries.map((entry) => entry.title)).toEqual([
+		"Checkpoint 1", "Checkpoint 3", "Alternate choice",
+	]);
+	expect(timeline.getBranches()[0].presentPoint?.time).toBe(1);
+	expect(timeline.restoreSnapshot(snapAt3)).toBe(true);
+	expect(restoredCount).toBe(2);
+	expect(timeline.isAtPast()).toBe(true);
 	timeline.dispose();
 });
 
@@ -636,7 +625,7 @@ test("bubbling bk:snapshot-view-change dispatches from timeline and syncs figure
 	});
 });
 
-test("interaction branching: scene interaction or control modification branches ONCE before new telemetry and clears viewing cue", () => {
+test("scene interaction continues the restored state on one timeline and clears its viewing cue", () => {
 	const dom = new JSDOM(
 		`<!DOCTYPE html><html><body>
 		<figure class="bk-object bk-object--maximized" id="branch-test-fig">
@@ -706,23 +695,23 @@ test("interaction branching: scene interaction or control modification branches 
 		// User interacts with scene or modifies a host control while viewing snapshot
 		handleBranchingInteraction(mockRuntime, "Scene interaction");
 
-		// Branches ONCE
+		// Continuation exits inspection without creating another timeline.
 		expect(timeline.isAtPast()).toBe(false);
-		expect(timeline.getBranches()).toHaveLength(2);
-		expect(timeline.getActiveBranchId()).toBe("branch-1");
+		expect(timeline.getBranches()).toHaveLength(1);
+		expect(timeline.getActiveBranchId()).toBe("main");
 
 		// Stage cue is cleared
 		expect(figure.dataset.bkSnapshotViewing).toBeUndefined();
 		expect(cue?.hidden).toBe(true);
 
-		// Original future remains intact in main branch
+		// Saved moments remain available after continuation.
 		const mainBranch = timeline.getBranches().find((b) => b.id === "main")!;
 		expect(mainBranch.entries.map((e) => e.title)).toContain("Future Event 3");
 
-		// Subsequent interaction does NOT create another branch (branches count stays 2)
+		// Further interactions continue the same run.
 		handleBranchingInteraction(mockRuntime, "Subsequent interaction");
-		expect(timeline.getBranches()).toHaveLength(2);
-		expect(timeline.getActiveBranchId()).toBe("branch-1");
+		expect(timeline.getBranches()).toHaveLength(1);
+		expect(timeline.getActiveBranchId()).toBe("main");
 
 		timeline.dispose();
 	});
@@ -823,7 +812,7 @@ test("snapshot capture returns measurements from the captured simulation frame",
  dom.window.close();
 });
 
-test("snapshot inspection keeps controls interactive and playback requests a branch", () => {
+test("snapshot inspection keeps controls interactive and playback requests continuation", () => {
 	const dom = new JSDOM(
 		`<!DOCTYPE html><html><body>
 		<figure class="bk-object bk-object--maximized" id="immutable-lab">
@@ -1350,7 +1339,7 @@ test("custom adapter state with nested objects is deep cloned and mutations do n
  dom.window.close();
 });
 
-test("cross-branch pending captures are branch-bound and do not append to active branch after switch", async () => {
+test("delayed capture replies do not append snapshots while inspecting saved history", async () => {
 	const dom = new JSDOM(`
 		<figure id="branch-sim" class="bk-object">
 			<div class="bk-sim-workspace">
@@ -1434,27 +1423,15 @@ test("cross-branch pending captures are branch-bound and do not append to active
 
 		expect(r.timeline!.getActiveBranchId()).toBe("main");
 
-		// Inspect ancestor snap1 and fork to create branch-1
-		await r.timeline!.restoreSnapshot(snap1);
-		const newBranchId = r.timeline!.branchOnContinuation("Branch choice");
-		expect(newBranchId).toBeDefined();
-		expect(newBranchId).not.toBe("main");
-
-		// Switch back to Main head
-		await r.timeline!.switchBranch("main");
-		expect(r.timeline!.getActiveBranchId()).toBe("main");
-
 		// Launch capture on Main branch
 		const captureBtn = figure.querySelector<HTMLButtonElement>("[data-bk-capture-snapshot]")!;
 		captureBtn.click();
 		expect(pendingCaptureMsg).not.toBeNull();
 		const captureId = pendingCaptureMsg.id;
 
-		// While capture is in-flight, switch to the other branch!
-		await r.timeline!.switchBranch(newBranchId!);
-		const currentActiveBranchId = r.timeline!.getActiveBranchId();
-		expect(currentActiveBranchId).toBe(newBranchId);
-
+		// Restore while capture is pending: its delayed reply must not alter inspection.
+		await r.timeline!.restoreSnapshot(snap1);
+		expect(r.timeline!.isAtPast()).toBe(true);
 		// Now delayed reply from Main's capture arrives!
 		window.dispatchEvent(
 			new window.MessageEvent("message", {
@@ -1471,15 +1448,12 @@ test("cross-branch pending captures are branch-bound and do not append to active
 			}),
 		);
 
-		// Assert: Active branch MUST NOT have Main's captured snapshot appended!
-		const activeBranch = r.timeline!.getBranches().find((b) => b.id === currentActiveBranchId)!;
-		const activeTitles = activeBranch.entries.map((e) => e.title);
-		expect(activeTitles).not.toContain("Saved snapshot");
-
-		// And Main branch preserves lineage (or records against originating branch)
-		const mainBranch = r.timeline!.getBranches().find((b) => b.id === "main")!;
-		const mainTitles = mainBranch.entries.map((e) => e.title);
-		expect(mainTitles).toContain("Saved snapshot");
+		expect(r.timeline!.getBranches()).toHaveLength(1);
+		expect(r.timeline!.getActiveBranchId()).toBe("main");
+		expect(r.timeline!.isAtPast()).toBe(true);
+		const entries = r.timeline!.getBranches()[0].entries;
+		expect(entries.map((entry) => entry.title)).not.toContain("Saved snapshot");
+		expect(entries.map((entry) => entry.title)).toEqual(["Main Event 1", "Main Event 2"]);
 	});
 });
 
@@ -1534,7 +1508,7 @@ test("async adapter capture and restore handlers are rejected cleanly", () => {
 	dom.window.close();
 });
 
-test("no-op control events and active presets do not create spurious branch continuations", async () => {
+test("no-op controls keep inspection active and changed presets continue on one timeline", async () => {
 	const dom = new JSDOM(`
 		<figure id="noop-sim" class="bk-object bk-object--maximized" data-bk-playback-state="paused">
 			<div class="bk-sim-workspace">
@@ -1625,35 +1599,35 @@ test("no-op control events and active presets do not create spurious branch cont
 
 		const initialBranches = r.timeline!.getBranches().length;
 
-		// 1. Click on identical preset (mass: 5 vs current mass: 5) -> must NOT fork or exit viewing
+		// Identical props keep inspection active.
 		heavyPreset.click();
 		expect(figure.dataset.bkSnapshotViewing).toBe("true");
 		expect(r.timeline!.getBranches().length).toBe(initialBranches);
 
-		// 2. Click on disabled action -> must NOT fork or exit viewing
+		// Disabled actions keep inspection active.
 		disabledAction.click();
 		expect(figure.dataset.bkSnapshotViewing).toBe("true");
 		expect(r.timeline!.getBranches().length).toBe(initialBranches);
 
-		// 3. Slider event with IDENTICAL value (mass: 5) -> must NOT fork or exit viewing
+		// Unchanged sliders keep inspection active.
 		slider.value = "5";
 		slider.dispatchEvent(new window.Event("input", { bubbles: true }));
 		slider.dispatchEvent(new window.Event("change", { bubbles: true }));
 		expect(figure.dataset.bkSnapshotViewing).toBe("true");
 		expect(r.timeline!.getBranches().length).toBe(initialBranches);
 
-		// 4. Changed props at ancestor snapshot (mass changed to 2 via light preset) -> FORKS ONCE!
+		// Changed props continue from the restored state.
 		lightPreset.click();
 		expect(figure.dataset.bkSnapshotViewing).toBeUndefined();
-		expect(r.timeline!.getBranches().length).toBe(initialBranches + 1);
+		expect(r.timeline!.getBranches().length).toBe(initialBranches);
 
-		// 5. Changed props at head extends without forking
-		const branchesAfterFork = r.timeline!.getBranches().length;
+		// Further changes continue the same run.
+		const timelinesAfterContinuation = r.timeline!.getBranches().length;
 		slider.value = "7";
 		slider.dispatchEvent(new window.Event("input", { bubbles: true }));
 		slider.dispatchEvent(new window.Event("change", { bubbles: true }));
-		// Head edit extends; branches count does not increase
-		expect(r.timeline!.getBranches().length).toBe(branchesAfterFork);
+		// Editing never creates another timeline.
+		expect(r.timeline!.getBranches().length).toBe(timelinesAfterContinuation);
 	});
 });
 
@@ -1665,30 +1639,22 @@ test("preset comparisons preserve types and compare nested JSON props", () => {
  expect(arePropsEqual(current, { options: { enabled: true, points: [9, 2] } })).toBe(false);
 });
 
-test("branch plots preserve each future and restore inherited data without mixing siblings", () => {
- const { graphData, restoreBranchSamples } = require("../src/client/telemetry.js");
- const point = (time: number, y: number) => ({time, x: time, y});
- const r = {
-  timeline: { getActiveBranchId: () => "main" },
-  specs: [{key: "x", xAxis: {key: "time"}}],
-  samples: {x: [point(0, 0), point(1, 10)]}, latest: {x: point(3, 30)},
- } as any;
- restoreBranchSamples(r, "main");
- r.graphSnapshotTime = 1;
- r.latest = {x: point(1, 10)};
- expect(graphData(r).x.map((p: any) => p.y)).toEqual([0, 10]);
- // Continuation inherits only the shared prefix.
- r.samples.x = graphData(r).x;
- r.sampleBranchId = "branch-1";
- delete r.graphSnapshotTime;
- r.latest = {x: point(2, 99)};
- restoreBranchSamples(r, "main");
- expect(graphData({...r, latest: {}}).x.map((p: any) => p.y)).toEqual([0, 10, 30]);
- r.graphSnapshotTime = 1;
- restoreBranchSamples(r, "branch-1");
- delete r.graphSnapshotTime;
- r.latest = {};
- expect(graphData(r).x.map((p: any) => p.y)).toEqual([0, 10, 99]);
- r.samples.x[0].y = -1;
- expect(r.branchSamples.get("main").x[0].y).toBe(0);
+test("continuation discards future plot samples while preserving saved snapshot history", () => {
+ const { handleBranchingInteraction, graphData } = require("../src/client/telemetry.js");
+ const doc = new JSDOM("<figure><div></div></figure>").window.document;
+ const timeline = createMeasurementTimeline(doc.querySelector("div")!, {schema: {}, onRestoreSnapshot: () => true});
+ const saved = {id:"saved", time:1, timestamp:1, label:"Saved", props:{}, telemetry:{x:10}, isExact:true};
+ timeline.start(0, {});
+ timeline.record({title:"Saved", time:1, snapshot:saved});
+ timeline.record({title:"Future", time:3, snapshot:{...saved,id:"future",time:3}});
+ timeline.restoreSnapshot(saved);
+ const point = (time: number, y: number) => ({time, x:time, y});
+ const r = {figure:doc.querySelector("figure")!, timeline, time:1, specs:[{key:"x",xAxis:{key:"time"}}], samples:{x:[point(0,0),point(1,10),point(3,30)]}, latest:{x:point(3,30)}, graphSnapshotTime:1} as any;
+ handleBranchingInteraction(r);
+ expect(graphData(r).x.map((p: any) => p.y)).toEqual([0,10]);
+ expect(r.graphSnapshotTime).toBeUndefined();
+ expect(r.latest.x).toBeUndefined();
+ expect(timeline.getBranches()).toHaveLength(1);
+ expect(timeline.getBranches()[0].entries.map(entry=>entry.title)).toEqual(["Saved","Future"]);
+ timeline.dispose();
 });
