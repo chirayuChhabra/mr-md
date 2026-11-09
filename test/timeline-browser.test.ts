@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import puppeteer from 'puppeteer';
 
-test('timeline renders node-only branches and preserves frozen history', async () => {
+test('linear timeline preserves captured history and supports snapshot rename', async () => {
  const bundle = await Bun.build({entrypoints:['src/client/measurement-timeline.ts'], target:'browser',format:'esm'});
  const browser = await puppeteer.launch({headless:true,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage']});
  try {
@@ -44,16 +44,18 @@ timeline.update(3,{speed:3},false,snapshot('present',3));`});
    return Math.abs(start.y-(a.top+a.height/2-base))<1 && Math.abs(end.y-(b.top+b.height/2-base))<1;
   }));
   await page.locator('button[aria-label="First crossing, 1 s"]').click();
-  await page.click('[data-id="one"]', {button:'right'});
-  await page.waitForSelector('.bk-timeline-menu');
-  await page.evaluate(() => [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(button => button.textContent === 'Compare in plots')!.click());
-  expect(await page.evaluate(() => (window as any).compared)).toBe('main');
+  await page.locator('button[aria-label="Rename snapshot"]').click();
+  await page.locator('input[aria-label="Snapshot name"]').fill('Renamed crossing');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('button[aria-label="Renamed crossing, 1 s"]');
+  expect(await page.evaluate(() => (window as any).timeline.getBranches().length)).toBe(1);
+  expect(await page.$$eval('.bk-timeline-fork-edge', nodes => nodes.length)).toBe(0);
   expect(errors).toEqual([]);
   await page.screenshot({path:'/tmp/mr-md-timeline.png'});
  } finally {await browser.close()}
 },30000);
 
-test('harness restores a snapshot and branches directly on control interaction', async () => {
+test('harness restores a snapshot and continues on the same timeline after control interaction', async () => {
  const {renderSimulation}=await import('../src/renderer/blocks/simulation.js');
  const bundle=await Bun.build({entrypoints:['harness-test'],target:'browser',plugins:[{name:'harness-test',setup(build){
   build.onResolve({filter:/^harness-test$/},()=>({path:'harness-test',namespace:'harness'}));
@@ -102,7 +104,7 @@ window.bkSetup(800,450,ctx=>{time+=sim.deltaTime()*sim.props.speed;sim.publishTe
   await page.waitForFunction(()=>!document.querySelector('.bk-object')?.hasAttribute('data-snapshot-viewing'));
   expect(await page.$eval('iframe',e=>e.hasAttribute('inert'))).toBe(false);
   expect(await page.$eval('[data-bk-prop="speed"]',e=>(e as HTMLInputElement).disabled)).toBe(false);
-  expect(await page.$$eval('.bk-timeline-fork-edge',nodes=>nodes.length)).toBeGreaterThan(0);
+  expect(await page.$$eval('.bk-timeline-fork-edge',nodes=>nodes.length)).toBe(0);
   const forkCount=await page.$$eval('.bk-timeline-fork-edge',nodes=>nodes.length);
   await page.locator(`[data-id="${savedId}"]`).click();
   await page.waitForFunction(()=>document.querySelector('.bk-object')?.hasAttribute('data-snapshot-viewing'));
@@ -110,7 +112,7 @@ window.bkSetup(800,450,ctx=>{time+=sim.deltaTime()*sim.props.speed;sim.publishTe
   await page.waitForFunction(()=>!document.querySelector('.bk-object')?.hasAttribute('data-snapshot-viewing'));
   const showAll = await page.$('[data-action="show-all"]');
   if (showAll) await showAll.click();
-  expect(await page.$$eval('.bk-timeline-fork-edge',nodes=>nodes.length)).toBe(forkCount+1);
+  expect(await page.$$eval('.bk-timeline-fork-edge',nodes=>nodes.length)).toBe(forkCount);
   // Direct paused spatial edits remain paused; only explicit Play/Space resumes
   expect(await page.$eval('.bk-object',e=>(e as HTMLElement).dataset.bkPlaybackState)).toBe('paused');
   expect(await page.$eval('.bk-sim-pause-overlay',e=>(e as HTMLElement).hidden)).toBe(false);
@@ -121,7 +123,7 @@ window.bkSetup(800,450,ctx=>{time+=sim.deltaTime()*sim.props.speed;sim.publishTe
  } finally {await browser.close()}
 },30000);
 
-test('spring lab harness: initial Start restores exact model values, editing head extends, older snapshot forks, and reset purges pending state', async () => {
+test('spring lab harness restores exact model values, continues linearly, and resets captured history', async () => {
  const { renderSimulation } = await import('../src/renderer/blocks/simulation.js');
  const springConfig = JSON.parse(readFileSync('playground/measurements-lab/spring.config.json', 'utf8'));
  const springSrc = readFileSync('playground/measurements-lab/spring.js', 'utf8');
@@ -232,7 +234,7 @@ bkInitTelemetry();
   const returnedState = await frame.evaluate(() => (window as any).__bkSnapshotHandlers.capture());
   expect(returnedState.time).toBeCloseTo(pauseState.time, 1);
 
-  // 6. Live editing at current head extends active branch (no fork)
+  // Live control changes keep all captured snapshots on the same timeline.
   const forkCountBefore = await page.$$eval('.bk-timeline-fork-edge', nodes => nodes.length);
   await page.$eval('[data-bk-prop="mass"]', e => {
    (e as HTMLInputElement).value = '2.5';
@@ -240,10 +242,10 @@ bkInitTelemetry();
    e.dispatchEvent(new Event('change', { bubbles: true }));
   });
   expect(await frame.evaluate(() => (window as any).__simProps?.mass)).toBe(2.5);
-  // Head edit extends; does NOT fork
+  // Captured history remains on one timeline.
   expect(await page.$$eval('.bk-timeline-fork-edge', nodes => nodes.length)).toBe(forkCountBefore);
 
-  // 7. Restoring older snapshot (snap1) and editing forks exactly once
+  // Restoring and editing an older snapshot continues on the same timeline.
   await page.locator(`[data-id="${snap1Id}"]`).click();
   await page.waitForFunction(() => document.querySelector('.bk-object')?.getAttribute('data-snapshot-viewing') === 'true');
   const restoredSnap1 = await frame.evaluate(() => (window as any).__bkSnapshotHandlers.capture());
@@ -253,8 +255,8 @@ bkInitTelemetry();
   await frame.locator('canvas').click();
   await page.waitForFunction(() => !document.querySelector('.bk-object')?.hasAttribute('data-snapshot-viewing'));
 
-  // Forks exactly once
-  expect(await page.$$eval('.bk-timeline-fork-edge', nodes => nodes.length)).toBe(forkCountBefore + 1);
+  // Continuation retains the existing captures without creating a branch.
+  expect(await page.$$eval('.bk-timeline-fork-edge', nodes => nodes.length)).toBe(forkCountBefore);
   // Direct paused spatial edit remains paused
   expect(await page.$eval('.bk-object', e => (e as HTMLElement).dataset.bkPlaybackState)).toBe('paused');
 
