@@ -14,6 +14,8 @@ export interface LabExpansionOptions {
 const EXPAND_ICON =
 	'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
 
+let labHistoryPushed = false;
+let savedMainScroll: number | null = null;
 let savedScrollY: number | null = null;
 let savedFocusEl: HTMLElement | null = null;
 let activeExpandedSimId: string | null = null;
@@ -21,16 +23,18 @@ let activeExpandedSimId: string | null = null;
 let wiredDocument: Document | null = null;
 let savedOverflow: string | null = null;
 let stateDocument: Document | null = null;
+let relocatedTopbar: HTMLElement | null = null;
 let topbarPlaceholder: Comment | null = null;
 
 function restoreHeader(): void {
-	const topbar = document.getElementById("bk-topbar");
-	document.getElementById("bk-lab-exit-topbar-btn")?.remove();
-	document.querySelectorAll(".bk-lab-crumb").forEach((el) => {
+	const topbar = document.getElementById("bk-topbar") || relocatedTopbar;
+	topbar?.querySelector("#bk-lab-exit-topbar-btn")?.remove();
+	(topbar || document).querySelectorAll(".bk-lab-crumb").forEach((el) => {
 		el.remove();
 	});
 	if (topbar && topbarPlaceholder) topbarPlaceholder.replaceWith(topbar);
 	topbarPlaceholder = null;
+	relocatedTopbar = null;
 }
 
 function isHTMLElement(el: unknown): el is HTMLElement {
@@ -55,7 +59,12 @@ function isolateWorkspace(figure: HTMLElement): void {
 	let branch: Element = figure;
 	while (branch.parentElement) {
 		for (const sibling of branch.parentElement.children) {
-			if (sibling === branch || !isHTMLElement(sibling)) continue;
+			if (
+				sibling === branch ||
+				!isHTMLElement(sibling) ||
+				sibling.matches(".bk-sidebar")
+			)
+				continue;
 			inertElements.set(sibling, sibling.inert);
 			sibling.inert = true;
 		}
@@ -74,7 +83,7 @@ function isolateWorkspace(figure: HTMLElement): void {
 		);
 	}
 	figure.setAttribute?.("role", "dialog");
-	figure.setAttribute?.("aria-modal", "true");
+	figure.setAttribute?.("aria-modal", "false");
 	figure.setAttribute?.(
 		"aria-label",
 		figure.querySelector(".bk-object-title")?.textContent?.trim() ||
@@ -629,6 +638,8 @@ export function bkExpandLab(
 	if (stateDocument !== document) {
 		restoreBackground();
 		modalAttributes.clear();
+		labHistoryPushed = false;
+		savedMainScroll = null;
 		savedOverflow = null;
 		savedScrollY = null;
 		savedFocusEl = null;
@@ -658,6 +669,12 @@ export function bkExpandLab(
 		}
 	}
 
+	if (!labHistoryPushed && window.history?.pushState) {
+		window.history.pushState({ ...window.history.state, bkLab: true }, "");
+		labHistoryPushed = true;
+	}
+	if (savedMainScroll === null)
+		savedMainScroll = document.querySelector?.(".bk-main")?.scrollTop ?? 0;
 	restoreHeader();
 
 	// Unexpand any other expanded figure without resetting saved scroll or focus
@@ -684,6 +701,7 @@ export function bkExpandLab(
 
 	const topbar = document.getElementById("bk-topbar");
 	if (topbar?.parentNode) {
+		relocatedTopbar = topbar;
 		topbarPlaceholder = document.createComment("topbar");
 		topbar.before(topbarPlaceholder);
 		figure.prepend(topbar);
@@ -691,13 +709,11 @@ export function bkExpandLab(
 		exit.id = "bk-lab-exit-topbar-btn";
 		exit.type = "button";
 		exit.className = "bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn";
-		exit.setAttribute("aria-label", "Exit expanded view");
-		exit.title = "Exit expanded view (Esc)";
-		exit.innerHTML =
-			'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-		exit.addEventListener("click", bkCollapseLab);
-		const theme = topbar.querySelector("#bk-theme-toggle");
-		if (theme?.parentElement) theme.before(exit);
+		exit.setAttribute("aria-label", "Back to lesson");
+		exit.title = "Back to lesson (Esc)";
+		exit.textContent = "Back to lesson";
+		exit.addEventListener("click", () => bkCollapseLab());
+		(topbar.querySelector(".bk-topbar-left") || topbar).prepend(exit);
 		const crumbs = topbar.querySelector(".bk-topbar-breadcrumbs");
 		const label = figure.querySelector(".bk-object-title")?.textContent?.trim();
 		if (
@@ -771,11 +787,11 @@ export function bkExpandLab(
  * Collapse the expanded lab workspace and restore normal inline layout,
  * exact prior document scroll, and prior input focus.
  */
-export function bkCollapseLab(): void {
+export function bkCollapseLab(fromNavigation = false): void {
 	const maximizedObjects = document.querySelectorAll<HTMLElement>(
 		".bk-object--maximized",
 	);
-	if (maximizedObjects.length === 0) return;
+	if (maximizedObjects.length === 0 && savedOverflow === null) return;
 
 	maximizedObjects.forEach((obj) => {
 		setPreviewActive(obj, false);
@@ -795,6 +811,12 @@ export function bkCollapseLab(): void {
 		}
 	});
 
+	if (labHistoryPushed && !fromNavigation) {
+		(window as any).__bk_suppress_router_popstate = true;
+		window.history.back();
+	}
+	labHistoryPushed = false;
+	for (const figure of modalAttributes.keys()) restoreModal(figure);
 	restoreHeader();
 	restoreBackground();
 	document.body.style.overflow = savedOverflow || "";
@@ -808,6 +830,12 @@ export function bkCollapseLab(): void {
 		topbarBtn.classList.remove("is-active");
 	}
 
+	if (savedMainScroll !== null) {
+		const main = document.querySelector?.(".bk-main");
+		if (main) main.scrollTop = savedMainScroll;
+		savedMainScroll = null;
+	}
+
 	// Restore prior document scroll
 	if (savedScrollY !== null) {
 		const y = savedScrollY;
@@ -819,7 +847,7 @@ export function bkCollapseLab(): void {
 	if (savedFocusEl && typeof savedFocusEl.focus === "function") {
 		const el = savedFocusEl;
 		savedFocusEl = null;
-		el.focus();
+		if (el.isConnected !== false) el.focus({ preventScroll: true });
 	}
 }
 
@@ -952,6 +980,22 @@ export function bkWireWorkspace(): void {
 			}
 		}
 	}
+
+	document.addEventListener(
+		"click",
+		(event) => {
+			const target = event.target as Element;
+			if (
+				document.querySelector(".bk-object--maximized") &&
+				target.closest?.(".bk-topbar-breadcrumbs a, .bk-topbar-active-section")
+			) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				bkCollapseLab();
+			}
+		},
+		true,
+	);
 
 	// 2. Global click handling for expanded lab entry/exit affordances and inspector tabs
 	document.addEventListener("click", (e: MouseEvent) => {
@@ -1120,6 +1164,7 @@ export function bkWireWorkspace(): void {
 			if (
 				figure &&
 				e.key === "Tab" &&
+				!document.querySelector(".bk-sidebar") &&
 				figure.classList.contains("bk-object--maximized")
 			) {
 				const elements = focusableElements(figure);
@@ -1261,6 +1306,6 @@ export function bkWireWorkspace(): void {
 	});
 
 	window.addEventListener("bk-page-loaded", () => {
-		bkCollapseLab();
+		bkCollapseLab(true);
 	});
 }

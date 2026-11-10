@@ -1412,6 +1412,8 @@ bkRegisterWorldTransition("pixel", pixelGatewayTransition);
 // ============================================================================
 
 let worldHistoryPushed = false;
+let sourceScroll = null;
+let worldExitGeneration = 0;
 
 function pushWorldHistoryState() {
 	if (worldHistoryPushed) return;
@@ -1451,14 +1453,14 @@ function attachTopbarWorldControls(figure) {
 		exitBtn.id = "bk-world-exit-topbar-btn";
 		exitBtn.type = "button";
 		exitBtn.className = "bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn";
-		exitBtn.setAttribute("aria-label", "Exit Simulation");
-		exitBtn.setAttribute("title", "Exit Simulation (Esc)");
-		exitBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><span class="bk-sr-only">Exit Simulation</span>`;
+		exitBtn.setAttribute("aria-label", "Back to lesson");
+		exitBtn.setAttribute("title", "Back to lesson (Esc)");
+		exitBtn.textContent = "Back to lesson";
 		exitBtn.addEventListener("click", () => bkExitWorld());
-		const themeToggle = document.getElementById("bk-theme-toggle");
-		if (themeToggle?.parentElement) {
-			themeToggle.parentElement.insertBefore(exitBtn, themeToggle);
-		}
+		(
+			document.querySelector(".bk-topbar-left") ||
+			document.querySelector(".bk-topbar")
+		)?.prepend(exitBtn);
 	}
 	exitBtn.removeAttribute("hidden");
 	exitBtn.style.removeProperty("display");
@@ -1477,8 +1479,18 @@ function detachTopbarWorldControls() {
 	}
 }
 
+function captureWorldSource() {
+	if (!sourceScroll)
+		sourceScroll = {
+			main: document.querySelector(".bk-main")?.scrollTop || 0,
+			window: window.scrollY,
+			overflow: document.body.style.overflow,
+		};
+}
+
 export function bkEnterWorld(figure) {
 	if (!figure) return;
+	captureWorldSource();
 	activeWorldFigure = figure;
 	figure.classList.add("bk-world--active");
 	figure.classList.remove("bk-wormhole--charging");
@@ -1531,7 +1543,12 @@ export function bkExitWorld(figure, options = {}) {
 		document.querySelector(".bk-world-fullscreen.bk-world--flying");
 
 	if (!fullscreen && !fig) return;
-	if (fullscreen?.classList?.contains("bk-world--exiting")) return;
+	if (
+		fullscreen?.classList?.contains("bk-world--exiting") &&
+		!options.immediate
+	)
+		return;
+	const exitGeneration = ++worldExitGeneration;
 
 	if (!options?.fromPopstate && worldHistoryPushed) {
 		worldHistoryPushed = false;
@@ -1557,6 +1574,7 @@ export function bkExitWorld(figure, options = {}) {
 	}
 
 	const cleanup = () => {
+		if (exitGeneration !== worldExitGeneration) return;
 		detachTopbarWorldControls();
 		document.body.classList.remove("bk-world-immersive");
 
@@ -1600,9 +1618,20 @@ export function bkExitWorld(figure, options = {}) {
 		try {
 			const aperture = fig?.querySelector?.(".bk-world-portal");
 			aperture?.focus?.({ preventScroll: true });
-			fig?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+			if (sourceScroll) {
+				const main = document.querySelector(".bk-main");
+				if (main) main.scrollTop = sourceScroll.main;
+				window.scrollTo(0, sourceScroll.window);
+				document.body.style.overflow = sourceScroll.overflow;
+				sourceScroll = null;
+			}
 		} catch (_) {}
 	};
+
+	if (options.immediate) {
+		cleanup();
+		return;
+	}
 
 	const transition = resolveTransitionForFigure(fig);
 	const portal = fig?.querySelector(".bk-world-portal");
@@ -1926,6 +1955,7 @@ function setupWorldPortal(figure) {
 				fullscreen.setAttribute("aria-hidden", "false");
 				fullscreen.classList.add("bk-world--active", "bk-world--flying");
 				figure.classList.add("bk-world--active");
+				captureWorldSource();
 				activeWorldFigure = figure;
 				document.body.style.overflow = "hidden";
 				document.body.classList.add("bk-world-immersive");
@@ -2063,6 +2093,23 @@ export function bkInitWorldPortals() {
 export function bkWireWorldPortals() {
 	let _pointerDownTime = 0;
 
+	document.addEventListener(
+		"click",
+		(event) => {
+			if (
+				activeWorldFigure &&
+				event.target.closest?.(
+					".bk-topbar-breadcrumbs a, .bk-topbar-active-section",
+				)
+			) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				bkExitWorld();
+			}
+		},
+		true,
+	);
+
 	document.addEventListener("pointerdown", (e) => {
 		if (e.button !== 0 && e.pointerType === "mouse") return;
 
@@ -2164,6 +2211,11 @@ export function bkWireWorldPortals() {
 	window.addEventListener("message", (e) => {
 		if (!e.data) return;
 		if (e.data.type === "bk:world-exit") {
+			const fullscreen =
+				activeWorldFigure?.fullscreenEl ||
+				activeWorldFigure?.querySelector(".bk-world-fullscreen");
+			const iframe = fullscreen?.querySelector("iframe");
+			if (!iframe?.contentWindow || e.source !== iframe.contentWindow) return;
 			bkExitWorld();
 		}
 	});

@@ -7008,7 +7008,7 @@ button.bk-embed-overlay[data-bk-expand-preview]:focus-visible,
 .bk-object--maximized > .bk-topbar { width: 100%; box-sizing: border-box; gap: 12px; }
 .bk-object--maximized > .bk-topbar .bk-topbar-left { min-width: 0; }
 .bk-object--maximized > .bk-topbar .bk-object-header { flex: 1 1 auto; min-width: 0; height: auto; padding: 0; border: 0; background: transparent; }
-.bk-object--maximized > .bk-topbar .bk-topbar-sidebar-toggle { display: none; }
+.bk-object--maximized > .bk-topbar .bk-topbar-sidebar-toggle { display: inline-flex; }
 
 .bk-object--maximized:has(> .bk-topbar) > .bk-object-header { display: none; }
 .bk-object--maximized > .bk-topbar .bk-topbar-left { flex: 1; }
@@ -7361,3 +7361,10 @@ html[data-theme="dark"] .bk-snapshot-role[data-role="start"] { background: color
  .bk-object--maximized .bk-sim-stage .bk-steps-controls { padding: 4px; }
 }
 .bk-snapshot-row[data-inspected] .bk-snapshot-content { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+/* Keep navigation above the fullscreen stage without changing its dimensions. */
+body.bk-expanded-lab-active .bk-sidebar,
+body.bk-world-immersive .bk-sidebar {
+ position: fixed; top: 48px; left: 0; bottom: 0; height: auto; z-index: 100006;
+}
+#bk-lab-exit-topbar-btn, #bk-world-exit-topbar-btn { width: auto; padding-inline: 12px; white-space: nowrap; }

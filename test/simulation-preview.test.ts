@@ -60,6 +60,7 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 		const browser = await puppeteer.launch({
 			executablePath: chrome,
 			headless: true,
+			args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 		});
 		try {
 			const page = await browser.newPage();
@@ -103,7 +104,7 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 				el.dispatchEvent(new Event("input", { bubbles: true }));
 			});
 			expect(await page.$eval("#lesson-button", (el) => el.inert)).toBe(true);
-			await page.focus("#breadcrumb");
+			await page.focus("#bk-lab-exit-topbar-btn");
 			await page.keyboard.down("Shift");
 			await page.keyboard.press("Tab");
 			await page.keyboard.up("Shift");
@@ -111,7 +112,7 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 			expect(await page.$eval('input[type="number"][data-bk-sync="speed"]', el => el === document.activeElement)).toBe(true);
 			expect(await page.evaluate(() => Boolean(document.activeElement?.closest(".bk-object--maximized")))).toBe(true);
 			await page.keyboard.press("Tab");
-			expect(await page.$eval("#breadcrumb", el => el === document.activeElement)).toBe(true);
+			expect(await page.$eval("#bk-lab-exit-topbar-btn", el => el === document.activeElement)).toBe(true);
 			await page.keyboard.down("Shift");
 			await page.keyboard.press("Tab");
 			await page.keyboard.up("Shift");
