@@ -1,4 +1,9 @@
-import { PAUSE_ICON, PLAY_ICON, RESET_ICON } from "../simulation-toolbar.js";
+import {
+	CLOSE_ICON,
+	PAUSE_ICON,
+	PLAY_ICON,
+	RESET_ICON,
+} from "../simulation-toolbar.js";
 import { bkApplyPropsToControls } from "./simulation.js";
 
 const inspectorTabMemory = new WeakMap<
@@ -711,9 +716,9 @@ export function bkExpandLab(
 		exit.className = "bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn";
 		exit.setAttribute("aria-label", "Back to lesson");
 		exit.title = "Back to lesson (Esc)";
-		exit.textContent = "Back to lesson";
+		exit.innerHTML = CLOSE_ICON;
 		exit.addEventListener("click", () => bkCollapseLab());
-		(topbar.querySelector(".bk-topbar-left") || topbar).prepend(exit);
+		(topbar.querySelector(".bk-topbar-right") || topbar).append(exit);
 		const crumbs = topbar.querySelector(".bk-topbar-breadcrumbs");
 		const label = figure.querySelector(".bk-object-title")?.textContent?.trim();
 		if (
@@ -730,6 +735,13 @@ export function bkExpandLab(
 			item.textContent = label;
 			crumbs.append(sep, item);
 		}
+		const slash = document.createElement("button");
+		slash.type = "button";
+		slash.className = "bk-topbar-crumb-sep bk-lab-crumb bk-sim-exit-crumb";
+		slash.textContent = "/";
+		slash.setAttribute("aria-label", "Return to inline simulation");
+		slash.addEventListener("click", () => bkCollapseLab());
+		crumbs?.append(slash);
 	}
 	isolateWorkspace(figure);
 	ensurePlaybackControls(figure);

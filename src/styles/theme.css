@@ -7367,4 +7367,9 @@ body.bk-expanded-lab-active .bk-sidebar,
 body.bk-world-immersive .bk-sidebar {
  position: fixed; top: 48px; left: 0; bottom: 0; height: auto; z-index: 100006;
 }
-#bk-lab-exit-topbar-btn, #bk-world-exit-topbar-btn { width: auto; padding-inline: 12px; white-space: nowrap; }
+
+
+.bk-sidebar-footer { display: flex; align-items: center; gap: 8px; }
+.bk-sim-exit-crumb { border: 0; padding: 4px 8px; background: transparent; font: inherit; cursor: pointer; }
+.bk-sim-exit-crumb:hover { color: var(--ink); }
+.bk-sim-exit-crumb:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

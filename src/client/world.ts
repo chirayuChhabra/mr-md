@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { CLOSE_ICON } from "../simulation-toolbar.js";
 
 let activeWorldFigure = null;
 const registeredPortals = new Map();
@@ -1447,21 +1448,32 @@ function attachTopbarWorldControls(figure) {
 		}
 	}
 
+	if (breadcrumbs && !breadcrumbs.querySelector(".bk-sim-exit-crumb")) {
+		const slash = document.createElement("button");
+		slash.type = "button";
+		slash.className =
+			"bk-topbar-crumb-sep bk-world-crumb-sep bk-sim-exit-crumb";
+		slash.textContent = "/";
+		slash.setAttribute("aria-label", "Return to inline simulation");
+		slash.addEventListener("click", () => bkExitWorld());
+		breadcrumbs.append(slash);
+	}
+
 	let exitBtn = document.getElementById("bk-world-exit-topbar-btn");
 	if (!exitBtn) {
 		exitBtn = document.createElement("button");
 		exitBtn.id = "bk-world-exit-topbar-btn";
 		exitBtn.type = "button";
 		exitBtn.className = "bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn";
-		exitBtn.setAttribute("aria-label", "Back to lesson");
-		exitBtn.setAttribute("title", "Back to lesson (Esc)");
-		exitBtn.textContent = "Back to lesson";
 		exitBtn.addEventListener("click", () => bkExitWorld());
 		(
-			document.querySelector(".bk-topbar-left") ||
+			document.querySelector(".bk-topbar-right") ||
 			document.querySelector(".bk-topbar")
-		)?.prepend(exitBtn);
+		)?.append(exitBtn);
 	}
+	exitBtn.innerHTML = CLOSE_ICON;
+	exitBtn.setAttribute("aria-label", "Back to lesson");
+	exitBtn.setAttribute("title", "Back to lesson (Esc)");
 	exitBtn.removeAttribute("hidden");
 	exitBtn.style.removeProperty("display");
 }
