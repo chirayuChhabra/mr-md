@@ -211,6 +211,7 @@ bkInitTelemetry();
 
   // Pause simulation
   await page.locator('[data-bk-playback]').click();
+  await frame.waitForFunction(() => !(window as any).__loop);
   const pauseState = await frame.evaluate(() => (window as any).__bkSnapshotHandlers.capture());
   expect(pauseState.time).toBeGreaterThan(snap1Time);
 
@@ -231,7 +232,7 @@ bkInitTelemetry();
 
   // Model values restored to live present values
   const returnedState = await frame.evaluate(() => (window as any).__bkSnapshotHandlers.capture());
-  expect(returnedState.time).toBeCloseTo(pauseState.time, 1);
+  expect(returnedState).toEqual(pauseState);
 
   // Live control changes keep all captured snapshots on the same timeline.
   const forkCountBefore = await page.$$eval('.bk-timeline-fork-edge', nodes => nodes.length);

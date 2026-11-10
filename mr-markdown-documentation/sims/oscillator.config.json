@@ -1,24 +1,20 @@
 {
   "type": "block",
   "label": "Damped Harmonic Oscillator",
-  "caption": "Investigate spring-mass oscillations under viscous damping, presets, and impulse excitation. Damping ratio \u03b6 = c_eff / (2\u221a(km)) determines whether motion is underdamped, critically damped, or overdamped.",
-  "height": 520,
+  "caption": "Explore how damping changes spring–mass motion. For viscous damping, the damping ratio ζ = c_eff / (2√(km)) identifies the motion. Drag the cart to set it moving.",
+  "height": 320,
   "props": {
     "damping": 1.5,
     "dampingMode": "viscous",
     "medium": "air",
     "stiffness": 25,
-    "mass": 1.0,
-    "showTrace": true,
-    "showPhase": true
+    "mass": 1.0
   },
   "advancedControls": [
     "dampingMode",
     "medium",
     "stiffness",
-    "mass",
-    "showTrace",
-    "showPhase"
+    "mass"
   ],
   "tunables": {
     "damping": {
@@ -27,7 +23,7 @@
       "min": 0,
       "max": 25,
       "step": 0.5,
-      "unit": "N\u00b7s/m"
+      "unit": "N·s/m"
     },
     "dampingMode": {
       "label": "Damping model",
@@ -52,19 +48,19 @@
       "type": "select",
       "options": [
         {
-          "label": "Vacuum (0.0\u00d7, c = 0)",
+          "label": "Vacuum (0.0×, c = 0)",
           "value": "vacuum"
         },
         {
-          "label": "Air (1.0\u00d7 drag)",
+          "label": "Air (1.0× drag)",
           "value": "air"
         },
         {
-          "label": "Water / Light Oil (2.5\u00d7)",
+          "label": "Water / Light Oil (2.5×)",
           "value": "water"
         },
         {
-          "label": "Viscous Glycerin (5.0\u00d7)",
+          "label": "Viscous Glycerin (5.0×)",
           "value": "glycerin"
         }
       ]
@@ -84,19 +80,11 @@
       "max": 5.0,
       "step": 0.5,
       "unit": "kg"
-    },
-    "showTrace": {
-      "label": "Displacement Graph x(t)",
-      "type": "boolean"
-    },
-    "showPhase": {
-      "label": "Phase Space (x vs v)",
-      "type": "boolean"
     }
   },
   "actions": {
     "impulse": {
-      "label": "Apply Impulse (+\u0394v)",
+      "label": "Apply impulse",
       "color": "green"
     },
     "zero": {
@@ -148,36 +136,95 @@
   },
   "telemetry": {
     "regime": {
-      "label": "Damping regime"
+      "label": "Damping regime",
+      "display": "status",
+      "states": [
+        {
+          "when": {
+            "op": "eq",
+            "value": "Near critical damping"
+          },
+          "tone": "accent"
+        }
+      ]
     },
     "displacement": {
       "label": "Displacement x",
       "unit": "m",
-      "precision": 3
+      "precision": 3,
+      "graph": true,
+      "states": [
+        {
+          "when": {
+            "op": "gt",
+            "value": 0.01
+          },
+          "tone": "accent"
+        },
+        {
+          "when": {
+            "op": "lt",
+            "value": -0.01
+          },
+          "tone": "accent"
+        }
+      ]
     },
     "velocity": {
       "label": "Velocity v",
       "unit": "m/s",
-      "precision": 3
+      "precision": 3,
+      "graph": {
+        "x": {
+          "key": "displacement",
+          "label": "Displacement",
+          "unit": "m"
+        },
+        "y": {
+          "label": "Velocity",
+          "unit": "m/s"
+        }
+      },
+      "states": [
+        {
+          "when": {
+            "op": "gt",
+            "value": 0.05
+          },
+          "tone": "accent",
+          "label": "Moving right"
+        },
+        {
+          "when": {
+            "op": "lt",
+            "value": -0.05
+          },
+          "tone": "accent",
+          "label": "Moving left"
+        }
+      ]
     },
     "angularFrequency": {
-      "label": "Natural angular frequency \u03c9\u2080",
+      "label": "Natural angular frequency ω₀",
       "unit": "rad/s",
       "precision": 2
     },
-    "frequency": {
-      "label": "Natural frequency f\u2080",
-      "unit": "Hz",
-      "precision": 2
-    },
     "dampingRatio": {
-      "label": "Damping ratio \u03b6",
+      "label": "Damping ratio ζ",
       "precision": 3
-    },
-    "effectiveDamping": {
-      "label": "Effective viscous damping",
-      "unit": "N\u00b7s/m",
-      "precision": 1
     }
+  },
+  "measurements": {
+    "initialTab": "telemetry",
+    "graphs": [
+      {
+        "key": "displacement",
+        "x": 24,
+        "y": 80,
+        "width": 420,
+        "height": 290
+      }
+    ],
+    "timeline": true
   }
 }

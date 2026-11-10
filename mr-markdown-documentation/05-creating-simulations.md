@@ -169,17 +169,13 @@ A companion `.config.json` defines presets, actions, and typed tunables using co
     "dampingMode": "viscous",
     "medium": "air",
     "stiffness": 25,
-    "mass": 1.0,
-    "showTrace": true,
-    "showPhase": true
+    "mass": 1.0
   },
   "advancedControls": [
     "dampingMode",
     "medium",
     "stiffness",
-    "mass",
-    "showTrace",
-    "showPhase"
+    "mass"
   ],
   "tunables": {
     "damping": {
@@ -224,18 +220,10 @@ A companion `.config.json` defines presets, actions, and typed tunables using co
       "max": 5.0,
       "step": 0.5,
       "unit": "kg"
-    },
-    "showTrace": {
-      "label": "Displacement Graph x(t)",
-      "type": "boolean"
-    },
-    "showPhase": {
-      "label": "Phase Space (x vs v)",
-      "type": "boolean"
     }
   },
   "actions": {
-    "impulse": { "label": "Apply Impulse (+Δv)" },
+    "impulse": { "label": "Apply impulse" },
     "zero": { "label": "Reset to Rest" }
   },
   "presets": {
