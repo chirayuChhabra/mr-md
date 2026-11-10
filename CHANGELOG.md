@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Measurement Graphs and Scene Guides**:
+  - Stats and Graphs views with author-defined plots and learner-created X/Y plots from numeric telemetry.
+  - Draggable, minimizable floating graph windows and a separate browser tab for comparing live plots, with bounded sample history.
+  - Measurement rows that toggle scene guides, with session-persisted visibility and graph layout preferences across trial resets.
+  - Conditional measurement colors and labels, threshold-based unread counts, and configurable event notifications with cooldowns and toast limits.
+  - `measurements` startup configuration for visible guides, graph windows, initial inspector tab, notifications, and timeline options.
+- **Simulation Timeline and Snapshots**:
+  - Opt-in `timeline` configuration with automatic start, control-change, and measurement-event captures, plus a manual Capture button.
+  - Exact state capture and restoration through `window.bkRegisterSnapshot`, with a restoration guard exposed as `window.__bkRestoring`.
+  - Select saved moments to restore and pause the simulation; return with Back to live or continue from the restored state by resuming, changing a control, or interacting with the scene.
+  - Linear capture history preserving saved moments after continuation and trimming later plot samples from the active run.
+  - Named canvas and SVG captures with thumbnails and PNG downloads; JSON export including timeline entries, exact states, embedded images, measurement schema, and plot definitions.
+- Spring measurements playground with draggable mass, physical controls, scene guides, graphs, and snapshot registration; expanded simulation authoring documentation.
 - Unified full-width topbar with single breadcrumb navigation (`[ ◨ ] Parent / Current`) and stationary sidebar toggle button across all themes.
 - **Full-Window Simulation Workspace & Inspector**:
   - Modal lab dialog (`role="dialog"`, `aria-modal="true"`) expanding inline block and step simulations into a focused stage and inspector column.
@@ -38,10 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
 
 ### Fixed
+- Wait for snapshot restoration to finish before continuing from a saved moment.
 - Improve syntax highlighting and line number contrast in light-mode code editors.
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Rename the simulation inspector's Controls tab to Settings, arrange measurements in aligned instrument rows, and add a separate Timeline tab.
+- Clear trial samples, timeline history, and notification state on reset while preserving graph layout, scene visibility, and the active inspector tab.
 - Streamlined sidebar header by eliminating duplicate document titles and redundant branding.
 - Converted sidebar toggle button into a clean, borderless icon with matching 24px height and vertical alignment with breadcrumbs across all themes (Standard, Neo, Playful).
 - Updated guided step simulations (`type: "steps"`) to integrate with the shared modal workspace, isolating trial parameter resets (`initialProps`) without reloading iframes.
