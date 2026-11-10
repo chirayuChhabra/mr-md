@@ -44,3 +44,29 @@ test('measurement inspector keeps labels, values and actions separated across th
   }
  } finally { await browser.close(); }
 }, 30000);
+
+test('measurement navigation stays visible while the inspector scrolls', async () => {
+ const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] });
+ try {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 390, height: 844 });
+  const css = ['theme', 'measurement-timeline'].map(name => readFileSync(`src/styles/${name}.css`, 'utf8')).join('\n');
+  const schema = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`value${i}`, { label: `Value ${i}`, graph: true }]));
+  const telemetry = renderSimulationTelemetry('lab', schema);
+  await page.setContent(`<style>${css}</style><figure class="bk-object bk-object--maximized"><aside style="width:300px;height:300px">${renderInspectorTabs('lab', '<div>Settings</div>', telemetry, schema)}</aside></figure>`);
+  const result = await page.evaluate(() => {
+   const panel = document.querySelector<HTMLElement>('.bk-sim-tabpanel--telemetry')!;
+   panel.hidden = false;
+   panel.style.height = '200px';
+   panel.style.flex = 'none';
+   const nav = panel.querySelector<HTMLElement>('.bk-measurement-navigation')!;
+   const before = nav.getBoundingClientRect().top;
+   panel.scrollTop = 150;
+   return { before, after: nav.getBoundingClientRect().top, scroll: panel.scrollTop, first: panel.firstElementChild === nav, height: nav.querySelector('button')!.getBoundingClientRect().height };
+  });
+  expect(result.first).toBe(true);
+  expect(result.scroll).toBeGreaterThan(0);
+  expect(Math.abs(result.after - result.before)).toBeLessThanOrEqual(1);
+  expect(result.height).toBeGreaterThanOrEqual(44);
+ } finally { await browser.close(); }
+}, 30000);

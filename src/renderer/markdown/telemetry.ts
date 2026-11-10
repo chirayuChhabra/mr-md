@@ -145,7 +145,7 @@ export function renderInspectorTabs(
 			label: "Measurements",
 			html:
 				telemetryHtml && Object.keys(schema).length
-					? `<div class="bk-measurement-view-switch" role="group" aria-label="Measurement view"><button type="button" data-measurement-view="stats" aria-pressed="true">Stats</button><button type="button" data-measurement-view="graphs" aria-pressed="false">Graphs</button></div><div data-measurement-panel="stats">${telemetryHtml}</div><div data-measurement-panel="graphs" hidden>${renderGraphControls(schema)}</div>`
+					? `<div class="bk-measurement-navigation"><div class="bk-measurement-view-switch" role="group" aria-label="Measurement view"><button type="button" data-measurement-view="stats" aria-pressed="true">Stats</button><button type="button" data-measurement-view="graphs" aria-pressed="false">Graphs</button></div></div><div data-measurement-panel="stats">${telemetryHtml}</div><div data-measurement-panel="graphs" hidden>${renderGraphControls(schema)}</div>`
 					: telemetryHtml,
 		},
 		{

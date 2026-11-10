@@ -347,3 +347,8 @@ html[data-theme="dark"] .bk-timeline-menu-action--danger { color: #ff9393; }
 .bk-measurement-view-switch { display: inline-flex; align-self: flex-start; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .bk-measurement-view-switch button { min-width: 64px; min-height: 32px; padding: 6px 12px; border: 0; border-radius: 5px; }
 .bk-measurement-view-switch button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px #0002; }
+
+/* Keep the measurement view available while the inspector scrolls. */
+.bk-measurement-navigation { position: sticky; top: -20px; z-index: 5; margin: -20px -20px 0; padding: 20px 20px 8px; background: var(--paper); }
+.bk-measurement-navigation .bk-measurement-view-switch { margin: 0; }
+.bk-measurement-navigation button { min-height: 44px; }
