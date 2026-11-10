@@ -14,9 +14,6 @@ export interface LabExpansionOptions {
 const EXPAND_ICON =
 	'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
 
-const CAPTURE_ICON =
-	'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
-
 let savedScrollY: number | null = null;
 let savedFocusEl: HTMLElement | null = null;
 let activeExpandedSimId: string | null = null;
@@ -420,29 +417,11 @@ function ensurePlaybackControls(figure: HTMLElement): void {
 		inspector.setAttribute("aria-label", "Simulation inspector");
 		figure.querySelector(".bk-sim-workspace")?.append(inspector);
 	}
-	let captureEnabled = true;
-	try {
-		const config = JSON.parse(
-			figure.querySelector(".bk-measurements-config")?.textContent || "{}",
-		);
-		captureEnabled =
-			config.timeline !== false && config.timeline?.capture !== false;
-	} catch {}
-	const hasTimeline =
-		captureEnabled &&
-		Boolean(
-			figure.querySelector(
-				".bk-measurement-history, .bk-sim-telemetry-schema, .bk-sim-telemetry",
-			),
-		);
-	const captureBtnHtml = hasTimeline
-		? `<button type="button" class="bk-steps-btn bk-sim-capture-btn" data-bk-capture-snapshot aria-label="Capture snapshot" title="Capture snapshot" disabled>${CAPTURE_ICON}<span class="bk-sr-only">Capture snapshot</span></button>`
-		: "";
 	const controls = document.createElement("div");
 	controls.className = "bk-steps-controls bk-sim-playback";
 	controls.setAttribute("role", "group");
 	controls.setAttribute("aria-label", "Simulation playback");
-	controls.innerHTML = `<div class="bk-steps-nav"><button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space" title="Pause simulation (Space)">${PAUSE_ICON}${PLAY_ICON}<span class="bk-sr-only" data-bk-playback-label>Pause</span></button>${captureBtnHtml}<button type="button" class="bk-steps-btn" data-bk-reset-simulation aria-keyshortcuts="R" aria-label="Reset simulation" title="Reset simulation">${RESET_ICON}<span class="bk-sr-only">Reset</span></button></div>`;
+	controls.innerHTML = `<div class="bk-steps-nav"><button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space" title="Pause simulation (Space)">${PAUSE_ICON}${PLAY_ICON}<span class="bk-sr-only" data-bk-playback-label>Pause</span></button><button type="button" class="bk-steps-btn" data-bk-reset-simulation aria-keyshortcuts="R" aria-label="Reset simulation" title="Reset simulation">${RESET_ICON}<span class="bk-sr-only">Reset</span></button></div>`;
 	(figure.querySelector(".bk-sim-stage") || inspector).append(controls);
 	updatePlaybackButton(figure);
 }

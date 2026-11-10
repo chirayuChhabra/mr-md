@@ -80,8 +80,8 @@ window.bkSetup(800,450,ctx=>{time+=sim.deltaTime()*sim.props.speed;sim.publishTe
   await page.waitForFunction(()=>{const b=document.querySelector<HTMLButtonElement>('[data-bk-capture-snapshot]');return b&&!b.disabled});
   const frame=page.frames().find(f=>f.parentFrame()===page.mainFrame())!;
   await frame.waitForFunction(()=>(window as any).__readTime()>0.2);
-  await page.locator('[data-bk-capture-snapshot]').click();
   await page.locator('[role="tab"][aria-controls$="-panel-timeline"]').click();
+  await page.locator('[data-bk-capture-snapshot]').click();
   const node=await page.waitForSelector('.bk-snapshot-row[data-kind="snapshot"]:not([data-id="start"])');
   const savedTime=Number(await node!.evaluate(e=>(e as HTMLElement).dataset.time));
   const savedId=await node!.evaluate(e=>(e as HTMLElement).dataset.id);

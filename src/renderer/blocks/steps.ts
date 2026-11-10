@@ -144,6 +144,7 @@ export function renderSteps(
 		controlsHtml,
 		telemetryHtml,
 		block.telemetry,
+		Boolean(block.measurements?.timeline),
 	);
 	const telemetrySchemaScript = hasTel
 		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry)}</script>`

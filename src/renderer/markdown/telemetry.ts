@@ -134,6 +134,7 @@ export function renderInspectorTabs(
 	controlsHtml: string,
 	telemetryHtml: string,
 	schema: SimulationTelemetry = {},
+	timelineEnabled = false,
 ): string {
 	controlsHtml = controlsHtml.trim();
 	telemetryHtml = telemetryHtml.trim();
@@ -151,9 +152,10 @@ export function renderInspectorTabs(
 		{
 			key: "timeline",
 			label: "Timeline",
-			html: telemetryHtml
-				? `<div class="bk-timeline-toolbar"><button type="button" data-export-timeline title="Download timeline (.csv)">Export</button></div><div class="bk-measurement-history" aria-live="polite"></div>`
-				: "",
+			html:
+				telemetryHtml && timelineEnabled
+					? `<div class="bk-timeline-toolbar"><details><summary>More</summary><button type="button" data-export-timeline title="Download timeline (.csv)">Export timeline</button></details></div><div class="bk-measurement-history" aria-live="polite"></div>`
+					: "",
 		},
 	].filter((panel) => panel.html);
 	const safeId = escAttr(id);

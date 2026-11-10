@@ -45,6 +45,7 @@ export function renderSimulation(
 		controlsHtml,
 		telemetryHtml,
 		block.telemetry,
+		Boolean(block.measurements?.timeline),
 	);
 
 	const inspectorHtml = inspectorContent
