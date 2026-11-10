@@ -1,13 +1,7 @@
-// ============================================================
-//  Interactive Damped Harmonic Oscillator
-//  Demonstrates spring-mass dynamics, damping regimes, presets,
-//  and impulse actions with robust locally scoped state.
-// ============================================================
-
 (() => {
   "use strict";
 
-  const sim = window.defineSimulation({ props: { damping: 1.5, dampingMode: "viscous", medium: "air", stiffness: 25, mass: 1, showTrace: true, showPhase: true } });
+  const sim = window.defineSimulation({ props: { damping: 1.5, dampingMode: "viscous", medium: "air", stiffness: 25, mass: 1 } });
 
   // Core physical state (all variables encapsulated in local closure)
   const state = {
@@ -17,18 +11,12 @@
     medium: String(window.__simProps?.medium ?? "air"),
     stiffness: Number(window.__simProps?.stiffness ?? 25), // N/m
     mass: Math.max(0.1, Number(window.__simProps?.mass ?? 1.0)), // kg
-    showTrace: Boolean(window.__simProps?.showTrace ?? true),
-    showPhase: Boolean(window.__simProps?.showPhase ?? true),
 
     // Dynamical state: displacement x (meters), velocity v (m/s)
     x: 0.75,
     v: 0.0,
     time: 0,
   };
-
-  // Rolling trajectory history for graphs (unambiguous local name)
-  const plotHistory = [];
-  const MAX_HISTORY = 400;
 
   // Pointer drag and visual animation state
   let isDragging = false;
@@ -42,12 +30,12 @@
     if (playing && dragPointerId === null) isDragging = false;
   });
 
-  // Coordinate geometry for 1280 x 540 logical coordinate space
+  // Coordinate geometry for 1280 x 300 logical coordinate space
   const LOGICAL_WIDTH = 1280;
-  const LOGICAL_HEIGHT = 540;
+  const LOGICAL_HEIGHT = 300;
   const TRACK_Y = 150;
-  const ANCHOR_X = 80;
-  const EQUILIBRIUM_X = 360;
+  const ANCHOR_X = 250;
+  const EQUILIBRIUM_X = 640;
   const METERS_TO_PIXELS = 160; // 1.0 m = 160 px
   const CART_WIDTH = 88;
   const CART_HEIGHT = 54;
@@ -89,19 +77,18 @@
     if (p.medium !== undefined) state.medium = String(p.medium);
     if (p.stiffness !== undefined) state.stiffness = Math.max(1, Number(p.stiffness));
     if (p.mass !== undefined) state.mass = Math.max(0.1, Number(p.mass));
-    if (p.showTrace !== undefined) state.showTrace = Boolean(p.showTrace);
-    if (p.showPhase !== undefined) state.showPhase = Boolean(p.showPhase);
   });
 
   sim.onReset(() => {
     state.x = 0.75;
     state.v = 0;
     state.time = 0;
-    plotHistory.length = 0;
     isDragging = false;
     dragPointerId = null;
     impulseFlash = 0;
   });
+
+
 
   // React to host action button clicks (repeatable impulses and rest reset)
   window.addEventListener("bk:action", (event) => {
@@ -117,7 +104,6 @@
     } else if (action === "zero") {
       state.x = 0;
       state.v = 0;
-      plotHistory.length = 0;
       impulseFlash = 0;
     }
   });
@@ -376,18 +362,13 @@
     const viewHeight = frame?.viewportHeight ?? height;
     initializePointer(ctx.canvas);
 
-    const dt = Math.min(sim.deltaTime(), 0.05);
+    const elapsed = sim.deltaTime();
+    const dt = window.__bkRestoring ? 0 : Math.min(elapsed, 0.05);
 
     updatePhysics(dt);
 
     if (impulseFlash > 0) {
       impulseFlash = Math.max(0, impulseFlash - dt * 2.5);
-    }
-
-    // Record sample in rolling trajectory history
-    if (dt > 0) {
-      plotHistory.push({ t: state.time, x: state.x, v: state.v });
-      if (plotHistory.length > MAX_HISTORY) plotHistory.shift();
     }
 
     const ui = getUiStyle();
@@ -403,7 +384,7 @@
     // Clear canvas background
     ctx.fillStyle = bg;
     ctx.fillRect(viewX, viewY, viewWidth, viewHeight);
-    layoutOffsetY = viewY;
+    layoutOffsetY = viewY + Math.max(0, (viewHeight - LOGICAL_HEIGHT) / 2);
     ctx.save();
     ctx.translate(0, layoutOffsetY);
 
@@ -411,25 +392,24 @@
     const mediumMult = getMediumMultiplier(state.medium);
     const effC = state.damping * mediumMult;
     const omega0 = Math.sqrt(state.stiffness / state.mass);
-    const freq0 = omega0 / (2 * Math.PI);
     const criticalC = 2 * Math.sqrt(state.stiffness * state.mass);
     const zeta = effC / criticalC;
 
-    let regimeBadge = "UNDERDAMPED (ζ < 1)";
+    let regimeBadge = "Underdamped";
     if (state.dampingMode === "viscous") {
       if (effC === 0) {
-        regimeBadge = "UNDAMPED (ζ = 0.00)";
+        regimeBadge = "Undamped";
       } else if (Math.abs(zeta - 1.0) <= 0.02) {
-        regimeBadge = "CRITICAL DAMPING (ζ ≈ 1.00)";
+        regimeBadge = "Near critical damping";
       } else if (zeta > 1.02) {
-        regimeBadge = `OVERDAMPED (ζ = ${zeta.toFixed(2)})`;
+        regimeBadge = "Overdamped";
       } else {
-        regimeBadge = `UNDERDAMPED (ζ = ${zeta.toFixed(2)})`;
+        regimeBadge = "Underdamped";
       }
     } else if (state.dampingMode === "quadratic") {
-      regimeBadge = "NONLINEAR QUADRATIC DRAG";
+      regimeBadge = "Quadratic drag";
     } else if (state.dampingMode === "friction") {
-      regimeBadge = "COULOMB DRY FRICTION";
+      regimeBadge = "Dry friction";
     }
 
     // ============================================================
@@ -578,206 +558,29 @@
       ctx.fill();
     }
 
-    sim.publishTelemetry({
+    if (!window.__bkRestoring) sim.publishTelemetry({
       regime: regimeBadge,
       displacement: state.x,
       velocity: state.v,
       angularFrequency: omega0,
-      frequency: freq0,
-      dampingRatio: state.dampingMode === "viscous" ? zeta : null,
-      effectiveDamping: state.dampingMode === "viscous" ? effC : null
+      dampingRatio: state.dampingMode === "viscous" ? zeta : null
     });
 
-    // ============================================================
-    //  BOTTOM PLOTS: DISPLACEMENT x(t) & PHASE SPACE (x vs v)
-    // ============================================================
-    const plotY = 216;
-    const plotHeight = Math.max(300, viewHeight - plotY - 24);
-
-    let traceWidth = 1140;
-    if (state.showTrace && state.showPhase) {
-      traceWidth = 670;
-    }
-    const traceX = ANCHOR_X;
-
-    // Plot 1: Displacement waveform x(t)
-    if (state.showTrace) {
-      ctx.save();
-      ctx.fillStyle = paper;
-      ctx.strokeStyle = line;
-      ctx.lineWidth = ui.lineWidth;
-
-      if (ui.mode === "neo") {
-        ctx.fillRect(traceX, plotY, traceWidth, plotHeight);
-        ctx.strokeRect(traceX, plotY, traceWidth, plotHeight);
-      } else {
-        ctx.beginPath();
-        ctx.roundRect(traceX, plotY, traceWidth, plotHeight, ui.panelRadius);
-        ctx.fill();
-        ctx.stroke();
-      }
-
-      ctx.font = `600 12px ${ui.fontFamily}`;
-      ctx.fillStyle = text;
-      ctx.textAlign = "left";
-      ctx.fillText("DISPLACEMENT OVER TIME  x(t)", traceX + 16, plotY + 22);
-
-      const midY = plotY + plotHeight / 2 + 10;
-      const yRange = 1.35; // +/- 1.35 meters
-
-      // Center zero axis
-      ctx.strokeStyle = lineStrong;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(traceX + 50, midY);
-      ctx.lineTo(traceX + traceWidth - 20, midY);
-      ctx.stroke();
-
-      // Grid lines
-      ctx.strokeStyle = line;
-      ctx.setLineDash([2, 4]);
-      [-1.0, -0.5, 0.5, 1.0].forEach((gVal) => {
-        const gy = midY - (gVal / yRange) * (plotHeight / 2 - 35);
-        ctx.beginPath();
-        ctx.moveTo(traceX + 50, gy);
-        ctx.lineTo(traceX + traceWidth - 20, gy);
-        ctx.stroke();
-
-        ctx.fillStyle = textLight;
-        ctx.font = `10px monospace`;
-        ctx.textAlign = "right";
-        ctx.fillText(`${gVal > 0 ? "+" : ""}${gVal}m`, traceX + 44, gy + 3);
-      });
-      ctx.setLineDash([]);
-
-      // Waveform trace
-      if (plotHistory.length > 1) {
-        const graphW = traceWidth - 75;
-        const stepX = graphW / MAX_HISTORY;
-        const startPlotX = traceX + 50;
-
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = ui.thickLineWidth;
-        ctx.lineJoin = ui.lineJoin;
-        ctx.lineCap = ui.lineCap;
-        ctx.beginPath();
-
-        const offsetIdx = MAX_HISTORY - plotHistory.length;
-        for (let i = 0; i < plotHistory.length; i++) {
-          const h = plotHistory[i];
-          const hx = startPlotX + (offsetIdx + i) * stepX;
-          const hy = midY - (h.x / yRange) * (plotHeight / 2 - 35);
-          if (i === 0) ctx.moveTo(hx, hy);
-          else ctx.lineTo(hx, hy);
-        }
-        ctx.stroke();
-
-        // Current value marker
-        const lastH = plotHistory[plotHistory.length - 1];
-        const curX = startPlotX + (offsetIdx + plotHistory.length - 1) * stepX;
-        const curY = midY - (lastH.x / yRange) * (plotHeight / 2 - 35);
-        ctx.fillStyle = accent;
-        ctx.beginPath();
-        ctx.arc(curX, curY, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    // Plot 2: Phase space portrait (x vs v)
-    if (state.showPhase) {
-      const phaseX = state.showTrace ? traceX + traceWidth + 20 : traceX;
-      const phaseW = state.showTrace ? width - phaseX - 60 : 1140;
-
-      ctx.save();
-      ctx.fillStyle = paper;
-      ctx.strokeStyle = line;
-      ctx.lineWidth = ui.lineWidth;
-
-      if (ui.mode === "neo") {
-        ctx.fillRect(phaseX, plotY, phaseW, plotHeight);
-        ctx.strokeRect(phaseX, plotY, phaseW, plotHeight);
-      } else {
-        ctx.beginPath();
-        ctx.roundRect(phaseX, plotY, phaseW, plotHeight, ui.panelRadius);
-        ctx.fill();
-        ctx.stroke();
-      }
-
-      ctx.font = `600 12px ${ui.fontFamily}`;
-      ctx.fillStyle = text;
-      ctx.textAlign = "left";
-      ctx.fillText("PHASE PORTRAIT (x vs v)", phaseX + 16, plotY + 22);
-
-      const centerX = phaseX + phaseW / 2;
-      const centerY = plotY + plotHeight / 2 + 10;
-      const scaleX = (phaseW / 2 - 35) / 1.35;
-      const velocityRange = Math.max(3.5, ...plotHistory.map(point => Math.abs(point.v) * 1.15));
-      const scaleV = (plotHeight / 2 - 35) / velocityRange;
-
-      // Crosshairs
-      ctx.strokeStyle = line;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(phaseX + 24, centerY);
-      ctx.lineTo(phaseX + phaseW - 24, centerY);
-      ctx.moveTo(centerX, plotY + 36);
-      ctx.lineTo(centerX, plotY + plotHeight - 16);
-      ctx.stroke();
-
-      ctx.font = `10px monospace`;
-      ctx.fillStyle = textLight;
-      ctx.textAlign = "right";
-      ctx.fillText("+x →", phaseX + phaseW - 28, centerY - 6);
-      ctx.textAlign = "center";
-      ctx.fillText("↑ +v", centerX, plotY + 48);
-
-      // Keep large impulses inside the plot while adapting its velocity scale.
-      ctx.beginPath();
-      ctx.rect(phaseX + 16, plotY + 36, phaseW - 32, plotHeight - 52);
-      ctx.clip();
-
-      // Trajectory curve
-      if (plotHistory.length > 1) {
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        for (let i = 0; i < plotHistory.length; i++) {
-          const pt = plotHistory[i];
-          const px = centerX + pt.x * scaleX;
-          const py = centerY - pt.v * scaleV;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.stroke();
-
-        const curPt = plotHistory[plotHistory.length - 1];
-        const curPX = centerX + curPt.x * scaleX;
-        const curPY = centerY - curPt.v * scaleV;
-        ctx.fillStyle = accent;
-        ctx.beginPath();
-        ctx.arc(curPX, curPY, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
     ctx.restore();
   }
 
-  // Include trajectory and transient visuals so a restored frame matches its capture.
+  // Preserve transient visuals so a restored frame matches its capture.
   window.bkRegisterSnapshot({
     capture: () => ({
       ...state,
       props: { ...window.__simProps },
-      plotHistory: plotHistory.map(point => ({ ...point })),
       impulseFlash,
       isDragging,
       lastDragX,
     }),
     restore: (snapshot) => {
-      const { props, plotHistory: history, impulseFlash: flash, isDragging: dragging, lastDragX: dragX, ...model } = snapshot;
+      const { props, impulseFlash: flash, isDragging: dragging, lastDragX: dragX, ...model } = snapshot;
       Object.assign(state, model);
-      plotHistory.splice(0, plotHistory.length, ...history.map(point => ({ ...point })));
       impulseFlash = flash;
       // Pointer capture belongs to a live gesture, never to a historical frame.
       if (dragPointerId !== null) {

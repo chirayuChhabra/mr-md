@@ -5,8 +5,6 @@ import * as path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 import { iframeDoc } from "../src/renderer/blocks/iframe.js";
 
-const installedChrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const CHROME_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || (fs.existsSync(installedChrome) ? installedChrome : undefined);
 const SIM_JS_PATH = path.resolve(__dirname, "../mr-markdown-documentation/sims/oscillator.js");
 const SIM_CONFIG_PATH = path.resolve(__dirname, "../mr-markdown-documentation/sims/oscillator.config.json");
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,8 +33,7 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		// 3. Launch real Chrome browser instance
 		browser = await puppeteer.launch({
 			headless: true,
-			executablePath: CHROME_PATH,
-			args: ["--no-sandbox", "--disable-setuid-sandbox"],
+			args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 		});
 	});
 
@@ -204,6 +201,7 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		await delay(300);
 
 		expect(await frame!.evaluate(() => (window as any).__telemetry.dampingRatio)).toBeCloseTo(1, 3);
+		expect(await frame!.evaluate(() => (window as any).__telemetry.regime)).toBe("Near critical damping");
 
 		// Verify no errors occurred on preset update
 		const errorCheck = await frame!.evaluate(() => {
@@ -391,6 +389,33 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		await page.close();
 	});
 
+	test("restores exact oscillator state and declares host measurements", async () => {
+		expect(config.measurements.timeline).toBe(true);
+		expect(config.telemetry.velocity.graph.x.key).toBe("displacement");
+		const { matchesMeasurementCondition } = require("../src/client/measurement-rules.js");
+		const movingRight = config.telemetry.velocity.states.find((state: any) => matchesMeasurementCondition(1, state.when));
+		const movingLeft = config.telemetry.velocity.states.find((state: any) => matchesMeasurementCondition(-1, state.when));
+		expect([movingRight.label, movingLeft.label]).toEqual(["Moving right", "Moving left"]);
+		expect(movingRight.tone).toBe("accent");
+		expect(config.telemetry.velocity.states.some((state: any) => matchesMeasurementCondition(0, state.when))).toBe(false);
+		const page = await browser.newPage();
+		const html = iframeDoc(bundledJs, JSON.stringify(config.props), false);
+		await page.setContent(`<iframe sandbox="allow-scripts" srcdoc="${html}"></iframe>`);
+		const frame = await (await page.waitForSelector("iframe"))!.contentFrame();
+		await frame!.waitForSelector("#c");
+		const result = await frame!.evaluate(() => {
+			const handlers = (window as any).__bkSnapshotHandlers;
+			const initial = handlers.capture();
+			window.dispatchEvent(new CustomEvent("bk:action", { detail: { action: "impulse" } }));
+			const kicked = handlers.capture();
+			handlers.restore(initial);
+			return { initial, kicked, restored: handlers.capture() };
+		});
+		expect(result.kicked.v).not.toBe(result.initial.v);
+		expect(result.restored).toEqual(result.initial);
+		await page.close();
+	});
+
 	test("enforces compact controls contract and honest physics parameters", () => {
 		// Only damping is primary tunable
 		expect(config.tunables.damping).toBeDefined();
@@ -402,8 +427,6 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 			"medium",
 			"stiffness",
 			"mass",
-			"showTrace",
-			"showPhase",
 		]);
 
 		// Redundant per-control advanced flags removed
@@ -411,8 +434,8 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		expect(config.tunables.medium.advanced).toBeUndefined();
 		expect(config.tunables.stiffness.advanced).toBeUndefined();
 		expect(config.tunables.mass.advanced).toBeUndefined();
-		expect(config.tunables.showTrace.advanced).toBeUndefined();
-		expect(config.tunables.showPhase.advanced).toBeUndefined();
+		expect(config.tunables.showTrace).toBeUndefined();
+		expect(config.tunables.showPhase).toBeUndefined();
 
 		// runLabel tunable removed
 		expect(config.tunables.runLabel).toBeUndefined();
