@@ -1,5 +1,6 @@
 {
   "type": "block",
+  "timeline": true,
   "label": "Damped Harmonic Oscillator",
   "caption": "Investigate spring-mass oscillations under viscous damping, presets, and impulse excitation. Damping ratio \u03b6 = c_eff / (2\u221a(km)) determines whether motion is underdamped, critically damped, or overdamped.",
   "height": 520,

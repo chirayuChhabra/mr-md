@@ -157,6 +157,12 @@ Here is a complete, coherent experiment demonstrating these capabilities in a da
 
 ![Damped Harmonic Oscillator](./sims/oscillator.js)
 
+The oscillator opts in with `"timeline": true` in its config and registers both
+`capture` and `restore` with `bkRegisterSnapshot`. Open Timeline, capture a frame,
+apply an impulse, then restore the frame to compare runs. Snapshots include the
+model parameters, displacement, velocity, simulation time, trajectory history,
+and impulse highlight. Restoring pauses playback; resuming continues the saved state.
+
 #### Control contract example
 
 A companion `.config.json` defines presets, actions, and typed tunables using collective `advancedControls`:
