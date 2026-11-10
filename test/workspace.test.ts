@@ -59,7 +59,7 @@ describe("expanded simulation workspace", () => {
 			document.body.style.overflow = "clip";
 			bkExpandLab(figure);
 			expect(figure.getAttribute("role")).toBe("dialog");
-			expect(figure.getAttribute("aria-modal")).toBe("true");
+			expect(figure.getAttribute("aria-modal")).toBe("false");
 			expect((document.getElementById("navigation") as HTMLElement).inert).toBe(
 				true,
 			);
@@ -152,7 +152,7 @@ describe("expanded simulation workspace", () => {
 			expect(first.classList.contains("bk-object--maximized")).toBe(false);
 			expect(first.inert).toBe(true);
 			expect(second.inert).toBeFalsy();
-			expect(second.getAttribute("aria-modal")).toBe("true");
+			expect(second.getAttribute("aria-modal")).toBe("false");
 			expect(messages).toContainEqual({ type: "bk:pause" });
 		}));
 

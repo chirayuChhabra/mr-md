@@ -466,6 +466,7 @@ function syncCaptureButtonState(r: MeasurementRuntime): void {
 		"[data-bk-capture-snapshot]",
 	);
 	for (const btn of buttons) {
+		btn.hidden = isUnsupported;
 		btn.disabled = disabled;
 		if (isPending) {
 			btn.setAttribute("aria-busy", "true");
@@ -486,9 +487,7 @@ function syncCaptureButtonState(r: MeasurementRuntime): void {
 
 function ensureCaptureButton(r: MeasurementRuntime): void {
 	if (!r.timeline || r.config.timeline?.capture === false) return;
-	const nav = r.figure.querySelector<HTMLElement>(
-		".bk-sim-playback .bk-steps-nav",
-	);
+	const nav = r.figure.querySelector<HTMLElement>(".bk-timeline-toolbar");
 	if (nav && !nav.querySelector("[data-bk-capture-snapshot]")) {
 		const btn = document.createElement("button");
 		btn.type = "button";
@@ -498,9 +497,7 @@ function ensureCaptureButton(r: MeasurementRuntime): void {
 		btn.title = "Capture snapshot";
 		btn.disabled = true;
 		btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="bk-sr-only">Capture snapshot</span>`;
-		const resetBtn = nav.querySelector("[data-bk-reset-simulation]");
-		if (resetBtn) resetBtn.before(btn);
-		else nav.append(btn);
+		nav.prepend(btn);
 	}
 	syncCaptureButtonState(r);
 }
@@ -2018,7 +2015,7 @@ export function bkWireTelemetry(): void {
 					event.data.supported ?? event.data.canRestoreExactState,
 				);
 				r.timeline?.setCapability(r.supportsExactSnapshot, event.data.reason);
-				syncCaptureButtonState(r);
+				ensureCaptureButton(r);
 			}
 			return;
 		}
@@ -2267,7 +2264,7 @@ export function bkInitTelemetry(): void {
 		const history = figure.querySelector<HTMLElement>(
 			".bk-measurement-history",
 		);
-		if (history && r.config.timeline !== false)
+		if (history && r.config.timeline)
 			r.timeline = createMeasurementTimeline(history, {
 				schema,
 				config:

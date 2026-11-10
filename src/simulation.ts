@@ -74,6 +74,9 @@ export function defineSimulation<Props extends object>(options: {
 			message.type === "bk:steps-reset-step"
 		) {
 			updatePlayback(false);
+		} else if (message.type === "bk:snapshot-restore") {
+			lastTime = null;
+			updatePlayback(Boolean(message.resumePlayback));
 		} else if (message.type === "bk:sim-play-state") {
 			updatePlayback(Boolean(message.playing));
 		} else if (message.type === "bk:reset" && resetCallbacks.size > 0) {

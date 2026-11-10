@@ -580,7 +580,7 @@ test("bubbling bk:snapshot-view-change dispatches from timeline and syncs figure
 					</div>
 				</div>
 				<div class="bk-sim-inspector">
-					<div class="bk-measurement-history"></div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
 				</div>
 			</div>
 		</figure>
@@ -636,7 +636,7 @@ test("scene interaction continues the restored state on one timeline and clears 
 					</div>
 				</div>
 				<div class="bk-sim-inspector">
-					<div class="bk-measurement-history"></div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
 				</div>
 			</div>
 		</figure>
@@ -830,7 +830,7 @@ test("snapshot inspection keeps controls interactive and playback requests conti
 					<div class="bk-sim-controls">
 						<input type="range" data-bk-control data-bk-control-key="mass" min="1" max="10" value="5">
 					</div>
-					<div class="bk-measurement-history"></div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
 				</aside>
 			</div>
 		</figure>
@@ -894,7 +894,7 @@ test("harness capture button: created in controls for timeline sims, disabled wh
 					</div>
 				</div>
 				<aside class="bk-sim-inspector">
-					<div class="bk-measurement-history"></div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
 				</aside>
 			</div>
 			<script class="bk-sim-telemetry-schema" type="application/json">{"velocity": {"label": "Velocity", "unit": "m/s"}}</script>
@@ -913,10 +913,12 @@ test("harness capture button: created in controls for timeline sims, disabled wh
 		const figure = window.document.getElementById("capture-lab") as HTMLElement;
 		const captureBtn = figure.querySelector<HTMLButtonElement>("[data-bk-capture-snapshot]");
 
-		// Capture button exists in controls
+		// Capture button exists in the timeline
 		expect(captureBtn).not.toBeNull();
 		// Initially disabled before capabilities query confirms exact snapshot support
 		expect(captureBtn?.disabled).toBe(true);
+		expect(captureBtn?.hidden).toBe(true);
+		expect(captureBtn?.closest(".bk-timeline-toolbar")).not.toBeNull();
 
 		const iframe = figure.querySelector("iframe")!;
 		const messages: any[] = [];
@@ -934,6 +936,7 @@ test("harness capture button: created in controls for timeline sims, disabled wh
 
 		// Button is now enabled for capturing
 		expect(captureBtn?.disabled).toBe(false);
+		expect(captureBtn?.hidden).toBe(false);
 
 		// Click capture button
 		captureBtn?.click();
@@ -982,7 +985,7 @@ test("startup graph preferences: keep the latest window for each measurement", (
 					<div class="bk-embed-frame"><iframe></iframe></div>
 				</div>
 				<aside class="bk-sim-inspector">
-					<div class="bk-measurement-history"></div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
 				</aside>
 			</div>
 			<script class="bk-sim-telemetry-schema" type="application/json">{"height": {"label": "Height", "unit": "m", "graph": true}}</script>
@@ -1063,7 +1066,7 @@ test("bkResetTelemetry settles pending requests and rejects stale generations so
 						</div>
 					</div>
 				</div>
-				<div class="bk-sim-inspector"><div class="bk-measurement-history"></div></div>
+				<div class="bk-sim-inspector"><div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script></div>
 			</div>
 			<script class="bk-sim-telemetry-schema" type="application/json">{"val": {"label": "Val", "unit": ""}}</script>
 		</figure>
@@ -1165,7 +1168,7 @@ test("rapid concurrent restores sequence atomically and older in-flight restore 
 						<input type="range" data-bk-prop="pos" min="0" max="100" value="0">
 					</div>
 				</div>
-				<div class="bk-sim-inspector"><div class="bk-measurement-history"></div></div>
+				<div class="bk-sim-inspector"><div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script></div>
 			</div>
 			<script class="bk-sim-telemetry-schema" type="application/json">{"pos": {"label": "Pos", "unit": "m"}}</script>
 		</figure>
@@ -1351,7 +1354,7 @@ test("delayed capture replies do not append snapshots while inspecting saved his
 						</div>
 					</div>
 				</div>
-				<div class="bk-sim-inspector"><div class="bk-measurement-history"></div></div>
+				<div class="bk-sim-inspector"><div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script></div>
 			</div>
 			<script class="bk-sim-telemetry-schema" type="application/json">{"speed": {"label": "Speed", "unit": "m/s"}}</script>
 		</figure>
@@ -1520,7 +1523,7 @@ test("no-op controls keep inspection active and changed presets continue on one 
 						<button type="button" data-bk-preset="light" data-bk-preset-props='{"mass":2}'>Light</button>
 						<button type="button" data-bk-action="disabled-action" disabled>Disabled</button>
 					</div>
-					<div class="bk-measurement-history"></div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
 				</div>
 			</div>
 			<script class="bk-sim-telemetry-schema" type="application/json">{"mass": {"label": "Mass"}}</script>

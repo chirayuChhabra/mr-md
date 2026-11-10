@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { bkCollapseLab } from "./workspace.js";
+import { bkExitWorld } from "./world.js";
 export function bkInitRouter() {
 	if (window.__bk_router_initialized) return;
 	window.__bk_router_initialized = true;
@@ -25,6 +27,8 @@ export function bkInitRouter() {
 
 				if (newMain && newNav && newHeader) {
 					const updateDOM = () => {
+						bkCollapseLab(true);
+						bkExitWorld(undefined, { fromPopstate: true, immediate: true });
 						const mainEl = document.querySelector(".bk-main");
 						const navEl = document.querySelector(".bk-nav");
 						const headerEl = document.querySelector(".bk-sidebar-header");
@@ -188,6 +192,13 @@ export function bkInitRouter() {
 			return;
 		}
 		if (
+			document.querySelector(".bk-object--maximized") &&
+			new URL(window.location.href).pathname === currentPathname
+		) {
+			bkCollapseLab(true);
+			return;
+		}
+		if (
 			document.body.classList.contains("bk-world-immersive") ||
 			document.querySelector(
 				".bk-world-fullscreen.bk-world--active, .bk-world-fullscreen.bk-world--flying, .bk-world-fullscreen.bk-world--exiting",
@@ -195,6 +206,7 @@ export function bkInitRouter() {
 		) {
 			return;
 		}
+		bkCollapseLab(true);
 		const targetUrl = new URL(window.location.href);
 		if (targetUrl.pathname === currentPathname) {
 			const hash = targetUrl.hash;

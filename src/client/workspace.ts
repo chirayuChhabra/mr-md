@@ -1,4 +1,9 @@
-import { PAUSE_ICON, PLAY_ICON, RESET_ICON } from "../simulation-toolbar.js";
+import {
+	CLOSE_ICON,
+	PAUSE_ICON,
+	PLAY_ICON,
+	RESET_ICON,
+} from "../simulation-toolbar.js";
 import { bkApplyPropsToControls } from "./simulation.js";
 
 const inspectorTabMemory = new WeakMap<
@@ -14,9 +19,8 @@ export interface LabExpansionOptions {
 const EXPAND_ICON =
 	'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
 
-const CAPTURE_ICON =
-	'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
-
+let labHistoryPushed = false;
+let savedMainScroll: number | null = null;
 let savedScrollY: number | null = null;
 let savedFocusEl: HTMLElement | null = null;
 let activeExpandedSimId: string | null = null;
@@ -24,16 +28,18 @@ let activeExpandedSimId: string | null = null;
 let wiredDocument: Document | null = null;
 let savedOverflow: string | null = null;
 let stateDocument: Document | null = null;
+let relocatedTopbar: HTMLElement | null = null;
 let topbarPlaceholder: Comment | null = null;
 
 function restoreHeader(): void {
-	const topbar = document.getElementById("bk-topbar");
-	document.getElementById("bk-lab-exit-topbar-btn")?.remove();
-	document.querySelectorAll(".bk-lab-crumb").forEach((el) => {
+	const topbar = document.getElementById("bk-topbar") || relocatedTopbar;
+	topbar?.querySelector("#bk-lab-exit-topbar-btn")?.remove();
+	(topbar || document).querySelectorAll(".bk-lab-crumb").forEach((el) => {
 		el.remove();
 	});
 	if (topbar && topbarPlaceholder) topbarPlaceholder.replaceWith(topbar);
 	topbarPlaceholder = null;
+	relocatedTopbar = null;
 }
 
 function isHTMLElement(el: unknown): el is HTMLElement {
@@ -58,7 +64,12 @@ function isolateWorkspace(figure: HTMLElement): void {
 	let branch: Element = figure;
 	while (branch.parentElement) {
 		for (const sibling of branch.parentElement.children) {
-			if (sibling === branch || !isHTMLElement(sibling)) continue;
+			if (
+				sibling === branch ||
+				!isHTMLElement(sibling) ||
+				sibling.matches(".bk-sidebar")
+			)
+				continue;
 			inertElements.set(sibling, sibling.inert);
 			sibling.inert = true;
 		}
@@ -77,7 +88,7 @@ function isolateWorkspace(figure: HTMLElement): void {
 		);
 	}
 	figure.setAttribute?.("role", "dialog");
-	figure.setAttribute?.("aria-modal", "true");
+	figure.setAttribute?.("aria-modal", "false");
 	figure.setAttribute?.(
 		"aria-label",
 		figure.querySelector(".bk-object-title")?.textContent?.trim() ||
@@ -420,29 +431,11 @@ function ensurePlaybackControls(figure: HTMLElement): void {
 		inspector.setAttribute("aria-label", "Simulation inspector");
 		figure.querySelector(".bk-sim-workspace")?.append(inspector);
 	}
-	let captureEnabled = true;
-	try {
-		const config = JSON.parse(
-			figure.querySelector(".bk-measurements-config")?.textContent || "{}",
-		);
-		captureEnabled =
-			config.timeline !== false && config.timeline?.capture !== false;
-	} catch {}
-	const hasTimeline =
-		captureEnabled &&
-		Boolean(
-			figure.querySelector(
-				".bk-measurement-history, .bk-sim-telemetry-schema, .bk-sim-telemetry",
-			),
-		);
-	const captureBtnHtml = hasTimeline
-		? `<button type="button" class="bk-steps-btn bk-sim-capture-btn" data-bk-capture-snapshot aria-label="Capture snapshot" title="Capture snapshot" disabled>${CAPTURE_ICON}<span class="bk-sr-only">Capture snapshot</span></button>`
-		: "";
 	const controls = document.createElement("div");
 	controls.className = "bk-steps-controls bk-sim-playback";
 	controls.setAttribute("role", "group");
 	controls.setAttribute("aria-label", "Simulation playback");
-	controls.innerHTML = `<div class="bk-steps-nav"><button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space" title="Pause simulation (Space)">${PAUSE_ICON}${PLAY_ICON}<span class="bk-sr-only" data-bk-playback-label>Pause</span></button>${captureBtnHtml}<button type="button" class="bk-steps-btn" data-bk-reset-simulation aria-keyshortcuts="R" aria-label="Reset simulation" title="Reset simulation">${RESET_ICON}<span class="bk-sr-only">Reset</span></button></div>`;
+	controls.innerHTML = `<div class="bk-steps-nav"><button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space" title="Pause simulation (Space)">${PAUSE_ICON}${PLAY_ICON}<span class="bk-sr-only" data-bk-playback-label>Pause</span></button><button type="button" class="bk-steps-btn" data-bk-reset-simulation aria-keyshortcuts="R" aria-label="Reset simulation" title="Reset simulation">${RESET_ICON}<span class="bk-sr-only">Reset</span></button></div>`;
 	(figure.querySelector(".bk-sim-stage") || inspector).append(controls);
 	updatePlaybackButton(figure);
 }
@@ -650,6 +643,8 @@ export function bkExpandLab(
 	if (stateDocument !== document) {
 		restoreBackground();
 		modalAttributes.clear();
+		labHistoryPushed = false;
+		savedMainScroll = null;
 		savedOverflow = null;
 		savedScrollY = null;
 		savedFocusEl = null;
@@ -679,6 +674,12 @@ export function bkExpandLab(
 		}
 	}
 
+	if (!labHistoryPushed && window.history?.pushState) {
+		window.history.pushState({ ...window.history.state, bkLab: true }, "");
+		labHistoryPushed = true;
+	}
+	if (savedMainScroll === null)
+		savedMainScroll = document.querySelector?.(".bk-main")?.scrollTop ?? 0;
 	restoreHeader();
 
 	// Unexpand any other expanded figure without resetting saved scroll or focus
@@ -705,6 +706,7 @@ export function bkExpandLab(
 
 	const topbar = document.getElementById("bk-topbar");
 	if (topbar?.parentNode) {
+		relocatedTopbar = topbar;
 		topbarPlaceholder = document.createComment("topbar");
 		topbar.before(topbarPlaceholder);
 		figure.prepend(topbar);
@@ -712,13 +714,11 @@ export function bkExpandLab(
 		exit.id = "bk-lab-exit-topbar-btn";
 		exit.type = "button";
 		exit.className = "bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn";
-		exit.setAttribute("aria-label", "Exit expanded view");
-		exit.title = "Exit expanded view (Esc)";
-		exit.innerHTML =
-			'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-		exit.addEventListener("click", bkCollapseLab);
-		const theme = topbar.querySelector("#bk-theme-toggle");
-		if (theme?.parentElement) theme.before(exit);
+		exit.setAttribute("aria-label", "Back to lesson");
+		exit.title = "Back to lesson (Esc)";
+		exit.innerHTML = CLOSE_ICON;
+		exit.addEventListener("click", () => bkCollapseLab());
+		(topbar.querySelector(".bk-topbar-right") || topbar).append(exit);
 		const crumbs = topbar.querySelector(".bk-topbar-breadcrumbs");
 		const label = figure.querySelector(".bk-object-title")?.textContent?.trim();
 		if (
@@ -735,6 +735,13 @@ export function bkExpandLab(
 			item.textContent = label;
 			crumbs.append(sep, item);
 		}
+		const slash = document.createElement("button");
+		slash.type = "button";
+		slash.className = "bk-topbar-crumb-sep bk-lab-crumb bk-sim-exit-crumb";
+		slash.textContent = "/";
+		slash.setAttribute("aria-label", "Return to inline simulation");
+		slash.addEventListener("click", () => bkCollapseLab());
+		crumbs?.append(slash);
 	}
 	isolateWorkspace(figure);
 	ensurePlaybackControls(figure);
@@ -792,11 +799,11 @@ export function bkExpandLab(
  * Collapse the expanded lab workspace and restore normal inline layout,
  * exact prior document scroll, and prior input focus.
  */
-export function bkCollapseLab(): void {
+export function bkCollapseLab(fromNavigation = false): void {
 	const maximizedObjects = document.querySelectorAll<HTMLElement>(
 		".bk-object--maximized",
 	);
-	if (maximizedObjects.length === 0) return;
+	if (maximizedObjects.length === 0 && savedOverflow === null) return;
 
 	maximizedObjects.forEach((obj) => {
 		setPreviewActive(obj, false);
@@ -816,6 +823,12 @@ export function bkCollapseLab(): void {
 		}
 	});
 
+	if (labHistoryPushed && !fromNavigation) {
+		(window as any).__bk_suppress_router_popstate = true;
+		window.history.back();
+	}
+	labHistoryPushed = false;
+	for (const figure of modalAttributes.keys()) restoreModal(figure);
 	restoreHeader();
 	restoreBackground();
 	document.body.style.overflow = savedOverflow || "";
@@ -829,6 +842,12 @@ export function bkCollapseLab(): void {
 		topbarBtn.classList.remove("is-active");
 	}
 
+	if (savedMainScroll !== null) {
+		const main = document.querySelector?.(".bk-main");
+		if (main) main.scrollTop = savedMainScroll;
+		savedMainScroll = null;
+	}
+
 	// Restore prior document scroll
 	if (savedScrollY !== null) {
 		const y = savedScrollY;
@@ -840,7 +859,7 @@ export function bkCollapseLab(): void {
 	if (savedFocusEl && typeof savedFocusEl.focus === "function") {
 		const el = savedFocusEl;
 		savedFocusEl = null;
-		el.focus();
+		if (el.isConnected !== false) el.focus({ preventScroll: true });
 	}
 }
 
@@ -973,6 +992,22 @@ export function bkWireWorkspace(): void {
 			}
 		}
 	}
+
+	document.addEventListener(
+		"click",
+		(event) => {
+			const target = event.target as Element;
+			if (
+				document.querySelector(".bk-object--maximized") &&
+				target.closest?.(".bk-topbar-breadcrumbs a, .bk-topbar-active-section")
+			) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				bkCollapseLab();
+			}
+		},
+		true,
+	);
 
 	// 2. Global click handling for expanded lab entry/exit affordances and inspector tabs
 	document.addEventListener("click", (e: MouseEvent) => {
@@ -1141,6 +1176,7 @@ export function bkWireWorkspace(): void {
 			if (
 				figure &&
 				e.key === "Tab" &&
+				!document.querySelector(".bk-sidebar") &&
 				figure.classList.contains("bk-object--maximized")
 			) {
 				const elements = focusableElements(figure);
@@ -1282,6 +1318,6 @@ export function bkWireWorkspace(): void {
 	});
 
 	window.addEventListener("bk-page-loaded", () => {
-		bkCollapseLab();
+		bkCollapseLab(true);
 	});
 }

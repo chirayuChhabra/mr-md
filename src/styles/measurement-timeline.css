@@ -5,8 +5,6 @@
 html[data-ui="neo"] .bk-sim-tabs { --inspector-radius: 2px; }
 html[data-ui="playful"] .bk-sim-tabs { --inspector-radius: 12px; }
 .bk-object--maximized .bk-sim-tablist {
-  display: grid !important;
-  grid-template-columns: 1fr 1.55fr 1.1fr;
   gap: 0;
   margin: 0;
   padding: 0 16px;
@@ -316,8 +314,8 @@ html[data-theme="dark"] .bk-timeline-menu-action--danger { color: #ff9393; }
 .bk-timeline-menu-question { padding: 6px; margin: 0; }
 .bk-object--maximized > .bk-graph-layer { z-index: 60 !important; }
 
-.bk-measurement-view-switch { display: flex; align-items: center; gap: 20px; margin: 0 0 12px; }
-.bk-measurement-view-switch button { padding: 0 0 6px; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: transparent; color: var(--muted); font: 400 12px/1.5 var(--font-sans); cursor: pointer; }
+.bk-measurement-view-switch { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; gap: 16px; border-bottom: 1px solid var(--line); }
+.bk-measurement-view-switch button { min-width: 0; min-height: 44px; padding: 8px 4px; border: 0; border-bottom: 2px solid transparent; overflow-wrap: anywhere; border-radius: 0; background: transparent; color: var(--muted); font: 400 12px/1.5 var(--font-sans); cursor: pointer; }
 .bk-measurement-view-switch button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
 [data-measurement-panel][hidden] { display: none; }
 .bk-custom-graph-item { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
@@ -344,6 +342,7 @@ html[data-theme="dark"] .bk-timeline-menu-action--danger { color: #ff9393; }
 :is(.bk-capture-name, .bk-timeline-rename, .bk-measurement-view-switch, .bk-timeline-toolbar) :is(button, input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .bk-object--maximized .bk-sim-stage .bk-steps-controls:has(.bk-capture-name) { z-index: 80; }
 
-.bk-measurement-view-switch { display: inline-flex; align-self: flex-start; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
-.bk-measurement-view-switch button { min-width: 64px; min-height: 32px; padding: 6px 12px; border: 0; border-radius: 5px; }
-.bk-measurement-view-switch button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px #0002; }
+/* Keep the measurement view available while the inspector scrolls. */
+.bk-measurement-navigation { position: sticky; top: -20px; z-index: 5; margin: -20px -20px 0; padding: 20px 20px 8px; background: var(--paper); }
+.bk-measurement-navigation .bk-measurement-view-switch { margin: 0; }
+.bk-measurement-navigation button { min-height: 44px; }

@@ -157,6 +157,12 @@ Here is a complete, coherent experiment demonstrating these capabilities in a da
 
 ![Damped Harmonic Oscillator](./sims/oscillator.js)
 
+The oscillator opts in with `"timeline": true` in its config and registers both
+`capture` and `restore` with `bkRegisterSnapshot`. Open Timeline, capture a frame,
+apply an impulse, then restore the frame to compare runs. Snapshots include the
+model parameters, displacement, velocity, simulation time, trajectory history,
+and impulse highlight. Restoring pauses playback; resuming continues the saved state.
+
 #### Control contract example
 
 A companion `.config.json` defines presets, actions, and typed tunables using collective `advancedControls`:
@@ -667,15 +673,14 @@ units come from the telemetry schema. Plot windows can move across the entire
 expanded lab, including the inspector, and can open in a separate browser tab.
 Use `measurements.initialTab: "graphs"` to open Measurements in the Graphs view.
 
-The camera button captures the rendered canvas or SVG scene alongside its exact
+Set `timeline: true` (or a timeline configuration object) to show Timeline. The camera appears in Timeline after the simulation registers both capture and restore handlers with `window.bkRegisterSnapshot`. The camera button captures the rendered canvas or SVG scene alongside its exact
 state. A **Saved to timeline** cue and thumbnail confirm the capture. Enter a
 name and choose **Save image** to download a PNG; the timeline entry uses the
 same name. Entries can be renamed later, and **Image** downloads the stored frame
 again. If image capture is unavailable, the exact state remains in Timeline and
 the naming form reports the image error.
 
-**Export** in Timeline downloads JSON containing the timeline, named snapshots,
-exact states, embedded PNG images, measurement schema, and plot definitions.
+**More → Export timeline** downloads timeline entries as CSV.
 
 ### Controls, graphs, and timeline captures
 

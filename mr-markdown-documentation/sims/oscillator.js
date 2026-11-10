@@ -26,6 +26,10 @@
   let impulseFlash = 0;
   let pointerInitialized = false;
 
+  sim.onPlaybackChange((playing) => {
+    if (playing && dragPointerId === null) isDragging = false;
+  });
+
   // Coordinate geometry for 1280 x 300 logical coordinate space
   const LOGICAL_WIDTH = 1280;
   const LOGICAL_HEIGHT = 300;
@@ -84,15 +88,7 @@
     impulseFlash = 0;
   });
 
-  window.bkRegisterSnapshot({
-    capture: () => ({ ...state, impulseFlash }),
-    restore: (saved) => {
-      Object.assign(state, saved);
-      impulseFlash = saved.impulseFlash;
-      isDragging = false;
-      dragPointerId = null;
-    },
-  });
+
 
   // React to host action button clicks (repeatable impulses and rest reset)
   window.addEventListener("bk:action", (event) => {
@@ -562,7 +558,7 @@
       ctx.fill();
     }
 
-    if (!window.__bkRestoring) window.bkTelemetry({
+    if (!window.__bkRestoring) sim.publishTelemetry({
       regime: regimeBadge,
       displacement: state.x,
       velocity: state.v,
@@ -572,6 +568,31 @@
 
     ctx.restore();
   }
+
+  // Preserve transient visuals so a restored frame matches its capture.
+  window.bkRegisterSnapshot({
+    capture: () => ({
+      ...state,
+      props: { ...window.__simProps },
+      impulseFlash,
+      isDragging,
+      lastDragX,
+    }),
+    restore: (snapshot) => {
+      const { props, impulseFlash: flash, isDragging: dragging, lastDragX: dragX, ...model } = snapshot;
+      Object.assign(state, model);
+      impulseFlash = flash;
+      // Pointer capture belongs to a live gesture, never to a historical frame.
+      if (dragPointerId !== null) {
+        const canvas = document.getElementById("c");
+        if (canvas.hasPointerCapture(dragPointerId)) canvas.releasePointerCapture(dragPointerId);
+      }
+      isDragging = dragging;
+      dragPointerId = null;
+      lastDragX = dragX;
+      lastDragTime = performance.now();
+    },
+  });
 
   // Register canvas loop with standard mr-md lifecycle
   window.bkSetup(LOGICAL_WIDTH, LOGICAL_HEIGHT, draw);

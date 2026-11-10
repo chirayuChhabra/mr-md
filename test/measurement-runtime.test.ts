@@ -12,7 +12,7 @@ test("measurement views persist while trial data, semantic events, badges and no
   ]},
   force:{label:"Force",unit:"N",graph:true,scene:"force"},
  };
- const dom=new JSDOM(`<figure id="trial" class="bk-object"><div class="bk-sim-workspace"><div class="bk-sim-stage"><div class="bk-embed-frame"><iframe></iframe></div></div>${renderInspectorTabs("trial","<p>Settings</p>",renderSimulationTelemetry("trial",schema),schema)}</div><script class="bk-sim-telemetry-schema" type="application/json">${JSON.stringify(schema)}</script><script class="bk-measurements-config" type="application/json">{"notifications":{"minInterval":60}}</script></figure>`,{pretendToBeVisual:true,url:"https://example.test/lesson"});
+ const dom=new JSDOM(`<figure id="trial" class="bk-object"><div class="bk-sim-workspace"><div class="bk-sim-stage"><div class="bk-embed-frame"><iframe></iframe></div></div>${renderInspectorTabs("trial","<p>Settings</p>",renderSimulationTelemetry("trial",schema),schema,true)}</div><script class="bk-sim-telemetry-schema" type="application/json">${JSON.stringify(schema)}</script><script class="bk-measurements-config" type="application/json">{"timeline":true,"notifications":{"minInterval":60}}</script></figure>`,{pretendToBeVisual:true,url:"https://example.test/lesson"});
  const {window}=dom;
  const names=["window","document","Element","HTMLElement","Node","CustomEvent","MutationObserver","requestAnimationFrame","cancelAnimationFrame","getComputedStyle"];
  const previous=new Map(names.map(name=>[name,(globalThis as any)[name]]));
