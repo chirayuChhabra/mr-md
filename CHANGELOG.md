@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conditional measurement colors and labels, threshold-based unread counts, and configurable event notifications with cooldowns and toast limits.
   - `measurements` startup configuration for visible guides, graph windows, initial inspector tab, notifications, and timeline options.
 - **Simulation Timeline and Snapshots**:
-  - Opt-in `timeline` configuration with automatic start, control-change, and measurement-event captures, plus a manual Capture button.
+  - Opt-in `timeline` configuration with automatic start, control-change, and measurement-event captures, plus a manual Capture button when exact snapshots are supported.
   - Exact state capture and restoration through `window.bkRegisterSnapshot`, with a restoration guard exposed as `window.__bkRestoring`.
   - Select saved moments to restore and pause the simulation; return with Back to live or continue from the restored state by resuming, changing a control, or interacting with the scene.
   - Linear capture history preserving saved moments after continuation and trimming later plot samples from the active run.
@@ -51,11 +51,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
 
 ### Fixed
+- Restore close controls, fullscreen breadcrumbs, navigation history, and lesson scroll position when leaving lab and world simulations.
+- Synchronize playback state when restoring simulation snapshots.
 - Wait for snapshot restoration to finish before continuing from a saved moment.
 - Improve syntax highlighting and line number contrast in light-mode code editors.
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Move timeline export into the More menu and keep measurement view controls visible.
+- Replace the oscillator example's canvas plots with host measurement graphs, add displacement, velocity direction, and near-critical damping states, and enable exact timeline snapshots.
 - Rename the simulation inspector's Controls tab to Settings, arrange measurements in aligned instrument rows, and add a separate Timeline tab.
 - Clear trial samples, timeline history, and notification state on reset while preserving graph layout, scene visibility, and the active inspector tab.
 - Streamlined sidebar header by eliminating duplicate document titles and redundant branding.
