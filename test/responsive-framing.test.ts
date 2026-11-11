@@ -7,7 +7,7 @@ import { stepsIframeDoc } from "../src/renderer/blocks/steps-iframe.js";
 
 
 for (const [kind, renderFrame] of [["block", iframeDoc], ["steps", stepsIframeDoc]] as const) {
- test(`${kind}: default canvas layout fills preview and expanded aspect ratios without distortion`, async () => {
+ test(`${kind}: explicit responsive canvas fills preview and expanded aspect ratios without distortion`, async () => {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"] });
   try {
    const page = await browser.newPage();
@@ -15,7 +15,7 @@ for (const [kind, renderFrame] of [["block", iframeDoc], ["steps", stepsIframeDo
    const source = `window.bkSetup(1280,720,(ctx,w,h,frame)=>{
     window.lastLayout={w,h,frame};
     ctx.fillStyle='#ff0000';ctx.fillRect(0,0,w,h);
-   });`;
+   }, {framing:'responsive'});`;
    await page.setContent(`<iframe srcdoc="${renderFrame(source,"{}")}" style="width:1200px;height:675px;border:0"></iframe>`);
    await page.waitForFunction(()=>!!(document.querySelector('iframe')!.contentWindow as any).lastLayout);
    for(const [width,height] of [[1200,675],[1200,900],[1500,600]]) {
@@ -53,10 +53,10 @@ test("QCD keeps pointer picking accurate after preview expands", async () => {
   await page.waitForFunction(()=>!!(document.querySelector('iframe')!.contentWindow as any).qcdState);
   for(const height of [675,1000]) {
    await page.$eval('iframe',(el,h)=>{el.style.height=h+'px';},height);
-   await page.waitForFunction(h=>{const win=document.querySelector('iframe')!.contentWindow as any;return win.document.querySelector('canvas').__bkLogicalH>=h/0.9375;},{},height);
+   await page.waitForFunction(h=>document.querySelector('iframe')!.getBoundingClientRect().height===h,{},height);
    const point=await page.$eval('iframe',el=>{
-    const win=el.contentWindow as any,canvas=win.document.querySelector('canvas'),q=win.qcdState().quarks[0],frame=el.getBoundingClientRect();
-    return {x:frame.x+q.x*canvas.__bkScale,y:frame.y+q.y*canvas.__bkScale};
+    const win=el.contentWindow as any,canvas=win.document.querySelector('canvas'),q=win.qcdState().quarks[0],frame=el.getBoundingClientRect(),rect=canvas.getBoundingClientRect();
+    return {x:frame.x+rect.left+q.x*rect.width/canvas.__bkLogicalW,y:frame.y+rect.top+q.y*rect.height/canvas.__bkLogicalH};
    });
    await page.mouse.move(point.x,point.y);
    await page.mouse.down();

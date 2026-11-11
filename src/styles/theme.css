@@ -7373,3 +7373,13 @@ body.bk-world-immersive .bk-sidebar {
 .bk-sim-exit-crumb { border: 0; padding: 4px 8px; background: transparent; font: inherit; cursor: pointer; }
 .bk-sim-exit-crumb:hover { color: var(--ink); }
 .bk-sim-exit-crumb:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* A scene without inspector content uses the entire workspace. Match the
+   iframe background so fixed-ratio canvases have a continuous surround. */
+.bk-object--maximized .bk-sim-workspace:not(:has(.bk-sim-inspector)) .bk-sim-stage,
+.bk-object--maximized .bk-sim-workspace:not(:has(.bk-sim-inspector)) .bk-sim-playback {
+ background: var(--bg);
+}
+.bk-object--maximized .bk-sim-workspace:not(:has(.bk-sim-inspector)) .bk-sim-playback {
+ border-top: 0;
+}

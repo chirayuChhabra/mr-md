@@ -1,6 +1,24 @@
 /** Shared 2D canvas and pointer contract for block and guided workspaces. */
 export function canvasFramingRuntime(defaultHeight = 500): string {
 	return `
+// Both setup forms use fixed logical dimensions unless framing is explicit.
+window.bkResolveSetup = function(widthOrDraw, heightOrOptions, drawOrOptions, maybeDraw) {
+  if (typeof widthOrDraw === "function") {
+    const options = heightOrOptions || {};
+    const width = options.width === undefined ? 800 : options.width;
+    const height = options.height === undefined ? 450 : options.height;
+    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+      throw new RangeError("bkSetup: width and height must be positive finite numbers");
+    }
+    return { width, height, draw: widthOrDraw, options: options };
+  }
+  return {
+    width: widthOrDraw,
+    height: heightOrOptions,
+    draw: typeof drawOrOptions === "function" ? drawOrOptions : maybeDraw,
+    options: (typeof drawOrOptions === "object" && drawOrOptions !== null) ? drawOrOptions : ((typeof maybeDraw === "object" && maybeDraw !== null) ? maybeDraw : {})
+  };
+};
 window.bkCanvasPoint = function(event, canvas) {
   const c = canvas || event.currentTarget || event.target;
   if (!c || typeof c.getBoundingClientRect !== "function") return { x: 0, y: 0 };
@@ -33,7 +51,7 @@ window.bkFitCanvas = function(c, requestedW, requestedH, options) {
   const w = requestedW || 800;
   const h = requestedH || ${defaultHeight};
   const opts = options || {};
-  const framing = opts.framing || opts.fit || (opts.bleed === false ? "contain" : "responsive");
+  const framing = opts.framing || opts.fit || (opts.bleed === false ? "contain" : "bleed");
   const isResponsive = framing === "responsive";
   const isBleed = framing === "bleed" || framing === "fill" || framing === "edge-to-edge" || isResponsive;
 
