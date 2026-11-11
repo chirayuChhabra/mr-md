@@ -160,39 +160,29 @@ prevent layout thrashing during 60 FPS animation loops. Quantities not yet
 published or undefined/null are displayed explicitly as `—` rather than fake
 zeros in the document-level Measurements inspector anchored below the global topbar.
 
-### `window.bkSetup(width, height, draw)`
+### `window.bkSetup(draw, options?)`
 
-Creates and fits the existing `#c` canvas, configures high-DPI rendering, and
-invokes:
+Use this form for new block and step simulations. It fixes logical dimensions at
+800 × 450; optionally pass `{ width, height }` for another fixed coordinate
+space. `bkCanvasPoint` maps input into that space. Keep physics in model units,
+separate from canvas and viewport dimensions, and check model state on resize.
 
-```js
-draw(context, logicalWidth, logicalHeight);
-```
+### Canvas framing and animation
 
-The callback initially draws once. The host starts and pauses continuous
-drawing by posting lifecycle messages as the frame is activated or leaves the
-viewport. Do not start another animation loop around `bkSetup`.
+Both `bkSetup(draw, options?)` and `bkSetup(width, height, draw, options?)`
+use fixed logical dimensions by default. The host scales the canvas uniformly
+to fit; it starts and pauses drawing with the workspace lifecycle. Do not start
+another animation loop.
 
-Default framing is responsive. The requested width and height establish the
-minimum logical drawing area. The harness uses one uniform scale and expands
-one callback dimension to match the available viewport. Lay out and clear the
-scene using the current callback dimensions on every draw. Do not capture those
-dimensions once in pointer listeners; use `bkCanvasPoint` for current coordinates.
-This contract is identical in inline previews and expanded block/step workspaces.
+Use `{ framing: "responsive" }` only when the scene intentionally adapts to
+viewport dimensions. The callback width or height can then change on resize.
+Keep physical state and force calculations in model units in every framing mode.
+Use `bkCanvasPoint` for input and verify state across resize and expansion.
 
-The fourth callback argument contains `width`, `height`, `viewportWidth`,
-`viewportHeight`, `originX`, `originY`, `windowWidth`, `windowHeight`, and `framing`.
-In default responsive framing the origins are zero and the viewport dimensions
-match the callback dimensions. Keep essential content inside a safe rectangle
-inset by at least 6% on every side. Include text, strokes, shadows, animation
-extent, and hit-target padding in layout bounds.
-
-For a diagram that must keep fixed logical coordinates, use
-`bkSetup(width, height, { framing: "contain" }, draw)`. It preserves the whole
-diagram with letterboxing. Explicit `framing: "bleed"` also keeps fixed callback
-dimensions, but exposes expanded background bounds through the fourth argument.
-Neither mode stretches or crops the diagram. Fixed legacy layouts cannot be
-reflowed automatically if they ignore the callback's available dimensions.
+Default bleed framing fills the viewport, centers the fixed logical scene, and
+provides viewport bounds in the fourth callback argument. Draw backgrounds with
+`ctx.fillRect(frame.originX, frame.originY, frame.viewportWidth, frame.viewportHeight)`.
+Use explicit contain framing only when letterboxing is desired.
 
 ### `window.bkCanvasPoint(event, canvas)`
 

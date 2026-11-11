@@ -49,7 +49,7 @@ To create a block simulation, define a script next to your lesson. `bkSetup` con
 
 ```javascript
 // mysim.js
-window.bkSetup(800, 450, (ctx, width, height) => {
+window.bkSetup((ctx, width, height) => {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = window.bkColor("accent");
   ctx.fillRect(40, 40, 80, 80);
@@ -63,6 +63,23 @@ and **Reset**. Closing pauses the model and restores the lesson position and foc
 reopening preserves control values and an explicit pause. Background lesson
 controls stay unavailable while the workspace is open. Escape also works from
 inside the simulation iframe.
+
+### A simulation without inspector controls
+
+This circular-motion example has no settings, measurements, or timeline. Expand it
+to see the scene use the full workspace, with Pause / Resume and Reset below it.
+The drawing keeps its proportions as the window changes size. Space around the
+scene shares its background.
+
+![Uniform circular motion](./sims/circular-motion.js)
+
+Its companion config only needs the presentation type:
+
+```json
+{ "type": "block" }
+```
+
+### Reset and lifecycle
 
 Reset restores authored props, clears measurements, and resets the model. Older
 scripts continue working: the host reloads their iframe to reset private state.
@@ -516,7 +533,8 @@ The solar-system example uses Three.js and external resources; it requires a net
 
 | API | Purpose |
 | --- | --- |
-| `bkSetup(width, height, draw)` | Set up a responsive 2D canvas and animation loop. |
+| `bkSetup(draw, options?)` | Set up a fixed logical drawing space and animation loop. |
+| `bkSetup(width, height, draw)` | Set up a fixed logical drawing space with the specified dimensions. |
 | `bkSetupWorld(draw)` | Set up a 2D world; the callback receives the context and world state. |
 | `bkColor(name)` | Read a theme color such as `accent`, `bg`, or `text`. |
 | `bkCanvasPoint(event, canvas)` | Convert pointer coordinates to canvas coordinates. |
@@ -534,17 +552,34 @@ mr-md manages layout, scaling, theme synchronization, and interaction infrastruc
 
 ### Canvas framing and Retina scaling
 
-Block and step simulations use a responsive canvas contract. The requested size is a minimum logical area. The host scales uniformly and expands callback `width` or `height` to fill available space without stretching:
+For new block and step simulations, use `bkSetup(draw)` for a fixed 800 × 450
+logical drawing space. Resizing changes its scale, not the callback dimensions.
+For a different fixed space, pass `{ width, height }` as the second argument:
 
 ```javascript
-window.bkSetup(800, 450, (ctx, width, height) => {
-  ctx.fillStyle = window.bkColor("bg");
-  ctx.fillRect(0, 0, width, height);
-  // Derive positions and safe bounds from the current width and height.
-});
+window.bkSetup((ctx, width, height) => {
+  // Draw model state in this fixed coordinate space.
+}, { width: 1200, height: 600 });
 ```
 
-A fixed diagram can opt into `{ framing: "contain" }` as the fourth argument to preserve exact logical dimensions and proportions with letterboxing. Explicit `{ framing: "bleed" }` preserves fixed logical coordinates while exposing extended background bounds (`frame.originX`, `frame.originY`, `frame.viewportWidth`, `frame.viewportHeight`) in the fourth callback argument.
+Keep physical state in model units and calculate forces from that state, not
+from viewport or screen pixels. Use `bkCanvasPoint` for pointer positions. Test
+that resizing and opening the workspace do not change the physical state.
+
+The numeric form `bkSetup(800, 450, draw)` also keeps its logical dimensions
+fixed. Both forms fill the viewport by default while keeping logical dimensions fixed.
+The fourth draw argument supplies `originX`, `originY`, `viewportWidth`, and
+`viewportHeight` for drawing backgrounds across the full viewport.
+
+For a layout that must expand with the viewport, opt in to responsive framing:
+
+```javascript
+window.bkSetup((ctx, width, height) => {
+  // Use the current dimensions for visual layout only.
+}, { framing: "responsive" });
+```
+
+Responsive callback dimensions may change when the viewport changes. Use `{ framing: "contain" }` only when a bounded canvas with letterboxing is desired.
 
 Canvas backing bitmaps scale automatically to `window.devicePixelRatio`. Pointer coordinates mapped with `window.bkCanvasPoint(event, canvas)` translate directly to current logical coordinates.
 

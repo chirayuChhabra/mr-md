@@ -290,8 +290,11 @@ window.bkSetup = function(requestedW, requestedH, loopFnOrOpts, maybeLoopFn) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  const loopFn = typeof loopFnOrOpts === "function" ? loopFnOrOpts : maybeLoopFn;
-  const options = (typeof loopFnOrOpts === "object" && loopFnOrOpts !== null) ? loopFnOrOpts : ((typeof maybeLoopFn === "object" && maybeLoopFn !== null) ? maybeLoopFn : {});
+  const setup = window.bkResolveSetup(requestedW, requestedH, loopFnOrOpts, maybeLoopFn);
+  requestedW = setup.width;
+  requestedH = setup.height;
+  const loopFn = setup.draw;
+  const options = setup.options;
   if (typeof loopFn !== "function") return;
 
   let loopId = null;

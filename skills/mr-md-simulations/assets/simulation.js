@@ -16,8 +16,8 @@ const state = {
 
 let initialized = false;
 
-const LOGICAL_WIDTH = 1280;
-const LOGICAL_HEIGHT = 720;
+const LOGICAL_WIDTH = 800;
+const LOGICAL_HEIGHT = 450;
 const viewport = { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
 const SAFE_INSET = 80;
 const MARKER_RADIUS = 26;
@@ -188,5 +188,5 @@ function draw(context, width, height) {
   drawMarker(context, ui, pulse);
 }
 
-window.bkSetup(LOGICAL_WIDTH, LOGICAL_HEIGHT, draw);
+window.bkSetup(draw);
 
