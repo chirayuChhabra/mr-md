@@ -1,5 +1,6 @@
 import { canvasFramingRuntime } from "./canvas-framing.js";
 import {
+	pausedInteractionRuntime,
 	simulationAuthoringRuntime,
 	workspaceKeyboardBridge,
 } from "./simulation-runtime.js";
@@ -48,6 +49,7 @@ window.__loop = false;
 window.bkSetupCalled = false;
 ${simulationAuthoringRuntime}
 ${snapshotRuntimeCode}
+${pausedInteractionRuntime}
 ${workspaceKeyboardBridge}
 window.__bkTheme = { colors: {}, theme: "light", palette: "ink", ui: "standard" };
 window.__bkStepCallbacks = [];

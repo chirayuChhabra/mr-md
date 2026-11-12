@@ -104,7 +104,8 @@ window.bkSetup(800, 450, (ctx, width, height) => {
 
 `sim.deltaTime()` returns seconds, zero while paused, and caps long delays at
 0.1 seconds. Call it once per draw and pass that value to model updates. A draw
-can occur while paused to refresh a changed control, theme, or viewport; drawing
+can occur while paused to refresh a pointer or keyboard interaction, changed
+control, theme, or viewport; drawing
 must not itself advance the model or append history. Reset all evolving state,
 including elapsed time, traces, drag state, and completion guards.
 
@@ -635,9 +636,10 @@ tab preserves each message, observed value, and time after the notification
 disappears.
 
 Publish `time` in seconds alongside the measurements to timestamp events and
-graphs in simulation time. Otherwise, time is measured from the host's last
-reset. Graphs keep a bounded, progressively sampled record of the current run
-and support multiple framework-owned floating windows. Drag each header anywhere
+graphs in simulation time, including after restoring a saved state. Otherwise,
+the host uses elapsed time and rebases it to the saved time when playback
+continues. Graphs retain the current run's recorded samples and support multiple
+framework-owned floating windows. Drag each header anywhere
 in the expanded viewport, including over the inspector. Minimize retains a live
 readout; Maximize opens a separate browser tab with selectable graphs side by
 side. The tab receives live samples while its source remains open, and retains
@@ -699,6 +701,40 @@ window.addEventListener("message", (event) => {
 
 See `playground/measurements-lab/spring-lab.md` for a spring experiment with a
 draggable mass, live physical controls, and spatial measurement guides.
+
+### User interactions on graphs
+
+BK records pointer and keyboard interaction periods and labels changes made
+through host controls, presets, and actions. Graphs draw these samples with an
+amber dashed line. Time graphs also shade the interaction interval; paused
+edits appear as a narrow band at the unchanged simulation time. The normal
+trace resumes with automatic updates after the interaction ends. Hover over
+an annotated sample to read its label. Custom X/Y plots use the same labeled
+segments without treating their X axis as a time interval.
+
+These labels are saved with measurement history and return when a saved state
+is opened. They identify user input during that interval, rather than attributing
+all later simulation behavior to the input. Older saved histories have no labels.
+
+Canvas and DOM scenes can name their automatic pointer interactions with
+`data-bk-interaction-label`, for example:
+
+```js
+document.querySelector("canvas").setAttribute("data-bk-interaction-label", "Cart dragged");
+```
+
+For a custom interaction, begin a labeled interval and call its returned cleanup
+when the direct edit ends, before automatic behavior resumes:
+
+```js
+const endInteraction = window.bkBeginInteraction?.("Particle repositioned");
+try {
+  particle.x = targetX;
+  particle.y = targetY;
+} finally {
+  endInteraction?.();
+}
+```
 
 Within **Measurements**, switch between **Stats** and **Graphs**. Graphs lists
 author-defined lesson plots and provides X/Y
@@ -771,27 +807,30 @@ Set `timeline: true` to enable snapshot history and the host Capture button. Dec
 adds a plot against time. For a phase plot, use
 `graph: { "x": { "key": "displacement" } }` on the velocity measurement.
 
-`timeline: true` enables snapshot history and the Capture button. Start and
-control-change snapshots are automatic. The present state uses the latest
-available capture. Use `timeline: { "capture": false }` to hide the manual
-Capture button, or `timeline: false` to disable history.
+`timeline: true` enables the Saved tab, an initial state, and the Save moment
+button. Use `timeline: { "capture": false }` to hide the manual button, or
+`timeline: false` to disable saved states. Telemetry `saveStates` rules define
+named automatic saves. Measurement notifications remain in the Events view.
 
-Measurement `notifications` also define automatic captures. `toast: false`
-records the event silently. Readers select a node to restore its state.
+Selecting a saved state restores its exact simulation state and pauses playback.
+Graphs show the measurements recorded up to that saved time. Each saved state
+contains its own copy of the measurement history and stays unchanged when the
+simulation continues.
 
-Selecting a saved moment restores its exact state and pauses the simulation.
-**Back to live** returns to the state preserved before inspection. Resuming
-playback, changing a control, or interacting with the scene continues from the
-restored state on the same timeline. Unchanged controls keep inspection active.
+**Live** freezes while a saved state is being inspected. Returning to Live
+restores the working run and graph history at the point you left. It resumes
+only if it was playing before inspection; a deliberately paused Live run stays
+paused. Pressing Play while viewing a saved state copies that state's
+simulation state and history into Live, then appends new measurements from that
+point. This replaces the previous Live continuation. Interacting with a saved
+scene copies it into Live while keeping playback paused. Dragged objects redraw
+immediately and stay where released until Play resumes automatic motion.
 
-Saved captures remain available after continuation. New captures appear at the
-top in recording order, with Start at the bottom. Their simulation times may
-move backward after a restore. Plot samples after the restored time are removed
-from the active run when it continues, so plots follow that run's measurements.
-
-Timeline snapshots and sample histories stay in memory for the current trial.
-Reset (`R`) or a page reload clears that history. Open graphs, selected scene
-guides, and the active tab persist across resets in session storage.
+Saved states and their histories are stored on this device and survive resets
+and page reloads. Reset (`R`) clears the current Live run's measurements. Open
+graphs, selected scene guides, and the active tab persist across resets in
+session storage. Older saved states created without measurement history can
+restore their simulation state, but cannot recover the missing measurements.
 
 ### Simulation snapshot registration and author contract
 
@@ -903,6 +942,42 @@ Setting `advanced: false` on a specific tunable explicitly overrides the collect
 ### Block previews and steps coexistence
 
 Both block and step simulations render inline still previews and expand into the shared full-window modal workspace. Steps simulations retain their guided milestone navigation, target badges, instructions, and hints without receiving duplicate block playback controls. Trial reset resets top-level props plus step `initialProps` in place, preserving student progress and narration across trials.
+
+
+### Automatically saved states
+
+With `"timeline": true`, the Saved tab keeps states captured by the camera. Each
+state includes its screenshot, settings, and exact simulation state. Clicking a
+card restores it paused; Play continues from that point. Saving never pauses the
+running simulation. Names can be edited, states can be deleted with Undo, and
+screenshots can be downloaded from their cards. Initial state stays at the bottom.
+
+Authors can also save a named state when a published measurement meets a condition:
+
+```json
+{
+  "timeline": true,
+  "telemetry": {
+    "time": {
+      "label": "Time",
+      "unit": "s",
+      "saveStates": [
+        {
+          "id": "five-seconds",
+          "name": "At five seconds",
+          "when": { "op": "gte", "value": 5 }
+        }
+      ]
+    }
+  }
+}
+```
+
+A rule saves once per run by default. Set `"once": false` to save whenever the
+condition changes from false to true, and use `"cooldown"` to set a minimum gap
+in seconds. Automatic saves include screenshots and leave playback running.
+The simulation must register exact capture and restore handlers with
+`bkRegisterSnapshot`. Saves remain on this device across page refreshes.
 
 ## AI-assisted authoring
 
