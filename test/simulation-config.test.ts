@@ -179,3 +179,11 @@ test("supports concise timeline config with capture default and top-level normal
 		expect(() => validateSimulationConfig(invalid as any)).toThrow(SimulationConfigError);
 	}
 });
+
+test("validates author-defined saved-state conditions and duplicate ids", () => {
+ const rule={id:"checkpoint",name:"Five seconds",when:{op:"gte",value:5}};
+ const config=validateSimulationConfig({timeline:true,telemetry:{time:{saveStates:[rule]}}},"saved.config.json");
+ expect(config.telemetry?.time.saveStates?.[0].name).toBe("Five seconds");
+ expect(()=>validateSimulationConfig({telemetry:{time:{saveStates:[rule,rule]}}},"saved.config.json")).toThrow("Duplicate saved-state rule id");
+ expect(()=>validateSimulationConfig({telemetry:{time:{saveStates:[{...rule,cooldown:-1}]}}},"saved.config.json")).toThrow();
+});

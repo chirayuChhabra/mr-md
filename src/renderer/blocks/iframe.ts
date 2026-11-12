@@ -1,5 +1,6 @@
 import { canvasFramingRuntime } from "./canvas-framing.js";
 import {
+	pausedInteractionRuntime,
 	simulationAuthoringRuntime,
 	workspaceKeyboardBridge,
 } from "./simulation-runtime.js";
@@ -34,6 +35,7 @@ window.__isWorld=${isWorld ? "true" : "false"};
 window.bkSetupCalled = false;
 ${simulationAuthoringRuntime}
 ${snapshotRuntimeCode}
+${pausedInteractionRuntime}
 ${isWorld ? "" : workspaceKeyboardBridge}
 window.__bkTheme = { colors: {}, theme: "light", palette: "ink", ui: "standard" };
 window.bkThemeMode = function() {

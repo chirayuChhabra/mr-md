@@ -28,6 +28,7 @@ import {
 	createMeasurementTimeline,
 	type MeasurementTimelineEntry,
 } from "./measurement-timeline.js";
+import { measurementInteractionSchema } from "./saved-experiments-store.js";
 import { bkApplyPropsToControls } from "./simulation.js";
 import {
 	bkSelectInspectorTab,
@@ -113,6 +114,9 @@ export interface PendingRestoreRequestEntry {
 }
 
 interface MeasurementRuntime {
+	sampleSequence?: number;
+	userInteractions?: Map<string, { id: string; label: string }>;
+	pendingInteraction?: { id: string; label: string };
 	figure: HTMLElement;
 	schema: SimulationTelemetry;
 	config: SimulationMeasurementsConfig;
@@ -460,7 +464,7 @@ function syncCaptureButtonState(r: MeasurementRuntime): void {
 		Boolean(r.timeline?.isAtPast?.());
 	const isUnsupported = r.supportsExactSnapshot !== true;
 	const isPending = Boolean(r.inFlightManualCapture);
-	const disabled = isInspecting || isUnsupported || isPending;
+	const disabled = isUnsupported || isPending || r.isRestoringSnapshot;
 
 	const buttons = r.figure.querySelectorAll<HTMLButtonElement>(
 		"[data-bk-capture-snapshot]",
@@ -473,13 +477,11 @@ function syncCaptureButtonState(r: MeasurementRuntime): void {
 			btn.title = "Capturing snapshot...";
 		} else {
 			btn.removeAttribute("aria-busy");
-			if (isInspecting) {
-				btn.title = "Cannot capture while inspecting snapshot";
-			} else if (isUnsupported) {
+			if (isUnsupported) {
 				btn.title =
 					"Exact snapshot capture requires simulation opt-in (window.bkRegisterSnapshot)";
 			} else {
-				btn.title = "Capture snapshot";
+				btn.title = "Save moment";
 			}
 		}
 	}
@@ -487,106 +489,29 @@ function syncCaptureButtonState(r: MeasurementRuntime): void {
 
 function ensureCaptureButton(r: MeasurementRuntime): void {
 	if (!r.timeline || r.config.timeline?.capture === false) return;
-	const nav = r.figure.querySelector<HTMLElement>(".bk-timeline-toolbar");
-	if (nav && !nav.querySelector("[data-bk-capture-snapshot]")) {
+	const nav = r.figure.querySelector<HTMLElement>(
+		".bk-sim-playback, .bk-sim-stage > .bk-steps-controls, .bk-sim-stage",
+	);
+	if (nav && !r.figure.querySelector("[data-bk-capture-snapshot]")) {
 		const btn = document.createElement("button");
 		btn.type = "button";
 		btn.className = "bk-steps-btn bk-sim-capture-btn";
 		btn.setAttribute("data-bk-capture-snapshot", "");
-		btn.setAttribute("aria-label", "Capture snapshot");
-		btn.title = "Capture snapshot";
+		btn.setAttribute("aria-label", "Save moment");
+		btn.title = "Save moment";
 		btn.disabled = true;
-		btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="bk-sr-only">Capture snapshot</span>`;
-		nav.prepend(btn);
+		btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="bk-sr-only">Save moment</span>`;
+		nav.append(btn);
 	}
 	syncCaptureButtonState(r);
 }
 
 function offerSnapshotSave(
 	r: MeasurementRuntime,
-	snapshot: SimulationSnapshot,
-	imageError?: string,
+	_snapshot: SimulationSnapshot,
+	_imageError?: string,
 ) {
-	r.figure.querySelector<HTMLFormElement>(".bk-capture-name")?.requestSubmit();
-	const doc = r.figure.ownerDocument;
-	const form = doc.createElement("form");
-	form.className = "bk-capture-name";
-	form.setAttribute("aria-label", "Save snapshot image");
-	const cue = doc.createElement("p");
-	cue.className = "bk-capture-saved";
-	cue.setAttribute("role", "status");
-	cue.textContent = "Saved to timeline";
-	const label = doc.createElement("label");
-	label.textContent = "Name";
-	const input = doc.createElement("input");
-	input.name = "snapshot-name";
-	input.maxLength = 100;
-	input.value = `Snapshot ${Number(snapshot.time.toFixed(2))} s`;
-	input.setAttribute("aria-label", "Snapshot name");
-	label.append(input);
-	const actions = doc.createElement("div");
-	actions.className = "bk-capture-name-actions";
-	const save = doc.createElement("button");
-	save.type = "submit";
-	save.textContent = snapshot.imageDataUrl ? "Save image" : "Save name";
-	const dismiss = doc.createElement("button");
-	dismiss.type = "button";
-	dismiss.textContent = "×";
-	dismiss.setAttribute("aria-label", "Dismiss snapshot naming");
-	actions.append(save, dismiss);
-	form.append(cue, label, actions);
-	if (!snapshot.imageDataUrl) {
-		const error = doc.createElement("p");
-		error.className = "bk-capture-image-error";
-		error.textContent =
-			imageError || "This scene could not be captured as an image.";
-		form.append(error);
-	}
-	const finish = () => {
-		const name =
-			input.value.trim() || input.defaultValue || `Snapshot ${snapshot.time} s`;
-		r.timeline?.renameSnapshot(snapshot.id, name);
-		if (snapshot.imageDataUrl) {
-			try {
-				downloadSnapshotImage(doc, snapshot.imageDataUrl, name);
-			} catch {
-				cue.textContent =
-					"Image download failed. Try Download image in Timeline.";
-				return;
-			}
-		}
-		form.remove();
-		r.figure
-			.querySelector<HTMLElement>("[data-bk-capture-snapshot]")
-			?.focus({ preventScroll: true });
-	};
-	form.addEventListener("submit", (event) => {
-		event.preventDefault();
-		finish();
-	});
-	dismiss.addEventListener("click", finish);
-	form.addEventListener("keydown", (event) => {
-		if (event.key !== "Escape") return;
-		event.preventDefault();
-		event.stopPropagation();
-		finish();
-		r.figure.querySelector<HTMLElement>("[data-bk-capture-snapshot]")?.focus();
-	});
-	(r.figure.querySelector(".bk-sim-playback") || r.figure).append(form);
-	for (const button of r.figure.querySelectorAll<HTMLElement>(
-		"[data-bk-capture-snapshot]",
-	))
-		button.dataset.saved = "true";
-	const timer = setTimeout(() => {
-		for (const button of r.figure.querySelectorAll<HTMLElement>(
-			"[data-bk-capture-snapshot]",
-		))
-			delete button.dataset.saved;
-		r.timers.delete(timer);
-	}, 2200);
-	r.timers.add(timer);
-	input.focus({ preventScroll: true });
-	input.select();
+	bkSelectInspectorTab(r.figure, "timeline");
 }
 
 function exportTimeline(r: MeasurementRuntime) {
@@ -631,21 +556,77 @@ function exportTimeline(r: MeasurementRuntime) {
 	}
 }
 
-function captureManualSnapshot(r: MeasurementRuntime): void {
+function markUserChange(r: MeasurementRuntime, label: string) {
+	r.pendingInteraction = {
+		id: snapshotRequestId(),
+		label: label.trim().slice(0, 120) || "User change",
+	};
+}
+
+function currentInteraction(r: MeasurementRuntime) {
+	return (
+		Array.from(r.userInteractions?.values() || []).at(-1) ||
+		r.pendingInteraction
+	);
+}
+
+function captureMeasurementHistory(
+	r: MeasurementRuntime,
+	time = r.time,
+	values = r.values,
+): Record<string, MeasurementGraphPoint[]> {
+	r.sampleSequence = (r.sampleSequence || 0) + 1;
+	const sampleId = r.sampleSequence;
+	const history = Object.fromEntries(
+		Object.entries(r.samples || {}).map(([key, points]) => [
+			key,
+			points
+				.filter((point) => point.time <= time)
+				.map((point) => ({ ...point })),
+		]),
+	);
+	for (const spec of [...(r.specs || []), ...(r.historySpecs || [])]) {
+		const x = spec.xAxis.key === "time" ? time : values[spec.xAxis.key];
+		const y = values[spec.yKey || spec.key];
+		if (
+			typeof x !== "number" ||
+			!Number.isFinite(x) ||
+			typeof y !== "number" ||
+			!Number.isFinite(y)
+		)
+			continue;
+		history[spec.key] ||= [];
+		const points = history[spec.key];
+		const last = points.at(-1);
+		if (last?.time === time && last.x === x && last.y === y) continue;
+		const interaction =
+			currentInteraction(r) ||
+			(r.latest[spec.key]?.time === time
+				? r.latest[spec.key]?.interaction
+				: undefined);
+		points.push({
+			time,
+			x,
+			y,
+			sampleId,
+			branchId: r.timeline?.getActiveBranchId() || "main",
+			...(interaction ? { interaction: { ...interaction } } : {}),
+		});
+	}
+	return history;
+}
+
+function captureManualSnapshot(
+	r: MeasurementRuntime,
+	options: { name?: string; automatic?: boolean } = {},
+): boolean {
 	if (
 		!r.timeline ||
-		r.config.timeline?.capture === false ||
+		(!options.automatic && r.config.timeline?.capture === false) ||
 		r.supportsExactSnapshot !== true
 	)
-		return;
-	if (
-		r.figure.dataset.bkSnapshotViewing === "true" ||
-		r.figure.getAttribute("data-snapshot-viewing") === "true" ||
-		r.timeline.isAtPast?.()
-	) {
-		return;
-	}
-	if (r.inFlightManualCapture) return;
+		return false;
+	if (r.inFlightManualCapture || r.isRestoringSnapshot) return false;
 
 	r.inFlightManualCapture = true;
 	syncCaptureButtonState(r);
@@ -658,13 +639,17 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 		simId: r.figure.id,
 		time: captureTime,
 		timestamp: Date.now(),
-		label: "Saved snapshot",
+		label:
+			options.name ||
+			`Saved state ${Math.max(0, ...(r.timeline?.getSavedMoments() || []).map((moment) => Number(/^Saved state (\d+)$/.exec(moment.name)?.[1]) || 0)) + 1}`,
 		props: r.controlValues ? Object.fromEntries(r.controlValues) : {},
 		telemetry: { ...r.values },
+		measurementHistory: captureMeasurementHistory(r),
 		isExact: false,
 	};
 	const entry: MeasurementTimelineEntry = {
-		title: "Saved snapshot",
+		title: snapshot.label,
+		nameOnSave: !options.automatic,
 		time: captureTime,
 		kind: "snapshot",
 		tone: "neutral",
@@ -690,7 +675,7 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 				r.inFlightManualCapture = false;
 				syncCaptureButtonState(r);
 				if (response.cancelled) {
-					return;
+					return false;
 				}
 				if (response.success && response.isExact) {
 					snapshot.isExact = true;
@@ -710,12 +695,18 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 					if (response.props && typeof response.props === "object") {
 						snapshot.props = { ...response.props };
 					}
+					snapshot.measurementHistory = captureMeasurementHistory(
+						r,
+						snapshot.time,
+						snapshot.telemetry,
+					);
 					// Branch-bound guard (Gap 3):
 					const currentActiveBranchId = r.timeline?.getActiveBranchId?.();
 					if (currentActiveBranchId === originatingBranchId) {
 						r.timeline?.record(entry);
 						markUnread(r, "timeline");
-						offerSnapshotSave(r, snapshot, response.imageError);
+						if (!options.automatic)
+							offerSnapshotSave(r, snapshot, response.imageError);
 					} else {
 						// Record against originating branch if present; do not corrupt active branch!
 						const allBranches = r.timeline?.getBranches?.() || [];
@@ -732,7 +723,8 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 							};
 							origBranch.entries.push(entryToSave);
 							r.timeline?.refreshLayout();
-							offerSnapshotSave(r, snapshot, response.imageError);
+							if (!options.automatic)
+								offerSnapshotSave(r, snapshot, response.imageError);
 							r.timeline?.showFeedback?.(
 								"Snapshot recorded to originating branch",
 								"neutral",
@@ -771,6 +763,7 @@ function captureManualSnapshot(r: MeasurementRuntime): void {
 			});
 		}
 	}
+	return true;
 }
 
 function rememberBranchSamples(r: MeasurementRuntime) {
@@ -793,8 +786,20 @@ function restoreBranchSamples(r: MeasurementRuntime, branchId: string) {
 	r.sampleBranchId = branchId;
 }
 
-function handleBranchingInteraction(r: MeasurementRuntime, reason?: string) {
-	if (r.isRestoringSnapshot || !r.timeline?.isAtPast()) return;
+function handleBranchingInteraction(
+	r: MeasurementRuntime,
+	reason?: string,
+	resumePlayback = true,
+) {
+	if (!r.isRestoringSnapshot && r.timeline?.isAtPast()) {
+		if (resumePlayback) bkSetLabPlayback(r.figure, true);
+		else
+			r.figure.dispatchEvent(
+				new CustomEvent("bk:snapshot-continue", { bubbles: true }),
+			);
+		return;
+	}
+	if (r.isRestoringSnapshot || !r.timeline?.canBranch()) return;
 	const forkTime = r.time;
 	rememberBranchSamples(r);
 	const newBranchId = r.timeline.branchOnContinuation(reason);
@@ -827,10 +832,12 @@ function handleBranchingInteraction(r: MeasurementRuntime, reason?: string) {
 			);
 		}
 		syncCaptureButtonState(r);
+		bkSetLabPlayback(r.figure, true);
 	}
 }
 
 function recordEvent(r: MeasurementRuntime, entry: MeasurementTimelineEntry) {
+	if (entry.kind !== "snapshot") return;
 	const snapshotId = `snap-${r.figure.id || "sim"}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 	const snapshot: SimulationSnapshot = {
 		id: snapshotId,
@@ -840,6 +847,7 @@ function recordEvent(r: MeasurementRuntime, entry: MeasurementTimelineEntry) {
 		label: entry.title,
 		props: Object.fromEntries(r.controlValues),
 		telemetry: { ...r.values },
+		measurementHistory: captureMeasurementHistory(r),
 		isExact: false,
 	};
 	entry.snapshot = snapshot;
@@ -926,10 +934,13 @@ async function restoreSimulationSnapshot(
 		}
 	}
 
+	const wasPlaying = r.figure.dataset.bkPlaybackState !== "paused";
 	// Mark paused by snapshot restore policy
 	r.figure.dataset.bkPausedSnapshot = "true";
 	bkSetLabPlayback(r.figure, false);
 	r.isRestoringSnapshot = true;
+	r.userInteractions?.clear();
+	delete r.pendingInteraction;
 
 	// Preserve the exact future before the first rewind, including a paused frame.
 	const isAlreadyInspecting =
@@ -961,6 +972,11 @@ async function restoreSimulationSnapshot(
 						id,
 						simId: r.figure.id,
 						label: "Present",
+						measurementHistory: captureMeasurementHistory(
+							r,
+							response.time ?? r.time,
+							response.telemetry || r.values,
+						),
 						timestamp: Date.now(),
 						time: Number.isFinite(response.time) ? response.time! : r.time,
 						props: response.props
@@ -1003,7 +1019,7 @@ async function restoreSimulationSnapshot(
 			return false;
 		}
 		r.latestPresentSnapshot = present;
-		r.timeline?.update(present.time, present.telemetry, false, present);
+		r.timeline?.update(present.time, present.telemetry, wasPlaying, present);
 	}
 
 	const restored = await new Promise<boolean>((resolve) => {
@@ -1082,10 +1098,25 @@ async function restoreSimulationSnapshot(
 	}
 	r.pendingControls.clear();
 
-	restoreBranchSamples(
-		r,
-		entry?.branchId || r.timeline?.getActiveBranchId() || "main",
+	// Older saves have no history. Never borrow samples from a different experiment.
+	r.samples = Object.fromEntries(
+		Object.entries(snapshot.measurementHistory || {}).map(([key, points]) => [
+			key,
+			points
+				.filter((point) => point.time <= snapshot.time)
+				.map((point) => ({ ...point })),
+		]),
 	);
+	r.sampleSequence = Object.values(r.samples).reduce(
+		(max, points) =>
+			points.reduce(
+				(value, point) => Math.max(value, point.sampleId || 0),
+				max,
+			),
+		0,
+	);
+	r.sampleBranchId = "main";
+
 	// Update host state to match restored snapshot
 	r.graphSnapshotTime = snapshot.time;
 	r.time = snapshot.time;
@@ -1110,6 +1141,14 @@ async function restoreSimulationSnapshot(
 				branchId: r.sampleBranchId,
 			};
 		}
+	}
+	// A saved run can predate the current authored graph definitions.
+	const restoredGraphs = graphData(r);
+	for (const spec of r.specs || []) {
+		if (!r.samples[spec.key]?.length && restoredGraphs[spec.key]?.length)
+			r.samples[spec.key] = restoredGraphs[spec.key].map((point) => ({
+				...point,
+			}));
 	}
 	if (snapshot.props && typeof snapshot.props === "object") {
 		const clonedProps = JSON.parse(JSON.stringify(snapshot.props));
@@ -1184,6 +1223,7 @@ async function restoreSimulationSnapshot(
 		});
 	}
 
+	r.graphs?.reset();
 	flushViews(r);
 
 	const doc =
@@ -1296,10 +1336,24 @@ function graphData(r: MeasurementRuntime) {
 			if (latest && points.at(-1)?.time !== latest.time) points.push(latest);
 			return points;
 		};
-		const source =
-			spec.yKey && spec.key.startsWith("custom:")
-				? pairGraphSamples(spec.xAxis.key, raw(spec.xAxis.key), raw(spec.yKey))
-				: r.samples[spec.key] || [];
+		const underlying = () => {
+			const ys = raw(spec.yKey || spec.key);
+			return spec.xAxis.key === "time"
+				? ys.map((point) => ({ ...point, x: point.time }))
+				: pairGraphSamples(spec.xAxis.key, raw(spec.xAxis.key), ys);
+		};
+		const recorded = r.samples[spec.key] || [];
+		let source = recorded;
+		if (!recorded.length || spec.key.startsWith("custom:")) {
+			const derived = underlying();
+			if (
+				derived.length &&
+				(!recorded.length ||
+					derived[0].time < recorded[0].time ||
+					derived.length >= recorded.length)
+			)
+				source = derived;
+		}
 		const points = source.filter(
 				(point) =>
 					typeof r.graphSnapshotTime !== "number" ||
@@ -1361,6 +1415,7 @@ function flushViews(r: MeasurementRuntime) {
 			label: "Present",
 			props: r.controlValues ? Object.fromEntries(r.controlValues) : {},
 			telemetry: { ...r.values },
+			measurementHistory: captureMeasurementHistory(r),
 			isExact: false,
 		};
 		const captureBranchId = r.timeline?.getActiveBranchId();
@@ -1377,6 +1432,11 @@ function flushViews(r: MeasurementRuntime) {
 				) {
 					freshSnapshot.time = response.time;
 				}
+				freshSnapshot.measurementHistory = captureMeasurementHistory(
+					r,
+					freshSnapshot.time,
+					freshSnapshot.telemetry,
+				);
 				if (
 					captureBranchId === r.timeline?.getActiveBranchId() &&
 					!r.isRestoringSnapshot &&
@@ -1417,6 +1477,7 @@ function flushViews(r: MeasurementRuntime) {
 				label: "Present",
 				props: r.controlValues ? Object.fromEntries(r.controlValues) : {},
 				telemetry: { ...r.values },
+				measurementHistory: captureMeasurementHistory(r),
 				isExact: false,
 			};
 		}
@@ -1554,6 +1615,9 @@ function resetRuntime(id: string) {
 	r.flushTimer = null;
 	r.started = Date.now();
 	r.hasStarted = false;
+	r.sampleSequence = 0;
+	r.userInteractions?.clear();
+	delete r.pendingInteraction;
 	r.time = 0;
 	r.values = Object.create(null);
 	r.previous = Object.create(null);
@@ -1647,7 +1711,9 @@ function processMeasurements(
 	r.time =
 		typeof r.values.time === "number" && Number.isFinite(r.values.time)
 			? r.values.time
-			: (Date.now() - r.started) / 1000;
+			: r.figure.dataset.bkPlaybackState === "paused"
+				? r.time
+				: (Date.now() - r.started) / 1000;
 	if (
 		!r.hasStarted &&
 		Object.keys(data).some((key) => Object.hasOwn(r.schema, key))
@@ -1661,6 +1727,7 @@ function processMeasurements(
 			label: "Start",
 			props: Object.fromEntries(r.controlValues),
 			telemetry: { ...r.values },
+			measurementHistory: captureMeasurementHistory(r),
 			isExact: false,
 		};
 		if (r.iframe?.contentWindow) {
@@ -1679,6 +1746,16 @@ function processMeasurements(
 					if (response.props && typeof response.props === "object") {
 						startSnapshot.props = { ...response.props };
 					}
+					startSnapshot.measurementHistory = captureMeasurementHistory(
+						r,
+						startSnapshot.time,
+						startSnapshot.telemetry,
+					);
+					r.timeline?.start(
+						startSnapshot.time,
+						startSnapshot.telemetry,
+						startSnapshot,
+					);
 				}
 			});
 			try {
@@ -1722,6 +1799,31 @@ function processMeasurements(
 			}
 		}
 		if (changed) markUnread(r, "telemetry", key);
+		for (const rule of item.saveStates || []) {
+			const ruleKey = `saved\0${key}\0${rule.id}`;
+			r.rules[ruleKey] ||= {
+				match: false,
+				fired: false,
+				last: -Infinity,
+			};
+			const prior = r.rules[ruleKey];
+			const match = matchesMeasurementCondition(value, rule.when);
+			if (!match) {
+				prior.match = false;
+				continue;
+			}
+			if (
+				!prior.match &&
+				(!prior.fired || rule.once === false) &&
+				Date.now() - prior.last >= (rule.cooldown ?? 0) * 1000
+			) {
+				if (captureManualSnapshot(r, { name: rule.name, automatic: true })) {
+					prior.match = true;
+					prior.fired = true;
+					prior.last = Date.now();
+				}
+			}
+		}
 		for (const rule of item.notifications || []) {
 			const ruleKey = `${key}\0${rule.id}`,
 				match = matchesMeasurementCondition(value, rule.when),
@@ -1753,6 +1855,9 @@ function processMeasurements(
 			prior.match = match;
 		}
 	}
+	const interaction = currentInteraction(r);
+	r.sampleSequence = (r.sampleSequence || 0) + 1;
+	const sampleId = r.sampleSequence;
 	for (const spec of [...r.specs, ...(r.historySpecs || [])]) {
 		const y = r.values[spec.yKey || spec.key],
 			x = spec.xAxis.key === "time" ? r.time : r.values[spec.xAxis.key];
@@ -1767,20 +1872,28 @@ function processMeasurements(
 			time: r.time,
 			x,
 			y,
+			sampleId,
 			branchId: r.timeline?.getActiveBranchId() || "main",
+			...(interaction ? { interaction: { ...interaction } } : {}),
 		};
 		r.latest[spec.key] = point;
 		r.samples[spec.key] ||= [];
 		const samples = r.samples[spec.key];
 		const last = samples.at(-1);
-		if (!last || r.time - last.time >= 0.05) {
+		const changed = last && (last.x !== x || last.y !== y);
+		const boundary = last?.interaction?.id !== interaction?.id;
+		if (
+			!last ||
+			r.time - last.time >= 0.05 ||
+			boundary ||
+			interaction ||
+			(changed && last.time === r.time)
+		) {
 			samples.push(point);
-			if (samples.length > 600)
-				r.samples[spec.key] = samples.filter(
-					(_, index) => index % 2 === 0 || index === samples.length - 1,
-				);
-		} else if (last.time === r.time) samples[samples.length - 1] = point;
+		} else if (last.time === r.time && !last.interaction)
+			samples[samples.length - 1] = point;
 	}
+	delete r.pendingInteraction;
 	scheduleViewUpdate(r);
 }
 
@@ -1990,9 +2103,23 @@ export function bkWireTelemetry(): void {
 		const r = runtime.get(simId);
 
 		if (event.data.type === "bk:scene-interaction") {
-			if (r && !r.isRestoringSnapshot && r.timeline?.isAtPast()) {
-				handleBranchingInteraction(r, "Moved in scene");
+			if (!r || r.isRestoringSnapshot) return;
+			if (event.data.phase === "end") {
+				const prior = r.userInteractions?.get(event.data.id);
+				r.userInteractions?.delete(event.data.id);
+				if (prior) r.pendingInteraction = prior;
+				return;
 			}
+			handleBranchingInteraction(r, "Moved in scene", false);
+			const parsed = measurementInteractionSchema.safeParse({
+				id: event.data.id || snapshotRequestId(),
+				label: event.data.label || "Scene interaction",
+			});
+			if (!parsed.success) return;
+			if (event.data.phase === "start") {
+				r.userInteractions ??= new Map();
+				r.userInteractions.set(parsed.data.id, parsed.data);
+			} else r.pendingInteraction = parsed.data;
 			return;
 		}
 
@@ -2086,8 +2213,8 @@ export function bkWireTelemetry(): void {
 		if (!event.data.data || typeof event.data.data !== "object") return;
 		if (
 			r &&
-			!r.isRestoringSnapshot &&
-			(r.figure.dataset.bkSnapshotViewing === "true" ||
+			(r.isRestoringSnapshot ||
+				r.figure.dataset.bkSnapshotViewing === "true" ||
 				r.figure.getAttribute("data-snapshot-viewing") === "true" ||
 				r.timeline?.isAtPast())
 		) {
@@ -2267,6 +2394,7 @@ export function bkInitTelemetry(): void {
 		if (history && r.config.timeline)
 			r.timeline = createMeasurementTimeline(history, {
 				schema,
+				storageKey: `${r.storageKey}:saved`,
 				config:
 					typeof r.config.timeline === "object" ? r.config.timeline : undefined,
 				getVisibleKeys: () => r.preferences.visible,
@@ -2285,6 +2413,7 @@ export function bkInitTelemetry(): void {
 				onRestoreSnapshot: (snapshot, entry) =>
 					restoreSimulationSnapshot(r, snapshot, entry),
 				canRestoreSnapshot: () => r.supportsExactSnapshot === true,
+				getPlaybackState: () => r.figure.dataset.bkPlaybackState !== "paused",
 			});
 		const notices = figure.querySelector(".bk-measurement-notifications");
 		if (notices) figure.append(notices);
@@ -2318,6 +2447,10 @@ export function bkInitTelemetry(): void {
 		r.iframe?.addEventListener("load", r.load);
 		r.graphs.onCursorChange((time) => r.timeline?.setInspectedTime(time));
 		r.click = (event: Event) => {
+			if ((event.target as Element).closest("[data-bk-back-live]")) {
+				void r.timeline?.returnToPresent();
+				return;
+			}
 			const action = (event.target as Element).closest<HTMLElement>(
 				"[data-bk-action], [data-bk-preset]",
 			);
@@ -2342,9 +2475,13 @@ export function bkInitTelemetry(): void {
 							r,
 							action.textContent?.trim() || "Preset changed",
 						);
+						markUserChange(r, action.textContent?.trim() || "Preset changed");
+						for (const [key, value] of Object.entries(presetProps))
+							r.controlValues.set(key, value);
 					}
 				} else if (!isDisabled) {
 					handleBranchingInteraction(r, action.textContent?.trim() || "Action");
+					markUserChange(r, action.textContent?.trim() || "Action");
 				}
 			}
 			const removePlot = (event.target as Element).closest<HTMLElement>(
@@ -2418,7 +2555,9 @@ export function bkInitTelemetry(): void {
 							?.querySelector("span")
 							?.textContent?.trim() || key;
 					handleBranchingInteraction(r, `${label} changed`);
+					markUserChange(r, `${label} changed`);
 				}
+				r.controlValues.set(key, val);
 			} else {
 				const presetSelect = (
 					event.target as Element
@@ -2440,6 +2579,9 @@ export function bkInitTelemetry(): void {
 					if (!arePropsEqual(r.controlValues, presetProps)) {
 						presetSelect.dataset.bkCurrentPreset = presetSelect.value;
 						handleBranchingInteraction(r, "Preset changed");
+						markUserChange(r, "Preset changed");
+						for (const [key, value] of Object.entries(presetProps))
+							r.controlValues.set(key, value);
 					}
 				}
 			}
@@ -2457,11 +2599,16 @@ export function bkInitTelemetry(): void {
 				typeof customEvent.detail.viewing === "boolean"
 			) {
 				if (customEvent.detail.viewing) {
+					r.figure.querySelector<HTMLFormElement>(".bk-capture-name")?.remove();
 					r.figure.dataset.bkSnapshotViewing = "true";
 					r.figure.setAttribute("data-snapshot-viewing", "true");
 				} else {
 					delete r.figure.dataset.bkSnapshotViewing;
 					r.figure.removeAttribute("data-snapshot-viewing");
+					delete r.graphSnapshotTime;
+					// Legacy simulations without telemetry time continue from the restored clock.
+					r.started = Date.now() - r.time * 1000;
+					r.graphs?.update(graphData(r));
 				}
 			}
 			r.graphs?.setCursor(
@@ -2470,12 +2617,12 @@ export function bkInitTelemetry(): void {
 			syncCaptureButtonState(r);
 		};
 		figure.addEventListener("bk:snapshot-view-change", r.snapshotViewListener);
-		r.continueListener = (e: Event) => {
-			const customEvent = e as CustomEvent<{ reason?: string }>;
-			handleBranchingInteraction(
-				r,
-				customEvent.detail?.reason || "Continuation",
-			);
+		r.continueListener = () => {
+			if (!r.timeline?.continueFromSnapshot()) return;
+			r.latestPresentSnapshot = undefined;
+			r.lastPresentCapture = 0;
+			delete r.graphSnapshotTime;
+			r.graphs?.update(graphData(r));
 		};
 		figure.addEventListener("bk:snapshot-continue", r.continueListener);
 		r.captureRequestListener = () => {
@@ -2486,6 +2633,16 @@ export function bkInitTelemetry(): void {
 			r.captureRequestListener,
 		);
 		r.observer = new MutationObserver((entries) => {
+			if (
+				figure.dataset.bkPlaybackState === "playing" &&
+				entries.some(
+					(entry) =>
+						entry.target === figure &&
+						entry.attributeName === "data-bk-playback-state",
+				)
+			) {
+				r.started = Date.now() - r.time * 1000;
+			}
 			if (
 				!entries.some(
 					(entry) =>

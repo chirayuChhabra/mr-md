@@ -560,7 +560,8 @@ slug: telemetry-test
 			expect(renderInspectorTabs("lab", "", telemetry)).not.toContain("bk-measurement-history");
 			const enabled = renderInspectorTabs("lab", "", telemetry, {}, true);
 			expect(enabled).toContain("bk-measurement-history");
-			expect(enabled).toContain("data-export-timeline");
+			expect(enabled).toContain("Saved");
+			expect(enabled).not.toContain("data-export-timeline");
 		});
 
 		test("renderInspectorTabs renders a Settings heading when no telemetry exists", () => {
