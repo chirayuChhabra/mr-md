@@ -87,7 +87,7 @@ describe("expanded simulation workspace", () => {
 					.classList.contains("is-interactive"),
 			).toBe(true);
 			expect(figure.querySelector("[data-bk-playback]")!.textContent).toBe(
-				"Resume",
+				"Play",
 			);
 			expect(messages).toContainEqual({ type: "bk:pause" });
 			bkCollapseLab();

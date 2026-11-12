@@ -58,6 +58,20 @@ function __bkCaptureSnapshotImage() {
         var style = window.getComputedStyle(element);
         return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 && rect.left < width && rect.top < height && style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity || 1) !== 0;
       };
+      // Capture scene bounds so viewport letterboxing does not become part of the image.
+      var encodeScene = function(rects) {
+        var left = Math.max(0, Math.min.apply(null, rects.map(function(r) { return r.left; })));
+        var top = Math.max(0, Math.min.apply(null, rects.map(function(r) { return r.top; })));
+        var right = Math.min(width, Math.max.apply(null, rects.map(function(r) { return r.right; })));
+        var bottom = Math.min(height, Math.max.apply(null, rects.map(function(r) { return r.bottom; })));
+        var cropped = document.createElement("canvas");
+        cropped.width = Math.max(1, Math.round((right - left) * scale));
+        cropped.height = Math.max(1, Math.round((bottom - top) * scale));
+        var cropContext = cropped.getContext("2d");
+        if (!cropContext) throw new Error("Image capture is unavailable in this browser.");
+        cropContext.drawImage(output, left * scale, top * scale, (right - left) * scale, (bottom - top) * scale, 0, 0, cropped.width, cropped.height);
+        return cropped.toDataURL("image/png");
+      };
       var canvases = Array.from(document.querySelectorAll("canvas")).filter(visible);
       canvases.sort(function(a, b) {
         return (parseInt(window.getComputedStyle(a).zIndex, 10) || 0) - (parseInt(window.getComputedStyle(b).zIndex, 10) || 0);
@@ -68,7 +82,7 @@ function __bkCaptureSnapshotImage() {
           ctx.globalAlpha = Number(window.getComputedStyle(canvas).opacity || 1);
           ctx.drawImage(canvas, rect.left, rect.top, rect.width, rect.height);
         }
-        resolve({ imageDataUrl: output.toDataURL("image/png") });
+        resolve({ imageDataUrl: encodeScene(canvases.map(function(canvas) { return canvas.getBoundingClientRect(); })) });
         return;
       }
       var scenes = Array.from(document.querySelectorAll("svg")).filter(visible);
@@ -93,7 +107,7 @@ function __bkCaptureSnapshotImage() {
         window.clearTimeout(imageTimer);
         try {
           ctx.drawImage(image, bounds.left, bounds.top, bounds.width, bounds.height);
-          resolve({ imageDataUrl: output.toDataURL("image/png") });
+          resolve({ imageDataUrl: encodeScene([bounds]) });
         } catch (_) {
           resolve({ imageError: "The scene image could not be saved because it contains restricted content." });
         }
@@ -420,14 +434,47 @@ window.addEventListener("message", function(event) {
   }
 });
 
-window.addEventListener("pointerdown", function() {
-  if (window.parent && window.parent !== window) {
-    try { window.parent.postMessage({ type: "bk:scene-interaction" }, "*"); } catch (_) {}
-  }
+var __bkInteractionSequence = 0;
+var __bkPointerInteractions = new Map();
+var __bkKeyInteractions = new Map();
+window.bkBeginInteraction = function(label) {
+  var id = "user-" + Date.now() + "-" + (++__bkInteractionSequence);
+  label = typeof label === "string" ? label.trim().slice(0, 120) : "";
+  label = label || "Scene interaction";
+  var send = function(phase) {
+    if (window.parent && window.parent !== window) {
+      try { window.parent.postMessage({ type: "bk:scene-interaction", phase: phase, id: id, label: label }, "*"); } catch (_) {}
+    }
+  };
+  send("start");
+  var ended = false;
+  return function() {
+    if (ended) return;
+    ended = true;
+    send("end");
+    if (typeof redrawPausedInteraction === "function") redrawPausedInteraction();
+  };
+};
+function __bkFinishInteraction(interactions, key) {
+  var end = interactions.get(key);
+  if (end) end();
+  interactions.delete(key);
+}
+window.addEventListener("pointerdown", function(e) {
+  __bkFinishInteraction(__bkPointerInteractions, e.pointerId);
+  var label = e.target && e.target.closest && e.target.closest("[data-bk-interaction-label]");
+  __bkPointerInteractions.set(e.pointerId, window.bkBeginInteraction(label && label.getAttribute("data-bk-interaction-label")));
 }, { capture: true, passive: true });
+for (var eventType of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  window.addEventListener(eventType, function(e) { __bkFinishInteraction(__bkPointerInteractions, e.pointerId); }, { capture: true, passive: true });
+}
 window.addEventListener("keydown", function(e) {
-  if (window.parent && window.parent !== window && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !["Tab", "Escape", "Shift", "Control", "Alt", "Meta"].includes(e.key)) {
-    try { window.parent.postMessage({ type: "bk:scene-interaction" }, "*"); } catch (_) {}
-  }
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || ["Tab", "Escape", " ", "Space", "Spacebar", "r", "R", "Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+  if (!__bkKeyInteractions.has(e.code || e.key)) __bkKeyInteractions.set(e.code || e.key, window.bkBeginInteraction("Keyboard interaction"));
 }, { capture: true, passive: true });
+window.addEventListener("keyup", function(e) { __bkFinishInteraction(__bkKeyInteractions, e.code || e.key); }, { capture: true, passive: true });
+window.addEventListener("blur", function() {
+  for (var key of __bkPointerInteractions.keys()) __bkFinishInteraction(__bkPointerInteractions, key);
+  for (var key of __bkKeyInteractions.keys()) __bkFinishInteraction(__bkKeyInteractions, key);
+});
 `;

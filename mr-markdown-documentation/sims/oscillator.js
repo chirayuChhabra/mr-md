@@ -139,7 +139,7 @@
 
       const targetX = (pt.x - EQUILIBRIUM_X) / METERS_TO_PIXELS;
       const clampedX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, targetX));
-      state.v = (clampedX - state.x) / dt;
+      state.v = sim.isPlaying ? (clampedX - state.x) / dt : 0;
       state.x = clampedX;
       lastDragX = pt.x;
       lastDragTime = now;
@@ -559,6 +559,7 @@
     }
 
     if (!window.__bkRestoring) sim.publishTelemetry({
+      time: state.time,
       regime: regimeBadge,
       displacement: state.x,
       velocity: state.v,

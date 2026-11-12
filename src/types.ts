@@ -430,6 +430,16 @@ export interface MeasurementState {
 	label?: string;
 }
 
+export interface SimulationSaveStateRule {
+	id: string;
+	name: string;
+	when: MeasurementCondition;
+	/** Save once per run by default; false saves on each new matching edge. */
+	once?: boolean;
+	/** Minimum seconds between saves for this rule. */
+	cooldown?: number;
+}
+
 export interface MeasurementNotification {
 	id: string;
 	when: MeasurementCondition;
@@ -450,6 +460,7 @@ export interface SimulationTelemetryItem {
 	display?: "metric" | "status" | "row";
 	states?: MeasurementState[];
 	notifications?: MeasurementNotification[];
+	saveStates?: SimulationSaveStateRule[];
 	graph?: boolean | MeasurementGraphOptions;
 	scene?: string;
 	changeThreshold?: number;
@@ -557,7 +568,22 @@ export interface SimulationSnapshotCapabilities {
 	reason?: string;
 }
 
+export interface SimulationInteraction {
+	id: string;
+	label: string;
+}
+
+export interface SimulationMeasurementPoint {
+	sampleId?: number;
+	interaction?: SimulationInteraction;
+	time: number;
+	x: number;
+	y: number;
+	branchId?: string;
+}
+
 export interface SimulationSnapshot<TState = unknown> {
+	measurementHistory?: Record<string, SimulationMeasurementPoint[]>;
 	imageDataUrl?: string;
 	id: string;
 	simId?: string;
@@ -593,7 +619,12 @@ export type SimulationIframeToHostMessage =
 	  }
 	| { type: "bk:mousemove"; clientX: number; clientY: number }
 	| { type: "bk:world-exit" }
-	| { type: "bk:scene-interaction" }
+	| {
+			type: "bk:scene-interaction";
+			phase?: "start" | "end";
+			id?: string;
+			label?: string;
+	  }
 	| {
 			type: "bk:snapshot-capabilities";
 			supported: boolean;

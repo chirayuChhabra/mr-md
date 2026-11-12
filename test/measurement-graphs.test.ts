@@ -523,3 +523,59 @@ test("comparison traces can be removed and Fit recalculates expanded bounds", ()
   expect(plot.__chartScale.ymax).toBeLessThan(50);
  } finally {workspace.dispose();dom.window.close();}
 });
+
+test("user interactions distinguish incoming segments and shade paused edits without changing automatic continuation", () => {
+ const dom=new JSDOM('<div id="plot"></div>');
+ const plot=dom.window.document.getElementById('plot')!;
+ const spec=measurementGraphSpecs({x:{label:'Position',graph:true}})[0];
+ const interaction={id:'drag-1',label:'Cart dragged <img src=x onerror=alert(1)>'};
+ const points=[{time:0,x:0,y:0,branchId:'main'},{time:1,x:1,y:1,branchId:'main'},
+  {time:1,x:1,y:3,branchId:'main',interaction},{time:1,x:1,y:4,branchId:'main',interaction},
+  {time:2,x:2,y:2,branchId:'main'}];
+ renderMeasurementGraph(plot,spec,points,{cursor:1});
+ const changed=plot.querySelector('.bk-chart-user-trace')!;
+ expect(changed).not.toBeNull();
+ expect(changed.getAttribute('points')!.split(' ')).toHaveLength(3);
+ expect(Number(plot.querySelector('.bk-chart-user-band')!.getAttribute('width'))).toBeGreaterThanOrEqual(4);
+ expect(plot.querySelector('.bk-chart-user-band title')?.textContent).toContain(interaction.label);
+ expect(plot.querySelector('.bk-chart-interaction-legend')?.textContent).toContain('User changes');
+ expect(plot.querySelectorAll('img')).toHaveLength(0);
+ const traces=plot.querySelectorAll('.bk-chart-trace');
+ expect(traces[traces.length-1].classList.contains('bk-chart-user-trace')).toBe(false);
+ expect(traces[traces.length-1].getAttribute('points')!.split(' ')).toHaveLength(2);
+ renderMeasurementGraph(plot,spec,points.slice(0,2));
+ expect(plot.querySelector('.bk-chart-user-trace')).toBeNull();
+ expect(plot.querySelector('.bk-chart-user-band')).toBeNull();
+ expect(plot.querySelector('.bk-chart-interaction-legend')).toBeNull();
+ dom.window.close();
+});
+
+test("interaction coloring works on custom axes without treating measurement ranges as time", () => {
+ const dom=new JSDOM('<div></div>');const plot=dom.window.document.querySelector('div')!;
+ const spec=measurementGraphSpecs({v:{label:'Velocity',graph:{x:{key:'position'}}}})[0];
+ const interaction={id:'drag',label:'Dragged'};
+ renderMeasurementGraph(plot,spec,[{time:0,x:2,y:0},{time:1,x:1,y:1,interaction},{time:2,x:0,y:3}],{cursor:1});
+ expect(plot.querySelector('.bk-chart-user-trace')).not.toBeNull();
+ expect(plot.querySelector('.bk-chart-user-band')).toBeNull();
+ expect(plot.querySelector('.bk-chart-readout')?.textContent).toContain('Dragged');
+ dom.window.close();
+});
+
+test("interaction traces never bridge experimental branches and remain visible in the graph tab", () => {
+ const dom=new JSDOM('<figure class="bk-object--maximized"></figure>',{pretendToBeVisual:true});
+ const popup=new JSDOM('',{pretendToBeVisual:true});
+ const figure=dom.window.document.querySelector('figure')!;
+ (dom.window as any).open=()=>popup.window;(popup.window as any).focus=()=>{};
+ const workspace=createMeasurementGraphWorkspace({figure,simId:'interaction-tab',specs:measurementGraphSpecs({x:{graph:true}}),initialWindows:[{key:'x'}],onWindowsChange:()=>{}});
+ try {
+  workspace.update({x:[{time:0,x:0,y:0,branchId:'before'}, {time:1,x:1,y:2,branchId:'after',interaction:{id:'drag',label:'Cart dragged'}}]});
+  workspace.flush();
+  const changed=figure.querySelector('.bk-chart-user-trace')!;
+  expect(changed.getAttribute('points')!.split(' ')).toHaveLength(1);
+  (figure.querySelector('[aria-label="Maximize graph"]') as HTMLElement).click();
+  expect(popup.window.document.querySelector('.bk-chart-user-trace')).not.toBeNull();
+  expect(popup.window.document.querySelector('.bk-chart-user-band')).not.toBeNull();
+  expect(popup.window.document.querySelector('.bk-chart-interaction-legend')?.textContent).toContain('User changes');
+  expect(popup.window.document.head.textContent).toContain('stroke-dasharray:6 4');
+ } finally { workspace.dispose();dom.window.close();popup.window.close(); }
+});
