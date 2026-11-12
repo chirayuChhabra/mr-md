@@ -2,11 +2,12 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import puppeteer from 'puppeteer';
 
-test('saved cards stay readable on mobile across themes and keyboard editing',async()=>{
+for (const hasTouch of [false, true]) {
+test(`saved cards stay readable on mobile across themes and keyboard editing (touch: ${hasTouch})`,async()=>{
  const bundle=await Bun.build({entrypoints:['src/client/measurement-timeline.ts'],target:'browser',format:'esm'});
  const browser=await puppeteer.launch({headless:true,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage']});
  try {
-  const page=await browser.newPage();await page.setViewport({width:390,height:844});
+  const page=await browser.newPage();await page.setViewport({width:390,height:844,hasTouch});
   await page.setContent(`<style>${readFileSync('src/styles/theme.css','utf8')+readFileSync('src/styles/measurement-timeline.css','utf8')}body{margin:0;padding:16px}#saved{width:300px;max-width:100%;box-sizing:border-box}</style><div id="saved"></div>`);
   await page.addScriptTag({content:(await bundle.outputs[0].text()).replace(/export\s*\{[\s\S]*?\};?\s*$/, "")+"\nwindow.__createSaved=createMeasurementTimeline;"});
   await page.evaluate(async()=>{
@@ -53,7 +54,9 @@ test('saved cards stay readable on mobile across themes and keyboard editing',as
   expect(await page.$eval('.bk-saved-card:first-child', e => e.getBoundingClientRect().height)).toBeLessThan(52);
   await page.mouse.move(380, 0);
   await page.focus('.bk-saved-toolbar button');
-  expect(await page.$eval('.bk-saved-card-actions', e => getComputedStyle(e).opacity)).toBe('0');
+  const hidesActionsUntilHover = await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches);
+  if (hasTouch) expect(hidesActionsUntilHover).toBe(false);
+  expect(await page.$eval('.bk-saved-card-actions', e => getComputedStyle(e).opacity)).toBe(hidesActionsUntilHover ? '0' : '1');
   await page.hover('.bk-saved-card:first-child');
   expect(await page.$eval('.bk-saved-card-actions', e => getComputedStyle(e).opacity)).toBe('1');
   await page.mouse.move(380, 0);
@@ -76,3 +79,5 @@ test('saved cards stay readable on mobile across themes and keyboard editing',as
   expect(await page.evaluate(()=>document.activeElement?.className)).toBe('bk-saved-open');
  }finally{await browser.close()}
 },20000);
+
+}

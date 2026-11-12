@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
 
 ### Fixed
+- Verify saved-card action visibility against pointer capabilities in browser tests, including touch devices and headless CI.
 - Redraw scene edits while paused without advancing simulation time.
 - Preserve samples recorded at the same simulation time when pairing custom graph axes.
 - Crop snapshot images to visible scene bounds.
