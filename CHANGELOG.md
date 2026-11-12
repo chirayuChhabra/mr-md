@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Persistent saved simulation states with screenshots, settings, exact state, and independent measurement histories stored in IndexedDB.
+- Named automatic saves through telemetry `saveStates` rules with per-run and cooldown options.
+- Labeled user interaction segments on time and custom X/Y graphs, preserved with saved histories.
 - **Measurement Graphs and Scene Guides**:
   - Stats and Graphs views with author-defined plots and learner-created X/Y plots from numeric telemetry.
   - Draggable, minimizable floating graph windows and a separate browser tab for comparing live plots, with bounded sample history.
@@ -15,11 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conditional measurement colors and labels, threshold-based unread counts, and configurable event notifications with cooldowns and toast limits.
   - `measurements` startup configuration for visible guides, graph windows, initial inspector tab, notifications, and timeline options.
 - **Simulation Timeline and Snapshots**:
-  - Opt-in `timeline` configuration with automatic start, control-change, and measurement-event captures, plus a manual Capture button when exact snapshots are supported.
+  - Opt-in `timeline` configuration with an initial state and manual Save moment button when exact snapshots are supported.
   - Exact state capture and restoration through `window.bkRegisterSnapshot`, with a restoration guard exposed as `window.__bkRestoring`.
   - Select saved moments to restore and pause the simulation; return with Back to live or continue from the restored state by resuming, changing a control, or interacting with the scene.
-  - Linear capture history preserving saved moments after continuation and trimming later plot samples from the active run.
-  - Named canvas and SVG captures with thumbnails and PNG downloads; JSON export including timeline entries, exact states, embedded images, measurement schema, and plot definitions.
+  - Independent saved measurement histories restored with each saved state.
+  - Named canvas and SVG captures with thumbnails and PNG downloads.
 - Spring measurements playground with draggable mass, physical controls, scene guides, graphs, and snapshot registration; expanded simulation authoring documentation.
 - Unified full-width topbar with single breadcrumb navigation (`[ ◨ ] Parent / Current`) and stationary sidebar toggle button across all themes.
 - **Full-Window Simulation Workspace & Inspector**:
@@ -51,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
 
 ### Fixed
+- Redraw scene edits while paused without advancing simulation time.
+- Preserve samples recorded at the same simulation time when pairing custom graph axes.
+- Crop snapshot images to visible scene bounds.
 - Restore close controls, fullscreen breadcrumbs, navigation history, and lesson scroll position when leaving lab and world simulations.
 - Synchronize playback state when restoring simulation snapshots.
 - Wait for snapshot restoration to finish before continuing from a saved moment.
@@ -58,10 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
-- Move timeline export into the More menu and keep measurement view controls visible.
+- Replace the Timeline inspector with Saved cards supporting rename, delete with Undo, image download, and return to Live.
+- Keep saved states across resets and reloads; continuing a saved state replaces Live while preserving the saved copy.
+- Move Save moment beside playback controls and use an icon-only Play button.
+- Keep measurement view controls visible.
 - Replace the oscillator example's canvas plots with host measurement graphs, add displacement, velocity direction, and near-critical damping states, and enable exact timeline snapshots.
-- Rename the simulation inspector's Controls tab to Settings, arrange measurements in aligned instrument rows, and add a separate Timeline tab.
-- Clear trial samples, timeline history, and notification state on reset while preserving graph layout, scene visibility, and the active inspector tab.
+- Rename the simulation inspector's Controls tab to Settings, arrange measurements in aligned instrument rows, and add a separate Saved tab.
+- Clear Live trial samples and notification state on reset while preserving graph layout, scene visibility, and the active inspector tab.
 - Streamlined sidebar header by eliminating duplicate document titles and redundant branding.
 - Converted sidebar toggle button into a clean, borderless icon with matching 24px height and vertical alignment with breadcrumbs across all themes (Standard, Neo, Playful).
 - Updated guided step simulations (`type: "steps"`) to integrate with the shared modal workspace, isolating trial parameter resets (`initialProps`) without reloading iframes.
