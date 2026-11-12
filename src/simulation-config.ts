@@ -49,6 +49,17 @@ const telemetry = z.record(
 				}),
 			)
 			.optional(),
+		saveStates: z
+			.array(
+				z.object({
+					id: z.string().min(1),
+					name: z.string().min(1).max(100),
+					when: condition,
+					once: z.boolean().optional(),
+					cooldown: z.number().finite().nonnegative().optional(),
+				}),
+			)
+			.optional(),
 		notifications: z
 			.array(
 				z.object({
@@ -219,6 +230,15 @@ export function validateSimulationConfig(
 	}
 	const issues: SimulationConfigIssue[] = [];
 	for (const [key, item] of Object.entries(config.telemetry ?? {})) {
+		const saveIds = new Set<string>();
+		for (const [index, rule] of (item.saveStates ?? []).entries()) {
+			if (saveIds.has(rule.id))
+				issues.push({
+					field: `telemetry.${key}.saveStates.${index}.id`,
+					message: "Duplicate saved-state rule id",
+				});
+			saveIds.add(rule.id);
+		}
 		const ids = new Set<string>();
 		for (const [index, notification] of (item.notifications ?? []).entries()) {
 			if (ids.has(notification.id))
