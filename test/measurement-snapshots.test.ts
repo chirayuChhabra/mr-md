@@ -216,6 +216,191 @@ test("security boundary: ignores messages from untrusted source or origin", () =
 	expect(parentMessages).toHaveLength(0);
 });
 
+test("timeline nodes show newest snapshots first", () => {
+	const doc = new JSDOM("<div></div>").window.document;
+	const container = doc.querySelector("div")!;
+	const schema: SimulationTelemetry = {
+		position: { label: "Position", unit: "m" },
+	};
+	const timeline = createMeasurementTimeline(container, { schema });
+
+	timeline.start(0, { position: 0 });
+	timeline.record({ title: "Event t=1", time: 1 });
+	timeline.record({ title: "Event t=2", time: 2 });
+	timeline.record({ title: "Event t=3", time: 3 });
+	timeline.update(5, { position: 50 }, true);
+
+	// Check DOM elements order
+	const children = Array.from(container.children) as HTMLElement[];
+	const presentIdx = children.findIndex((el) => el.dataset.kind === "present");
+	const eventsIdx = children.findIndex((el) =>
+		el.classList.contains("bk-timeline-events"),
+	);
+	const startIdx = children.findIndex((el) => el.dataset.kind === "start");
+
+	// Present must be at the top, events in the middle, start at the bottom!
+	expect(presentIdx).toBeLessThan(eventsIdx);
+	expect(eventsIdx).toBeLessThan(startIdx);
+
+	// Inside events: newest at top (t=3), then t=2, then t=1
+	const eventItems = Array.from(
+		container.querySelectorAll('.bk-snapshot-row:not([data-id="start"])'),
+	);
+	expect(eventItems).toHaveLength(3);
+	expect(eventItems[0].getAttribute("aria-label")).toContain("Event t=3");
+	expect(eventItems[1].getAttribute("aria-label")).toContain("Event t=2");
+	expect(eventItems[2].getAttribute("aria-label")).toContain("Event t=1");
+
+	timeline.dispose();
+});
+
+test("linear continuation keeps saved future snapshots available for restoration", () => {
+	const doc = new JSDOM("<div></div>").window.document;
+	const container = doc.querySelector("div")!;
+	let restoredCount = 0;
+
+	const timeline = createMeasurementTimeline(container, {
+		schema: { v: { label: "Velocity", unit: "m/s" } },
+		onRestoreSnapshot: () => {
+			restoredCount++;
+			return true;
+		},
+	});
+
+	timeline.setCapability(true);
+	timeline.start(0, { v: 0 });
+
+	const snapAt1 = {
+		id: "snap-1",
+		time: 1,
+		timestamp: 1000,
+		label: "T1",
+		props: {},
+		telemetry: { v: 10 },
+		state: { step: 1 },
+		isExact: true,
+	};
+	const snapAt3 = {
+		id: "snap-3",
+		time: 3,
+		timestamp: 3000,
+		label: "T3",
+		props: {},
+		telemetry: { v: 30 },
+		state: { step: 3 },
+		isExact: true,
+	};
+
+	timeline.record({ title: "Checkpoint 1", time: 1, snapshot: snapAt1 });
+	timeline.record({ title: "Checkpoint 3", time: 3, snapshot: snapAt3 });
+	timeline.update(4, { v: 40 }, true);
+
+	// User clicks Checkpoint 1 (rewind to t=1)
+	timeline.restoreSnapshot(snapAt1);
+	expect(restoredCount).toBe(1);
+	expect(timeline.isAtPast()).toBe(true);
+
+	// Continuation: user clicks explicit subtle Continue button (or triggers continuation)
+	const continueBtn = container.querySelector<HTMLButtonElement>(
+		".bk-timeline-continue-btn",
+	);
+	if (continueBtn) {
+		continueBtn.click();
+	} else {
+		timeline.branchOnContinuation("Alternate choice");
+	}
+
+	// Continuation: user modifies control or resumes simulation at t=1.2
+	timeline.record({
+		title: "Alternate choice",
+		time: 1.2,
+		kind: "control",
+	});
+
+	expect(timeline.getBranches()).toHaveLength(1);
+	expect(timeline.getActiveBranchId()).toBe("main");
+	expect(timeline.isAtPast()).toBe(false);
+	expect(timeline.getBranches()[0].entries.map((entry) => entry.title)).toEqual([
+		"Checkpoint 1", "Checkpoint 3", "Alternate choice",
+	]);
+	expect(timeline.getBranches()[0].presentPoint?.time).toBe(1);
+	expect(timeline.restoreSnapshot(snapAt3)).toBe(true);
+	expect(restoredCount).toBe(2);
+	expect(timeline.isAtPast()).toBe(true);
+	timeline.dispose();
+});
+
+test("explicit snapshot viewing state: suppresses centered pause overlay, displays subtle stage cue, scene remains interactive", () => {
+	const dom = new JSDOM(
+		`<!DOCTYPE html><html><body>
+		<figure class="bk-object bk-object--maximized" id="test-lab">
+			<div class="bk-sim-workspace">
+				<div class="bk-sim-stage">
+					<div class="bk-sim-preview">
+						<iframe></iframe>
+					</div>
+				</div>
+			</div>
+		</figure>
+		</body></html>`,
+	);
+	const { window } = dom;
+	const figure = window.document.getElementById("test-lab") as HTMLElement;
+
+	// Import workspace functions in JSDOM context
+	const {
+		bkSyncLabPauseOverlay,
+		syncSnapshotViewingState,
+	} = require("../src/client/workspace.js");
+
+	// Initial paused state in maximized view: pause overlay is shown
+	figure.dataset.bkPlaybackState = "paused";
+	bkSyncLabPauseOverlay(figure);
+	const preview = figure.querySelector(".bk-sim-preview")!;
+	const overlay = preview.querySelector<HTMLElement>(".bk-sim-pause-overlay")!;
+	expect(overlay).not.toBeNull();
+	expect(overlay.hidden).toBe(false);
+
+	// Enter snapshot viewing state via syncSnapshotViewingState or event
+	syncSnapshotViewingState(figure, true, 3.5);
+
+	// Attributes synced
+	expect(figure.dataset.bkSnapshotViewing).toBe("true");
+	expect(figure.getAttribute("data-snapshot-viewing")).toBe("true");
+
+	// Centered pause overlay is suppressed while viewing snapshot
+	expect(overlay.hidden).toBe(true);
+
+	// Stage cue is created and displays the required message
+	const cue = figure.querySelector<HTMLElement>(
+		".bk-sim-snapshot-cue, .bk-snapshot-stage-cue",
+	);
+	expect(cue).not.toBeNull();
+	expect(cue?.hidden).toBe(false);
+	expect(cue?.textContent).toContain("Paused");
+	expect(cue?.querySelector("[data-bk-continue-snapshot]")).toBeNull();
+
+	// A restored snapshot remains available for direct interaction.
+	const iframe = figure.querySelector("iframe");
+	if (iframe) {
+		expect(iframe.style.pointerEvents).toBe("");
+		expect(iframe.getAttribute("data-bk-viewing-locked")).toBeNull();
+	}
+
+	// Exit snapshot viewing state
+	syncSnapshotViewingState(figure, false);
+	expect(figure.dataset.bkSnapshotViewing).toBeUndefined();
+	expect(figure.getAttribute("data-snapshot-viewing")).toBeNull();
+	expect(cue?.hidden).toBe(true);
+	if (iframe) {
+		expect(iframe.style.pointerEvents).toBe("");
+		expect(iframe.getAttribute("data-bk-viewing-locked")).toBeNull();
+	}
+
+	// Centered pause overlay is unsuppressed
+	expect(overlay.hidden).toBe(false);
+});
+
 test("snapshot runtime guards replay frame with __bkRestoring and captures atomic time", () => {
 	const dom = new JSDOM(
 		`<!DOCTYPE html><html><body><canvas id="c"></canvas></body></html>`,
@@ -384,7 +569,7 @@ test("spring demo does not advance physics or telemetry during snapshot restore"
 	expect(publishedTelemetry).toHaveLength(0);
 });
 
-test("bubbling bk:snapshot-view-change dispatches from timeline and syncs figure attributes without a scene badge", () => {
+test("bubbling bk:snapshot-view-change dispatches from timeline and syncs figure attributes and cue", () => {
 	const dom = new JSDOM(
 		`<!DOCTYPE html><html><body>
 		<figure class="bk-object bk-object--maximized" id="timeline-fig">
@@ -422,7 +607,10 @@ test("bubbling bk:snapshot-view-change dispatches from timeline and syncs figure
 		expect(figure.getAttribute("data-snapshot-viewing")).toBe("true");
 
 		const cue = figure.querySelector<HTMLElement>(".bk-sim-snapshot-cue");
-		expect(cue).toBeNull();
+		expect(cue).not.toBeNull();
+		expect(cue?.hidden).toBe(false);
+		expect(cue?.textContent).toContain("Paused");
+		expect(cue?.querySelector("[data-bk-continue-snapshot]")).toBeNull();
 
 		// End viewing via bubbling event
 		historyContainer.dispatchEvent(
@@ -433,7 +621,99 @@ test("bubbling bk:snapshot-view-change dispatches from timeline and syncs figure
 		);
 		expect(figure.dataset.bkSnapshotViewing).toBeUndefined();
 		expect(figure.getAttribute("data-snapshot-viewing")).toBeNull();
-		expect(figure.querySelector(".bk-sim-snapshot-cue")).toBeNull();
+		expect(cue?.hidden).toBe(true);
+	});
+});
+
+test("scene interaction continues the restored state on one timeline and clears its viewing cue", () => {
+	const dom = new JSDOM(
+		`<!DOCTYPE html><html><body>
+		<figure class="bk-object bk-object--maximized" id="branch-test-fig">
+			<div class="bk-sim-workspace">
+				<div class="bk-sim-stage">
+					<div class="bk-sim-preview">
+						<iframe></iframe>
+					</div>
+				</div>
+				<div class="bk-sim-inspector">
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
+				</div>
+			</div>
+		</figure>
+		</body></html>`,
+	);
+	const { window } = dom;
+
+	withGlobals(window, () => {
+		const { bkWireWorkspace, syncSnapshotViewingState } = require("../src/client/workspace.js");
+		const { handleBranchingInteraction } = require("../src/client/telemetry.js");
+		bkWireWorkspace();
+
+		const figure = window.document.getElementById("branch-test-fig") as HTMLElement;
+		const historyContainer = figure.querySelector<HTMLElement>(".bk-measurement-history")!;
+
+		const timeline = createMeasurementTimeline(historyContainer, {
+			schema: { x: { label: "Position", unit: "m" } },
+			onRestoreSnapshot: () => true,
+		});
+		timeline.setCapability(true);
+		timeline.start(0, { x: 0 });
+
+		const snapAt1 = {
+			id: "snap-at-1",
+			time: 1.0,
+			timestamp: 1000,
+			label: "T1",
+			props: {},
+			telemetry: { x: 10 },
+			state: { x: 10 },
+			isExact: true,
+		};
+		timeline.record({ title: "Checkpoint 1", time: 1.0, snapshot: snapAt1 });
+		timeline.record({ title: "Future Event 3", time: 3.0 });
+		timeline.update(4.0, { x: 40 }, true);
+
+		// Restore past snapshot
+		timeline.restoreSnapshot(snapAt1);
+		syncSnapshotViewingState(figure, true, 1.0);
+
+		expect(timeline.isAtPast()).toBe(true);
+		expect(figure.dataset.bkSnapshotViewing).toBe("true");
+
+		const cue = figure.querySelector<HTMLElement>(".bk-sim-snapshot-cue");
+		expect(cue?.hidden).toBe(false);
+
+		// Mock MeasurementRuntime
+		const mockRuntime = {
+			figure,
+			timeline,
+			specs: [],
+			samples: {},
+			latest: {},
+		} as any;
+
+		// User interacts with scene or modifies a host control while viewing snapshot
+		handleBranchingInteraction(mockRuntime, "Scene interaction");
+
+		// Continuation exits inspection without creating another timeline.
+		expect(timeline.isAtPast()).toBe(false);
+		expect(timeline.getBranches()).toHaveLength(1);
+		expect(timeline.getActiveBranchId()).toBe("main");
+
+		// Stage cue is cleared
+		expect(figure.dataset.bkSnapshotViewing).toBeUndefined();
+		expect(cue?.hidden).toBe(true);
+
+		// Saved moments remain available after continuation.
+		const mainBranch = timeline.getBranches().find((b) => b.id === "main")!;
+		expect(mainBranch.entries.map((e) => e.title)).toContain("Future Event 3");
+
+		// Further interactions continue the same run.
+		handleBranchingInteraction(mockRuntime, "Subsequent interaction");
+		expect(timeline.getBranches()).toHaveLength(1);
+		expect(timeline.getActiveBranchId()).toBe("main");
+
+		timeline.dispose();
 	});
 });
 
@@ -530,6 +810,170 @@ test("snapshot capture returns measurements from the captured simulation frame",
  expect(captured.state.x).toBe(4);
  expect(captured.telemetry).toEqual({ time: 3, displacement: 4 });
  dom.window.close();
+});
+
+test("snapshot inspection keeps controls interactive and playback requests continuation", () => {
+	const dom = new JSDOM(
+		`<!DOCTYPE html><html><body>
+		<figure class="bk-object bk-object--maximized" id="immutable-lab">
+			<div class="bk-sim-workspace">
+				<div class="bk-sim-stage">
+					<div class="bk-sim-preview">
+						<iframe></iframe>
+					</div>
+					<div class="bk-steps-controls bk-sim-playback">
+						<button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space"><span class="bk-sim-btn-play">Play</span></button>
+						<button type="button" class="bk-steps-btn bk-sim-capture-btn" data-bk-capture-snapshot>Capture</button>
+					</div>
+				</div>
+				<aside class="bk-sim-inspector">
+					<div class="bk-sim-controls">
+						<input type="range" data-bk-control data-bk-control-key="mass" min="1" max="10" value="5">
+					</div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
+				</aside>
+			</div>
+		</figure>
+		</body></html>`,
+	);
+	const { window } = dom;
+
+	withGlobals(window, () => {
+		const { bkWireWorkspace, syncSnapshotViewingState, bkSetLabPlayback } = require("../src/client/workspace.js");
+		bkWireWorkspace();
+
+		const figure = window.document.getElementById("immutable-lab") as HTMLElement;
+		const iframe = figure.querySelector("iframe")!;
+		const playBtn = figure.querySelector<HTMLButtonElement>("[data-bk-playback]")!;
+		const slider = figure.querySelector<HTMLInputElement>("[data-bk-control]")!;
+
+		// Start paused
+		figure.dataset.bkPlaybackState = "paused";
+
+		// Enter snapshot viewing state
+		syncSnapshotViewingState(figure, true, 2.0);
+
+		expect(iframe.hasAttribute("inert")).toBe(false);
+		expect(iframe.style.pointerEvents).toBe("");
+		expect(slider.disabled).toBe(false);
+		expect(playBtn.disabled).toBe(false);
+		let continuations = 0;
+		figure.addEventListener("bk:snapshot-continue", () => { continuations++; });
+		bkSetLabPlayback(figure, true);
+		expect(continuations).toBe(1);
+		expect(figure.dataset.bkPlaybackState).toBe("playing");
+		const cue = figure.querySelector<HTMLElement>(".bk-sim-snapshot-cue");
+		expect(cue?.textContent).toContain("Paused");
+
+		// 5. Exit snapshot viewing (continuation unlocks)
+		syncSnapshotViewingState(figure, false);
+		expect(iframe.style.pointerEvents).toBe("");
+		expect(iframe.getAttribute("data-bk-viewing-locked")).toBeNull();
+		expect(slider.disabled).toBe(false);
+		expect(slider.getAttribute("data-bk-viewing-disabled")).toBeNull();
+		expect(playBtn.disabled).toBe(false);
+		expect(playBtn.getAttribute("data-bk-viewing-disabled")).toBeNull();
+		expect(cue?.hidden).toBe(true);
+	});
+});
+
+test("harness capture button: created in controls for timeline sims, disabled when unsupported/inspecting/pending, and captures exact snapshot", async () => {
+	const dom = new JSDOM(
+		`<!DOCTYPE html><html><body>
+		<figure class="bk-object bk-object--maximized" id="capture-lab">
+			<div class="bk-sim-workspace">
+				<div class="bk-sim-stage">
+					<div class="bk-sim-preview">
+						<iframe></iframe>
+					</div>
+					<div class="bk-steps-controls bk-sim-playback">
+						<div class="bk-steps-nav">
+							<button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space"><span class="bk-sim-btn-play">Play</span></button>
+							<button type="button" class="bk-steps-btn" data-bk-reset-simulation></button>
+						</div>
+					</div>
+				</div>
+				<aside class="bk-sim-inspector">
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
+				</aside>
+			</div>
+			<script class="bk-sim-telemetry-schema" type="application/json">{"velocity": {"label": "Velocity", "unit": "m/s"}}</script>
+		</figure>
+		</body></html>`,
+	);
+	const { window } = dom;
+
+	withGlobals(window, () => {
+		const { bkWireWorkspace } = require("../src/client/workspace.js");
+		const { bkWireTelemetry, bkInitTelemetry } = require("../src/client/telemetry.js");
+		bkWireWorkspace();
+		bkWireTelemetry();
+		bkInitTelemetry();
+
+		const figure = window.document.getElementById("capture-lab") as HTMLElement;
+		const captureBtn = figure.querySelector<HTMLButtonElement>("[data-bk-capture-snapshot]");
+
+		// Capture button exists in the timeline
+		expect(captureBtn).not.toBeNull();
+		// Initially disabled before capabilities query confirms exact snapshot support
+		expect(captureBtn?.disabled).toBe(true);
+		expect(captureBtn?.hidden).toBe(true);
+		expect(captureBtn?.closest(".bk-timeline-toolbar")).not.toBeNull();
+
+		const iframe = figure.querySelector("iframe")!;
+		const messages: any[] = [];
+		iframe.contentWindow!.postMessage = (msg: any) => {
+			messages.push(msg);
+		};
+
+		// Simulation reports exact snapshot capability
+		window.dispatchEvent(
+			new window.MessageEvent("message", {
+				source: iframe.contentWindow,
+				data: { type: "bk:snapshot-capabilities", canRestoreExactState: true },
+			}),
+		);
+
+		// Button is now enabled for capturing
+		expect(captureBtn?.disabled).toBe(false);
+		expect(captureBtn?.hidden).toBe(false);
+
+		// Click capture button
+		captureBtn?.click();
+
+		// Verify request message was sent to iframe
+		const captureMsg = messages.find((m) => m.type === "bk:snapshot-capture");
+		expect(captureMsg).not.toBeUndefined();
+		expect(captureBtn?.disabled).toBe(true); // Pending in flight
+
+		// Iframe responds with captured state
+		window.dispatchEvent(
+			new window.MessageEvent("message", {
+				source: iframe.contentWindow,
+				data: {
+					type: "bk:snapshot-data",
+					id: captureMsg.id,
+					success: true,
+					isExact: true,
+					state: { position: 10 },
+					telemetry: { velocity: 5 },
+					time: 2.0,
+				},
+			}),
+		);
+
+		// In-flight capture completed, button re-enabled
+		expect(captureBtn?.disabled).toBe(false);
+
+		// Entering snapshot viewing disables capture button
+		figure.dispatchEvent(
+			new (window as any).CustomEvent("bk:snapshot-view-change", {
+				bubbles: true,
+				detail: { viewing: true, time: 2.0 },
+			}),
+		);
+		expect(captureBtn?.disabled).toBe(true);
+	});
 });
 
 test("startup graph preferences: keep the latest window for each measurement", () => {
@@ -666,16 +1110,15 @@ test("bkResetTelemetry settles pending requests and rejects stale generations so
 			isExact: true,
 		};
 
+		// Launch in-flight restoreSimulationSnapshot
+		const restorePromise = restoreSimulationSnapshot(r, snap);
+		expect(r.pendingRestoreRequests.size + r.pendingSnapshotRequests.size).toBeGreaterThan(0);
+
 		// Also launch in-flight manual capture
 		const captureBtn = figure.querySelector<HTMLButtonElement>("[data-bk-capture-snapshot]")!;
 		captureBtn.click();
 		expect(r.inFlightManualCapture).toBe(true);
 		expect(captureBtn.disabled).toBe(true);
-
-		// Launch in-flight restoreSimulationSnapshot
-		const restorePromise = restoreSimulationSnapshot(r, snap);
-		expect(r.pendingRestoreRequests.size + r.pendingSnapshotRequests.size).toBeGreaterThan(0);
-
 
 		const oldCaptureMsg = iframeMessages.find((m) => m.type === "bk:snapshot-capture" && m.id?.startsWith("snap-"));
 		const oldCaptureId = oldCaptureMsg?.id;
@@ -899,6 +1342,124 @@ test("custom adapter state with nested objects is deep cloned and mutations do n
  dom.window.close();
 });
 
+test("delayed capture replies do not append snapshots while inspecting saved history", async () => {
+	const dom = new JSDOM(`
+		<figure id="branch-sim" class="bk-object">
+			<div class="bk-sim-workspace">
+				<div class="bk-sim-stage">
+					<div class="bk-embed-frame"><iframe></iframe></div>
+					<div class="bk-steps-controls bk-sim-playback">
+						<div class="bk-steps-nav">
+							<button type="button" class="bk-steps-btn bk-sim-capture-btn" data-bk-capture-snapshot>Capture</button>
+						</div>
+					</div>
+				</div>
+				<div class="bk-sim-inspector"><div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script></div>
+			</div>
+			<script class="bk-sim-telemetry-schema" type="application/json">{"speed": {"label": "Speed", "unit": "m/s"}}</script>
+		</figure>
+	`);
+	const { window } = dom;
+	await withGlobals(window, async () => {
+		const { bkWireWorkspace } = require("../src/client/workspace.js");
+		const { bkWireTelemetry, bkInitTelemetry, getMeasurementRuntime } = require("../src/client/telemetry.ts");
+		bkWireWorkspace();
+		bkWireTelemetry();
+		bkInitTelemetry();
+
+		const figure = window.document.getElementById("branch-sim") as HTMLElement;
+		const iframe = figure.querySelector("iframe")!;
+
+		let pendingCaptureMsg: any = null;
+		iframe.contentWindow!.postMessage = (msg: any) => {
+			if (msg.type === "bk:snapshot-capture") {
+				if (msg.label === "Present") {
+					window.dispatchEvent(
+						new window.MessageEvent("message", {
+							source: iframe.contentWindow,
+							data: {
+								type: "bk:snapshot-data",
+								id: msg.id,
+								success: true,
+								isExact: true,
+								state: {},
+								telemetry: {},
+								time: 0,
+							},
+						}),
+					);
+				} else {
+					pendingCaptureMsg = msg;
+				}
+			} else if (msg.type === "bk:snapshot-restore") {
+				window.dispatchEvent(
+					new window.MessageEvent("message", {
+						source: iframe.contentWindow,
+						data: {
+							type: "bk:snapshot-restored",
+							id: msg.id,
+							success: true,
+							isExact: true,
+						},
+					}),
+				);
+			}
+		};
+
+		// Capabilities
+		window.dispatchEvent(
+			new window.MessageEvent("message", {
+				source: iframe.contentWindow,
+				data: { type: "bk:snapshot-capabilities", supported: true },
+			}),
+		);
+
+		const r = getMeasurementRuntime("branch-sim")!;
+		expect(r).toBeDefined();
+
+		// Record initial state on main branch with snap1 and snap2
+		const snap1 = { id: "s1", time: 1.0, timestamp: 1000, label: "Main Event 1", props: { speed: 10 }, telemetry: { speed: 10 }, state: {}, isExact: true };
+		const snap2 = { id: "s2", time: 2.0, timestamp: 2000, label: "Main Event 2", props: { speed: 20 }, telemetry: { speed: 20 }, state: {}, isExact: true };
+		r.timeline!.start(0, { speed: 0 });
+		r.timeline!.record({ title: "Main Event 1", time: 1.0, snapshot: snap1 });
+		r.timeline!.record({ title: "Main Event 2", time: 2.0, snapshot: snap2 });
+
+		expect(r.timeline!.getActiveBranchId()).toBe("main");
+
+		// Launch capture on Main branch
+		const captureBtn = figure.querySelector<HTMLButtonElement>("[data-bk-capture-snapshot]")!;
+		captureBtn.click();
+		expect(pendingCaptureMsg).not.toBeNull();
+		const captureId = pendingCaptureMsg.id;
+
+		// Restore while capture is pending: its delayed reply must not alter inspection.
+		await r.timeline!.restoreSnapshot(snap1);
+		expect(r.timeline!.isAtPast()).toBe(true);
+		// Now delayed reply from Main's capture arrives!
+		window.dispatchEvent(
+			new window.MessageEvent("message", {
+				source: iframe.contentWindow,
+				data: {
+					type: "bk:snapshot-data",
+					id: captureId,
+					success: true,
+					isExact: true,
+					state: { speed: 42 },
+					telemetry: { speed: 42 },
+					time: 1.5,
+				},
+			}),
+		);
+
+		expect(r.timeline!.getBranches()).toHaveLength(1);
+		expect(r.timeline!.getActiveBranchId()).toBe("main");
+		expect(r.timeline!.isAtPast()).toBe(true);
+		const entries = r.timeline!.getBranches()[0].entries;
+		expect(entries.map((entry) => entry.title)).not.toContain("Saved snapshot");
+		expect(entries.map((entry) => entry.title)).toEqual(["Main Event 1", "Main Event 2"]);
+	});
+});
+
 test("async adapter capture and restore handlers are rejected cleanly", () => {
 	const dom = new JSDOM("<canvas></canvas>");
 	const w = dom.window as any;
@@ -950,10 +1511,153 @@ test("async adapter capture and restore handlers are rejected cleanly", () => {
 	dom.window.close();
 });
 
+test("no-op controls keep inspection active and changed presets continue on one timeline", async () => {
+	const dom = new JSDOM(`
+		<figure id="noop-sim" class="bk-object bk-object--maximized" data-bk-playback-state="paused">
+			<div class="bk-sim-workspace">
+				<div class="bk-sim-stage"><div class="bk-embed-frame"><iframe></iframe></div></div>
+				<div class="bk-sim-inspector">
+					<div class="bk-sim-controls" data-bk-default-props='{"mass":5}'>
+						<input type="range" data-bk-prop="mass" min="1" max="10" value="5">
+						<button type="button" data-bk-preset="heavy" data-bk-preset-props='{"mass":5}' class="is-active">Heavy</button>
+						<button type="button" data-bk-preset="light" data-bk-preset-props='{"mass":2}'>Light</button>
+						<button type="button" data-bk-action="disabled-action" disabled>Disabled</button>
+					</div>
+					<div class="bk-timeline-toolbar"></div><div class="bk-measurement-history"></div><script class="bk-measurements-config" type="application/json">{"timeline":true}</script>
+				</div>
+			</div>
+			<script class="bk-sim-telemetry-schema" type="application/json">{"mass": {"label": "Mass"}}</script>
+		</figure>
+	`);
+	const { window } = dom;
+	await withGlobals(window, async () => {
+		const { bkWireWorkspace } = require("../src/client/workspace.js");
+		const { bkWireSimControls } = require("../src/client/simulation.js");
+		const { bkWireTelemetry, bkInitTelemetry, getMeasurementRuntime } = require("../src/client/telemetry.ts");
+		bkWireWorkspace();
+		bkWireSimControls();
+		bkWireTelemetry();
+		bkInitTelemetry();
+
+		const figure = window.document.getElementById("noop-sim") as HTMLElement;
+		const slider = figure.querySelector<HTMLInputElement>("[data-bk-prop='mass']")!;
+		const heavyPreset = figure.querySelector<HTMLButtonElement>("[data-bk-preset='heavy']")!;
+		const lightPreset = figure.querySelector<HTMLButtonElement>("[data-bk-preset='light']")!;
+		const disabledAction = figure.querySelector<HTMLButtonElement>("[data-bk-action='disabled-action']")!;
+		const iframe = figure.querySelector("iframe")!;
+
+		iframe.contentWindow!.postMessage = (msg: any) => {
+			if (msg.type === "bk:snapshot-capture") {
+				window.dispatchEvent(
+					new window.MessageEvent("message", {
+						source: iframe.contentWindow,
+						data: {
+							type: "bk:snapshot-data",
+							id: msg.id,
+							success: true,
+							isExact: true,
+							state: {},
+							telemetry: {},
+							time: 0,
+						},
+					}),
+				);
+			} else if (msg.type === "bk:snapshot-restore") {
+				window.dispatchEvent(
+					new window.MessageEvent("message", {
+						source: iframe.contentWindow,
+						data: {
+							type: "bk:snapshot-restored",
+							id: msg.id,
+							success: true,
+							isExact: true,
+							props: msg.snapshot?.props,
+						},
+					}),
+				);
+			}
+		};
+
+		// Capabilities
+		window.dispatchEvent(
+			new window.MessageEvent("message", {
+				source: iframe.contentWindow,
+				data: { type: "bk:snapshot-capabilities", supported: true },
+			}),
+		);
+
+		const r = getMeasurementRuntime("noop-sim")!;
+		expect(r).toBeDefined();
+
+		// Record initial history with an ancestor (s1) and later descendant (s2)
+		const snap1 = { id: "s1", time: 1.0, timestamp: 1000, label: "S1", props: { mass: 5 }, telemetry: { mass: 5 }, state: {}, isExact: true };
+		const snap2 = { id: "s2", time: 2.0, timestamp: 2000, label: "S2", props: { mass: 5 }, telemetry: { mass: 5 }, state: {}, isExact: true };
+		r.timeline!.start(0, { mass: 5 });
+		r.timeline!.record({ title: "S1", time: 1.0, snapshot: snap1 });
+		r.timeline!.record({ title: "S2", time: 2.0, snapshot: snap2 });
+
+		// Restore ancestor snapshot s1 (which has later descendant s2)
+		await r.timeline!.restoreSnapshot(snap1);
+		expect(figure.dataset.bkSnapshotViewing).toBe("true");
+
+		const initialBranches = r.timeline!.getBranches().length;
+
+		// Identical props keep inspection active.
+		heavyPreset.click();
+		expect(figure.dataset.bkSnapshotViewing).toBe("true");
+		expect(r.timeline!.getBranches().length).toBe(initialBranches);
+
+		// Disabled actions keep inspection active.
+		disabledAction.click();
+		expect(figure.dataset.bkSnapshotViewing).toBe("true");
+		expect(r.timeline!.getBranches().length).toBe(initialBranches);
+
+		// Unchanged sliders keep inspection active.
+		slider.value = "5";
+		slider.dispatchEvent(new window.Event("input", { bubbles: true }));
+		slider.dispatchEvent(new window.Event("change", { bubbles: true }));
+		expect(figure.dataset.bkSnapshotViewing).toBe("true");
+		expect(r.timeline!.getBranches().length).toBe(initialBranches);
+
+		// Changed props continue from the restored state.
+		lightPreset.click();
+		expect(figure.dataset.bkSnapshotViewing).toBeUndefined();
+		expect(r.timeline!.getBranches().length).toBe(initialBranches);
+
+		// Further changes continue the same run.
+		const timelinesAfterContinuation = r.timeline!.getBranches().length;
+		slider.value = "7";
+		slider.dispatchEvent(new window.Event("input", { bubbles: true }));
+		slider.dispatchEvent(new window.Event("change", { bubbles: true }));
+		// Editing never creates another timeline.
+		expect(r.timeline!.getBranches().length).toBe(timelinesAfterContinuation);
+	});
+});
+
 test("preset comparisons preserve types and compare nested JSON props", () => {
  const { arePropsEqual } = require("../src/client/telemetry.ts");
  const current = new Map<string, unknown>([["mass", 1], ["options", { points: [1, 2], enabled: true }]]);
  expect(arePropsEqual(current, { mass: "1" })).toBe(false);
  expect(arePropsEqual(current, { options: { enabled: true, points: [1, 2] } })).toBe(true);
  expect(arePropsEqual(current, { options: { enabled: true, points: [9, 2] } })).toBe(false);
+});
+
+test("continuation discards future plot samples while preserving saved snapshot history", () => {
+ const { handleBranchingInteraction, graphData } = require("../src/client/telemetry.js");
+ const doc = new JSDOM("<figure><div></div></figure>").window.document;
+ const timeline = createMeasurementTimeline(doc.querySelector("div")!, {schema: {}, onRestoreSnapshot: () => true});
+ const saved = {id:"saved", time:1, timestamp:1, label:"Saved", props:{}, telemetry:{x:10}, isExact:true};
+ timeline.start(0, {});
+ timeline.record({title:"Saved", time:1, snapshot:saved});
+ timeline.record({title:"Future", time:3, snapshot:{...saved,id:"future",time:3}});
+ timeline.restoreSnapshot(saved);
+ const point = (time: number, y: number) => ({time, x:time, y});
+ const r = {figure:doc.querySelector("figure")!, timeline, time:1, specs:[{key:"x",xAxis:{key:"time"}}], samples:{x:[point(0,0),point(1,10),point(3,30)]}, latest:{x:point(3,30)}, graphSnapshotTime:1} as any;
+ handleBranchingInteraction(r);
+ expect(graphData(r).x.map((p: any) => p.y)).toEqual([0,10]);
+ expect(r.graphSnapshotTime).toBeUndefined();
+ expect(r.latest.x).toBeUndefined();
+ expect(timeline.getBranches()).toHaveLength(1);
+ expect(timeline.getBranches()[0].entries.map(entry=>entry.title)).toEqual(["Saved","Future"]);
+ timeline.dispose();
 });

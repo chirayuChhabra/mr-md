@@ -4,7 +4,6 @@ import * as fs from "fs";
 import * as path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 import { iframeDoc } from "../src/renderer/blocks/iframe.js";
-import { stepsIframeDoc } from "../src/renderer/blocks/steps-iframe.js";
 
 const SIM_JS_PATH = path.resolve(__dirname, "../mr-markdown-documentation/sims/oscillator.js");
 const SIM_CONFIG_PATH = path.resolve(__dirname, "../mr-markdown-documentation/sims/oscillator.config.json");
@@ -139,37 +138,6 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 
 		await page.close();
 	});
-
-	for (const [mode, renderFrame] of [["block", iframeDoc], ["steps", stepsIframeDoc]] as const) {
-	test(`paused dragging redraws the cart without advancing physics (${mode})`, async () => {
-		const page = await browser.newPage();
-		try {
-			await page.setViewport({width:1280,height:700});
-			await page.setContent(`<iframe style="width:1240px;height:540px;border:0" srcdoc="${renderFrame(bundledJs, JSON.stringify(config.props))}"></iframe>`);
-			const frame=await(await page.waitForSelector("iframe"))!.contentFrame();
-			await frame!.waitForFunction(()=>(window as any).__bkSnapshotHandlers && (window as any).bkSetupCalled);
-			const before=await frame!.evaluate(()=>({state:(window as any).__bkSnapshotHandlers.capture(),pixels:(document.querySelector("canvas") as HTMLCanvasElement).toDataURL()}));
-			const canvas=await frame!.$("canvas");
-			const bounds=(await canvas!.boundingBox())!;
-			const logical=await frame!.evaluate(()=>{const c=document.querySelector("canvas")!,r=c.getBoundingClientRect();const point=(x:number)=>(window as any).bkCanvasPoint({clientX:x,clientY:r.top},c).x;return {left:point(r.left),width:point(r.right)-point(r.left)};});
-			const x=(position:number)=>bounds.x+(640+position*160-logical.left)/logical.width*bounds.width;
-			await page.mouse.move(x(before.state.x),bounds.y+bounds.height/2);
-			await page.mouse.down();
-			await page.mouse.move(x(-0.5),bounds.y+bounds.height/2,{steps:8});
-			await page.mouse.up();
-			await frame!.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-			const after=await frame!.evaluate(()=>({state:(window as any).__bkSnapshotHandlers.capture(),pixels:(document.querySelector("canvas") as HTMLCanvasElement).toDataURL(),playing:(window as any).__loop}));
-			expect(after.state.x).toBeCloseTo(-0.5,2);
-			expect(after.pixels).not.toBe(before.pixels);
-			expect(after.state.time).toBe(before.state.time);
-			expect(after.state.v).toBe(0);
-			expect(after.playing).toBe(false);
-			await page.$eval("iframe",e=>(e as HTMLIFrameElement).contentWindow!.postMessage({type:"bk:play"},"*"));
-			await frame!.waitForFunction(t=>(window as any).__bkSnapshotHandlers.capture().time>t+0.05,{},after.state.time);
-			expect(await frame!.evaluate(()=>(window as any).__bkSnapshotHandlers.capture().x)).not.toBe(after.state.x);
-		} finally { await page.close(); }
-	});
-	}
 
 	test("responds visibly to primary damping adjustments and presets", async () => {
 		const page = await browser.newPage();

@@ -11,7 +11,7 @@ test('measurement inspector keeps labels, values and actions separated across th
   const css = ['theme', 'measurement-timeline'].map(name => readFileSync(`src/styles/${name}.css`, 'utf8')).join('\n');
   const telemetry = renderSimulationTelemetry('lab', {
    displacement: { label: 'Displacement from equilibrium', unit: 'm', scene: true, graph: true, description: 'Signed distance from the equilibrium position.' },
-   energy: { label: 'Velocity v', unit: 'm/s', graph: true, states: [{ when: { op: 'lt', value: -0.05 }, label: 'Moving left', tone: 'accent' }] },
+   energy: { label: 'Mechanical energy', unit: 'J', graph: true },
   });
   await page.setContent(`<style>${css}</style><figure class="bk-object bk-object--maximized"><aside style="width:300px">${renderInspectorTabs('lab', '<div>Settings</div>', telemetry)}</aside></figure>`);
   expect(await page.$$eval('.bk-telemetry-row [data-measurement-graph]', els => els.length)).toBe(0);
@@ -20,10 +20,6 @@ test('measurement inspector keeps labels, values and actions separated across th
   await page.evaluate(() => {
    document.querySelectorAll<HTMLElement>('.bk-sim-tabpanel').forEach(panel => panel.hidden = !panel.classList.contains('bk-sim-tabpanel--telemetry'));
    document.querySelectorAll('.bk-telemetry-num').forEach(num => num.textContent = '-123.45');
-   const state = document.querySelector<HTMLElement>('[data-telemetry-key="energy"] .bk-telemetry-state')!;
-   state.hidden = false;
-   state.textContent = 'Moving left';
-
   });
   for (const width of [300, 380]) for (const theme of ['light', 'dark']) for (const ui of ['standard', 'neo', 'playful']) {
    await page.evaluate(({ width, theme, ui }) => {
@@ -37,14 +33,11 @@ test('measurement inspector keeps labels, values and actions separated across th
     const label = labelRange.getBoundingClientRect();
     const value = row.querySelector('.bk-telemetry-value')!.getBoundingClientRect();
 
-    const state = row.querySelector<HTMLElement>('.bk-telemetry-state')!;
-    const stateOverlap = !state.hidden && state.getBoundingClientRect().top < value.bottom;
     const description = row.querySelector('.bk-telemetry-description')?.getBoundingClientRect();
-    return { stateOverlap, overlap: label.bottom > value.top + 1, overflow: row.scrollWidth > row.clientWidth + 1, descriptionHeight: description?.height };
+    return { overlap: label.bottom > value.top + 1, overflow: row.scrollWidth > row.clientWidth + 1, descriptionHeight: description?.height };
    }));
    for (const row of geometry) {
     expect(row.overlap).toBe(false);
-    expect(row.stateOverlap).toBe(false);
     expect(row.overflow).toBe(false);
    }
    expect(geometry[0].descriptionHeight).toBeGreaterThan(12);
@@ -78,7 +71,7 @@ test('measurement navigation stays visible while the inspector scrolls', async (
  } finally { await browser.close(); }
 }, 30000);
 
-test('inspector keeps full tab labels on one line and focus leaves the card quiet', async () => {
+test('inspector tracks fill the available width and descendant focus leaves the card quiet', async () => {
  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] });
  try {
   const page = await browser.newPage();
@@ -90,13 +83,14 @@ test('inspector keeps full tab labels on one line and focus leaves the card quie
    else {
     const tracks = await page.$eval('.bk-sim-tablist', el => getComputedStyle(el).gridTemplateColumns.split(' ').map(parseFloat));
     expect(tracks.length).toBe(count);
-    expect(await page.$$eval('.bk-sim-tab', els => els.every(el => getComputedStyle(el).whiteSpace === 'nowrap'))).toBe(true);
+    expect(Math.max(...tracks) - Math.min(...tracks)).toBeLessThan(1);
+    await page.$$eval('.bk-sim-tab', els => els.forEach(el => el.textContent = 'Long inspector navigation label'));
     expect(await page.$eval('.bk-sim-tablist', el => el.scrollWidth <= el.clientWidth)).toBe(true);
    }
    const before = await page.$eval('figure', el => getComputedStyle(el).borderColor);
    await page.focus('button');
    expect(await page.$eval('figure', el => getComputedStyle(el).borderColor)).toBe(before);
-   expect(await page.$eval('button:focus-visible', el => el.classList.contains('bk-sim-tab') ? getComputedStyle(el,'::after').backgroundColor !== 'rgba(0, 0, 0, 0)' : getComputedStyle(el).outlineStyle !== 'none')).toBe(true);
+   expect(await page.$eval('button:focus-visible', el => getComputedStyle(el).outlineStyle)).not.toBe('none');
   }
  } finally { await browser.close(); }
 }, 30000);

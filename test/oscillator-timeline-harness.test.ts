@@ -67,7 +67,6 @@ test('oscillator snapshot protocol restores exact pixels, history and determinis
   expect(result.savedTime).toBeGreaterThan(0);
   expect(result.exact).toBe(true);
   expect(result.telemetry.displacement).toBeDefined();
-  expect(result.telemetry.time).toBe(result.savedTime);
   expect(result.resumedTime).toBeGreaterThan(result.savedTime);
   expect(result.restored).toEqual(result.initial);
  } finally { await browser.close(); }

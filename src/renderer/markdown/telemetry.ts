@@ -151,10 +151,10 @@ export function renderInspectorTabs(
 		},
 		{
 			key: "timeline",
-			label: "Saved",
+			label: "Timeline",
 			html:
 				telemetryHtml && timelineEnabled
-					? `<div class="bk-measurement-history" aria-live="polite"></div>`
+					? `<div class="bk-timeline-toolbar"><details><summary>More</summary><button type="button" data-export-timeline title="Download timeline (.csv)">Export timeline</button></details></div><div class="bk-measurement-history" aria-live="polite"></div>`
 					: "",
 		},
 	].filter((panel) => panel.html);

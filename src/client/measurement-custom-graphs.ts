@@ -37,12 +37,14 @@ export function pairGraphSamples(
 	xs: import("./measurement-graphs.js").MeasurementGraphPoint[],
 	ys: import("./measurement-graphs.js").MeasurementGraphPoint[],
 ) {
-	const sampleKey = (
-		point: import("./measurement-graphs.js").MeasurementGraphPoint,
-	) => `${point.branchId || ""}:${point.time}:${point.sampleId ?? "legacy"}`;
-	const byTime = new Map(xs.map((point) => [sampleKey(point), point.y]));
+	const byTime = new Map(
+		xs.map((point) => [`${point.branchId || ""}:${point.time}`, point.y]),
+	);
 	return ys.flatMap((point) => {
-		const x = xKey === "time" ? point.time : byTime.get(sampleKey(point));
+		const x =
+			xKey === "time"
+				? point.time
+				: byTime.get(`${point.branchId || ""}:${point.time}`);
 		return typeof x === "number" &&
 			Number.isFinite(x) &&
 			Number.isFinite(point.y)

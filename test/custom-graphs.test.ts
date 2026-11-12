@@ -23,12 +23,3 @@ test('custom history pairs values within the same branch and excludes missing or
  expect(pairGraphSamples('velocity', [point(1, 2), point(2, 5, 'other')], [point(1, 3), point(2, 4), point(3, NaN)])).toEqual([{time:1,x:2,y:3,branchId:'main'}]);
  expect(pairGraphSamples('time', [], [point(1, 3)])).toEqual([{time:1,x:1,y:3,branchId:'main'}]);
 });
-
-
-test('custom history pairs each paused edit with the same frame and preserves its label', () => {
- const interaction={id:'drag',label:'Cart dragged'};
- const point=(sampleId:number,y:number)=>({time:1,x:1,y,sampleId,branchId:'main',interaction});
- const paired=pairGraphSamples('displacement',[point(1,2),point(2,4)],[point(1,3),point(2,5)]);
- expect(paired.map(p=>[p.x,p.y])).toEqual([[2,3],[4,5]]);
- expect(paired[1].interaction).toEqual(interaction);
-});

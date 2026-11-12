@@ -7,12 +7,6 @@ import {
 	downloadSnapshotImage,
 	validSnapshotImage,
 } from "./measurement-files.js";
-import {
-	type ExperimentStore,
-	experimentStore,
-	type SavedCollection,
-	type SavedMoment,
-} from "./saved-experiments-store.js";
 
 export interface MeasurementTimelineEntry {
 	id?: string;
@@ -24,7 +18,6 @@ export interface MeasurementTimelineEntry {
 	kind?: "event" | "control" | "snapshot";
 	snapshot?: SimulationSnapshot;
 	branchId?: string;
-	nameOnSave?: boolean;
 }
 
 // Retained for consumers of the existing export and telemetry contract.
@@ -51,8 +44,6 @@ export interface TimelineBranch {
 
 export interface CreateMeasurementTimelineOptions {
 	schema: SimulationTelemetry;
-	storageKey?: string;
-	store?: ExperimentStore;
 	config?: { start?: boolean; present?: boolean; controls?: boolean };
 	getVisibleKeys?: () => string[];
 	onSelect?: (key: string) => void;
@@ -62,7 +53,6 @@ export interface CreateMeasurementTimelineOptions {
 		entry?: MeasurementTimelineEntry,
 	) => Promise<boolean> | boolean | void;
 	canRestoreSnapshot?: () => boolean;
-	getPlaybackState?: () => boolean;
 }
 
 export function createMeasurementTimeline(
@@ -70,548 +60,1157 @@ export function createMeasurementTimeline(
 	options: CreateMeasurementTimelineOptions,
 ) {
 	const doc = container.ownerDocument;
-	const win = doc.defaultView;
-	const store =
-		options.store ||
-		experimentStore(
-			win?.indexedDB,
-			options.storageKey ||
-				`${win?.location.pathname}:${container.closest(".bk-object")?.id}`,
-		);
-	let moments: SavedMoment[] = [];
-	let workspace: SimulationSnapshot | undefined;
-	let selected: SavedMoment | null = null;
-	let initial: SavedMoment | null = null;
-	let normalState: SimulationSnapshot | undefined;
-	let normalPlaying = false;
-	let preview = false;
-	let busy = false;
-	let disposed = false;
-	let loadFailed = false;
-	let restoreRequest = 0;
-	let queue: Promise<void> = Promise.resolve();
-	let collapseAll = false;
-	let autoExpanded: string | null = null;
-	const collapsed = new Set<string>();
-	const expanded = new Set<string>();
-	const branch: TimelineBranch = {
-		id: "main",
-		name: "Current experiment",
-		forkTime: 0,
-		entries: [],
-	};
-	const status = doc.createElement("p");
-	status.className = "bk-saved-status";
-	status.setAttribute("role", "status");
-	status.setAttribute("aria-live", "polite");
-	const list = doc.createElement("div");
-	list.className = "bk-saved-list";
-	const detail = doc.createElement("section");
-	detail.className = "bk-saved-preview";
-	detail.setAttribute("aria-label", "Restore controls");
-	const storageLabel = doc.createElement("p");
-	storageLabel.className = "bk-saved-storage";
-	storageLabel.textContent = "Loading states…";
-	container.classList.add("bk-saved-experiments");
-	const toolbar = doc.createElement("div");
-	toolbar.className = "bk-saved-toolbar";
-	container.replaceChildren(status, toolbar, detail, list, storageLabel);
-	const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
-	const emit = (viewing: boolean, time?: number) => {
-		const EventCtor = win?.CustomEvent || CustomEvent;
-		container.dispatchEvent(
-			new EventCtor("bk:snapshot-view-change", {
-				bubbles: true,
-				detail: { viewing, time },
-			}),
-		);
-	};
-	const restorePlayback = (playing: boolean) => {
-		const EventCtor = win?.CustomEvent || CustomEvent;
-		container.dispatchEvent(
-			new EventCtor("bk:timeline-live", { bubbles: true, detail: { playing } }),
-		);
-	};
-	let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
-	const feedback = (message: string) => {
-		clearTimeout(feedbackTimer);
-		status.dataset.visible = "true";
-		feedbackTimer = setTimeout(() => {
-			delete status.dataset.visible;
-		}, 8000);
-		status.textContent = message;
-	};
-	const persist = async () => {
-		await ready;
-		if (loadFailed) throw new Error("Saved states could not be loaded.");
-		const value: SavedCollection = clone({
-			version: 1,
-			moments,
-			workspace: undefined,
-		});
-		const write = queue.catch(() => {}).then(() => store.write(value));
-		queue = write;
-		try {
-			await write;
-			if (!disposed) storageLabel.textContent = "States saved on this device";
-		} catch (error) {
-			if (!disposed) {
-				storageLabel.textContent = "Changes are only available in this session";
-				feedback(
-					"Could not save on this device. Free some storage, then try again.",
-				);
-			}
-			throw error;
-		}
-	};
-	const button = (text: string, action: () => void, primary = false) => {
-		const el = doc.createElement("button");
-		el.type = "button";
-		el.className = `bk-saved-button${primary ? " bk-saved-button--primary" : ""}`;
-		el.textContent = text;
-		el.disabled = busy;
-		el.addEventListener("click", action);
-		return el;
-	};
-	const actionIcon = (
-		label: "Rename" | "Download" | "Delete",
-		action: () => void,
-	) => {
-		const el = button(label, action);
-		el.classList.add("bk-saved-icon", `bk-saved-icon--${label.toLowerCase()}`);
-		el.setAttribute("aria-label", label);
-		el.title = label;
-		const paths = {
-			Rename: '<path d="m16 3 5 5M4 20l4-1L21 6l-4-4L4 15z"/>',
-			Download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
-			Delete: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
-		};
-		el.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[label]}</svg>`;
-		return el;
-	};
-	const restore = async (snapshot: SimulationSnapshot): Promise<boolean> => {
-		if (
-			!options.onRestoreSnapshot ||
-			options.canRestoreSnapshot?.() === false ||
-			!snapshot.isExact
-		) {
-			feedback("This simulation cannot restore this saved moment.");
-			return false;
-		}
-		try {
-			return (await options.onRestoreSnapshot(clone(snapshot))) !== false;
-		} catch {
-			feedback(
-				"Could not open this moment. Your current experiment is preserved.",
-			);
-			return false;
-		}
-	};
-	const open = async (moment: SavedMoment) => {
-		if (busy) return;
-		await ready;
-		const request = ++restoreRequest;
-		busy = true;
-		render();
-		const fromNormal = !normalState;
-		const wasPlaying =
-			options.getPlaybackState?.() ?? branch.presentPoint?.playing ?? false;
-		const restored = await restore(moment.snapshot);
-		if (restored && fromNormal && workspace?.isExact) {
-			normalState = clone(workspace);
-			normalPlaying = wasPlaying;
-		}
-		if (disposed || request !== restoreRequest) return;
-		if (restored) {
-			selected = moment;
-			autoExpanded =
-				collapsed.has(moment.id) || (collapseAll && !expanded.has(moment.id))
-					? moment.id
-					: null;
-			preview = true;
-			emit(true, moment.snapshot.time);
-			if (
-				storageLabel.textContent === "States saved on this device" &&
-				(!moment.snapshot.measurementHistory ||
-					!Object.values(moment.snapshot.measurementHistory).some(
-						(points) => points.length,
-					))
-			) {
-				feedback("This saved state has no recorded graph history.");
-			}
-		} else
-			feedback(
-				"Could not open this moment. Your current experiment is preserved.",
-			);
-		busy = false;
-		render();
-	};
-	const returnToPresent = async () => {
-		if (busy || !normalState) return;
-		const request = ++restoreRequest;
-		const current = clone(normalState);
-		busy = true;
-		render();
-		const restored = await restore(current);
-		if (disposed || request !== restoreRequest) return;
-		if (restored) {
-			preview = false;
-			selected = null;
-			autoExpanded = null;
-			normalState = undefined;
-			workspace = current;
-			emit(false, current.time);
-			branch.presentPoint = {
-				time: current.time,
-				values: current.telemetry,
-				playing: normalPlaying,
-				snapshot: current,
-			};
-			restorePlayback(normalPlaying);
-			normalPlaying = false;
-		} else {
-			emit(true, selected?.snapshot.time);
-			feedback("Could not return yet. Your experiment is still preserved.");
-		}
-		busy = false;
-		render();
-	};
-	const continueFromSnapshot = () => {
-		if (busy || !preview || !selected) return null;
-		workspace = clone(selected.snapshot);
-		selected = null;
-		normalState = undefined;
-		normalPlaying = false;
-		autoExpanded = null;
-		preview = false;
-		emit(false, workspace.time);
-		const EventCtor = win?.CustomEvent || CustomEvent;
-		container.dispatchEvent(
-			new EventCtor("bk:state-resumed", { bubbles: true }),
-		);
-		render();
-		return "main";
-	};
-	const render = () => {
-		if (disposed) return;
-		list.replaceChildren();
-		toolbar.replaceChildren();
-		const toggleAll = button(
-			collapseAll ? "Expand all" : "Collapse all",
-			() => {
-				collapseAll = !collapseAll;
-				autoExpanded = null;
-				collapsed.clear();
-				expanded.clear();
-				render();
-				toolbar.querySelector<HTMLButtonElement>("button")?.focus();
+
+	const empty = doc.createElement("p");
+	empty.className = "bk-measurement-empty";
+	empty.textContent = "Measurements will appear when the trial starts.";
+
+	const capabilityNotice = doc.createElement("div");
+	capabilityNotice.className = "bk-timeline-capability";
+	capabilityNotice.hidden = true;
+
+	const pastHint = doc.createElement("div");
+	pastHint.className = "bk-timeline-past-hint";
+	pastHint.setAttribute("role", "status");
+	pastHint.setAttribute("aria-live", "polite");
+	pastHint.hidden = true;
+
+	const statusNotice = doc.createElement("div");
+	statusNotice.className = "bk-timeline-status";
+	statusNotice.setAttribute("role", "status");
+	statusNotice.setAttribute("aria-live", "polite");
+	statusNotice.setAttribute("aria-atomic", "true");
+
+	const graphContainer = doc.createElement("div");
+	graphContainer.className = "bk-timeline-git-graph bk-timeline-events";
+	graphContainer.setAttribute("role", "region");
+	graphContainer.setAttribute("aria-label", "Simulation timeline");
+
+	let updateConnections = () => {};
+	const ResizeObserverCtor = doc.defaultView?.ResizeObserver;
+	const graphObserver = ResizeObserverCtor
+		? new ResizeObserverCtor(() => updateConnections())
+		: null;
+
+	const graphHeader = doc.createElement("div");
+	graphHeader.className = "bk-timeline-graph-header";
+
+	const headerRight = doc.createElement("div");
+	headerRight.className = "bk-timeline-header-right";
+
+	const headerState = doc.createElement("span");
+	headerState.className = "bk-timeline-header-state";
+	headerState.textContent = "Live · 0 s";
+
+	headerRight.append(headerState);
+
+	const graphRows = doc.createElement("div");
+	graphRows.className = "bk-timeline-graph-rows";
+	graphRows.setAttribute("role", "group");
+	graphRows.setAttribute("aria-label", "Timeline nodes");
+	graphObserver?.observe(graphRows);
+	graphObserver?.observe(graphContainer);
+
+	// Connected Live HEAD element inside the graph connected to the active rail
+	const liveHead = doc.createElement("div");
+	liveHead.className = "bk-timeline-point bk-timeline-live-head";
+	liveHead.dataset.kind = "present";
+	liveHead.dataset.id = "present";
+	liveHead.dataset.nodeRole = "head";
+	liveHead.dataset.head = "true";
+	liveHead.setAttribute("role", "button");
+	liveHead.setAttribute("tabindex", "0");
+	liveHead.setAttribute("aria-label", "Return to the current simulation state");
+	liveHead.setAttribute("aria-current", "true");
+	liveHead.hidden = true;
+
+	graphHeader.append(headerRight, pastHint);
+	graphContainer.append(graphHeader, graphRows);
+
+	const detailsPanel = doc.createElement("div");
+	detailsPanel.className = "bk-timeline-node-details";
+	detailsPanel.setAttribute("role", "region");
+	detailsPanel.setAttribute("aria-label", "Selected moment");
+	detailsPanel.hidden = true;
+
+	const startNode = doc.createElement("div");
+	startNode.className = "bk-timeline-point";
+	startNode.dataset.kind = "start";
+	startNode.hidden = true;
+
+	container.replaceChildren(
+		empty,
+		statusNotice,
+		capabilityNotice,
+		graphContainer,
+		detailsPanel,
+		startNode,
+	);
+
+	let started = false;
+	let supportsExactSnapshot: boolean | null = null;
+	let feedbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const activeBranchId = "main";
+	let isAtPastSnapshot = false;
+	let activeRestoredSnapshot: SimulationSnapshot | null = null;
+	let restoredEntryId: string | null = null;
+	let pastSnapshotTime = 0;
+	let currentRestoreRequestId = 0;
+	let restorePending = false;
+	let selectedNodeId: string | null = null;
+	let nextOrder = 1;
+	const nodeOrder = new Map<string, number>();
+
+	const branches = new Map<string, TimelineBranch>([
+		[
+			"main",
+			{
+				id: "main",
+				name: "Main timeline",
+				forkTime: 0,
+				entries: [],
 			},
-		);
-		toggleAll.setAttribute("aria-expanded", String(!collapseAll));
-		toggleAll.setAttribute(
-			"aria-label",
-			collapseAll ? "Expand all previews" : "Collapse all previews",
-		);
-		toggleAll.title = collapseAll
-			? "Expand all previews"
-			: "Collapse all previews";
-		toggleAll.classList.add("bk-saved-toggle-all");
-		toggleAll.innerHTML =
-			'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8 4-4 4 4M8 16l4 4 4-4"/></svg>';
-		const heading = doc.createElement("span");
-		heading.textContent = "Saved states";
-		toolbar.append(heading, toggleAll);
-		detail.hidden = false;
-		const live = button("Live", () => {
-			if (normalState) void returnToPresent();
-		});
-		live.className = "bk-saved-live";
-		live.setAttribute("aria-label", "Return to live experiment");
-		if (!normalState) live.setAttribute("aria-current", "true");
-		detail.replaceChildren(live);
-		if (!moments.length && !initial) {
-			const empty = doc.createElement("p");
-			empty.className = "bk-saved-empty";
-			empty.textContent = "Use the camera to save a state and its screenshot.";
-			list.append(empty);
+		],
+	]);
+
+	const stamp = (time: number) =>
+		`${Number.isFinite(time) ? Number(time.toFixed(2)) : 0} s`;
+
+	const renameSnapshot = (snapshotId: string, value: string): boolean => {
+		const name = value.trim().slice(0, 100);
+		if (!name) return false;
+		let renamed = false;
+		for (const branch of branches.values()) {
+			for (const entry of branch.entries) {
+				if (entry.snapshot?.id !== snapshotId) continue;
+				entry.title = name;
+				entry.snapshot.label = name;
+				renamed = true;
+			}
 		}
-		for (const moment of [...moments, ...(initial ? [initial] : [])]) {
-			const card = doc.createElement("article");
-			card.className = "bk-saved-card";
-			card.dataset.savedId = moment.id;
-			if (selected?.id === moment.id && preview) card.dataset.selected = "true";
-			const isCollapsed =
-				autoExpanded !== moment.id &&
-				(collapsed.has(moment.id) || (collapseAll && !expanded.has(moment.id)));
-			card.dataset.collapsed = String(isCollapsed);
-			const opener = button(moment.name, () => void open(moment));
-			opener.className = "bk-saved-open";
-			opener.setAttribute("aria-label", `Load ${moment.name}`);
-			if (selected?.id === moment.id && preview)
-				opener.setAttribute("aria-current", "true");
-			const name = doc.createElement("span");
-			name.textContent = moment.name;
-			opener.replaceChildren(name);
-			if (validSnapshotImage(moment.snapshot.imageDataUrl)) {
-				const image = doc.createElement("img");
-				image.src = moment.snapshot.imageDataUrl;
-				image.alt = "";
-				opener.prepend(image);
+		if (renamed) {
+			renderGraph();
+			const selected = [...branches.values()]
+				.flatMap((branch) => branch.entries)
+				.find((entry) => entry.id === selectedNodeId);
+			if (selected) renderNodeDetails(selected);
+		}
+		return renamed;
+	};
+
+	const formatSnapshotValues = (values: Record<string, unknown>) => {
+		const selected = options.getVisibleKeys?.() ?? [];
+		const keys = [...new Set([...selected, ...Object.keys(options.schema)])]
+			.filter(
+				(key) =>
+					key !== "time" &&
+					typeof values[key] === "number" &&
+					Number.isFinite(values[key] as number),
+			)
+			.slice(0, 3);
+		return keys
+			.map((key) => {
+				const item = options.schema[key] || {};
+				const value = values[key] as number;
+				const text =
+					item.precision === undefined
+						? String(Number(value.toFixed(2)))
+						: value.toFixed(Math.min(20, Math.max(0, item.precision)));
+				return `${item.label || key}: ${text}${item.unit ? ` ${item.unit}` : ""}`;
+			})
+			.join(" · ");
+	};
+
+	const setPoint = (
+		node: HTMLElement,
+		label: string,
+		time: number,
+		values: Record<string, unknown>,
+	) => {
+		node.hidden = false;
+		if (!node.querySelector(".bk-timeline-heading")) {
+			node.replaceChildren();
+
+			const dot = doc.createElement("span");
+			dot.className = "bk-snapshot-dot";
+			dot.setAttribute("aria-hidden", "true");
+
+			const heading = doc.createElement("div");
+			heading.className = "bk-timeline-heading";
+
+			const title = doc.createElement("span");
+			title.className = "bk-timeline-label";
+
+			const stampEl = doc.createElement("span");
+			stampEl.className = "bk-timeline-time";
+
+			heading.append(title, stampEl);
+
+			const detail = doc.createElement("div");
+			detail.className = "bk-timeline-snapshot";
+
+			const content = doc.createElement("div");
+			content.className = "bk-snapshot-content";
+			content.append(heading, detail);
+
+			node.append(dot, content);
+		}
+		const title = node.querySelector(".bk-timeline-label");
+		const timeLabel = node.querySelector(".bk-timeline-time");
+		const detail = node.querySelector(".bk-timeline-snapshot");
+		if (title) title.textContent = label;
+		if (timeLabel) timeLabel.textContent = stamp(time);
+		if (detail) detail.textContent = formatSnapshotValues(values);
+	};
+
+	const notifySnapshotViewChange = (viewing: boolean, time?: number) => {
+		const detail: { viewing: boolean; time?: number } = { viewing };
+		if (time !== undefined && Number.isFinite(time)) {
+			detail.time = time;
+		}
+		const CustomEventCtor =
+			doc.defaultView?.CustomEvent ||
+			(globalThis.CustomEvent as typeof CustomEvent);
+		const evt = new CustomEventCtor("bk:snapshot-view-change", {
+			bubbles: true,
+			composed: true,
+			detail,
+		});
+		container.dispatchEvent(evt);
+	};
+
+	const showFeedback = (
+		message: string,
+		tone: "neutral" | "success" | "warning" | "danger" = "neutral",
+		duration = 4000,
+	) => {
+		statusNotice.textContent = message;
+
+		if (feedbackTimer) {
+			clearTimeout(feedbackTimer);
+			feedbackTimer = null;
+		}
+
+		if (tone === "warning" || tone === "danger") {
+			capabilityNotice.hidden = false;
+			capabilityNotice.dataset.tone = tone;
+			capabilityNotice.textContent = message;
+			if (duration > 0) {
+				feedbackTimer = setTimeout(() => {
+					if (supportsExactSnapshot === false) {
+						capabilityNotice.hidden = false;
+						capabilityNotice.dataset.tone = "warning";
+						capabilityNotice.textContent =
+							"Exact state restore requires simulation opt-in (window.bkRegisterSnapshot).";
+					} else {
+						capabilityNotice.hidden = true;
+					}
+					feedbackTimer = null;
+				}, duration);
 			}
-			const actions = doc.createElement("div");
-			actions.className = "bk-saved-card-actions";
-			if (moment !== initial) {
-				actions.append(
-					actionIcon("Rename", () => {
-						if (card.querySelector("form")) return;
-						const form = doc.createElement("form");
-						form.className = "bk-saved-rename";
-						const input = doc.createElement("input");
-						input.value = moment.name;
-						input.maxLength = 100;
-						input.setAttribute("aria-label", "Saved moment name");
-						const submit = button("Save", () => {}, true);
-						submit.type = "submit";
-						const label = doc.createElement("label");
-						label.textContent = "State name";
-						label.append(input);
-						form.append(label, button("Cancel", render), submit);
-						form.addEventListener("keydown", (event) => {
-							if (event.key === "Escape") {
-								event.preventDefault();
-								render();
-							}
-						});
-						form.addEventListener("submit", async (event) => {
-							event.preventDefault();
-							if (!input.value.trim() || busy) return;
-							moment.name = input.value.trim();
-							moment.snapshot.label = moment.name;
-							busy = true;
-							submit.disabled = true;
-							try {
-								await persist();
-							} catch {
-								// persist reports storage failures without discarding the edit.
-							} finally {
-								busy = false;
-								render();
-							}
-						});
-						opener.after(form);
-						opener.disabled = true;
-						input.focus();
-						input.select();
-					}),
-				);
+		} else {
+			if (supportsExactSnapshot !== false) {
+				capabilityNotice.hidden = true;
 			}
-			if (validSnapshotImage(moment.snapshot.imageDataUrl))
-				actions.append(
-					actionIcon("Download", () =>
-						downloadSnapshotImage(
-							doc,
-							moment.snapshot.imageDataUrl!,
-							moment.name,
-						),
+			headerState.setAttribute("title", message);
+		}
+	};
+
+	const setSnapshotPending = (id: string, pending: boolean) => {
+		for (const el of Array.from(
+			container.querySelectorAll(".bk-snapshot-row, .bk-timeline-live-head"),
+		) as HTMLElement[]) {
+			if (el.dataset.id === id) {
+				if (pending) {
+					el.dataset.pending = "true";
+					el.setAttribute("aria-busy", "true");
+				} else {
+					delete el.dataset.pending;
+					el.removeAttribute("aria-busy");
+				}
+			}
+		}
+	};
+
+	const updatePastHint = () => {
+		if (!isAtPastSnapshot || !activeRestoredSnapshot) {
+			pastHint.hidden = true;
+			pastHint.replaceChildren();
+			return;
+		}
+
+		pastHint.hidden = false;
+		pastHint.replaceChildren();
+
+		const hintText = doc.createElement("span");
+		hintText.className = "bk-timeline-past-hint-text";
+		hintText.textContent = "Continue from this moment.";
+
+		const returnBtn = doc.createElement("button");
+		returnBtn.type = "button";
+		returnBtn.className = "bk-timeline-return-btn";
+		returnBtn.textContent = "Back to live";
+		returnBtn.title = "Return to the preserved live state";
+		returnBtn.addEventListener("click", () => {
+			returnToPresent();
+		});
+
+		pastHint.append(hintText, returnBtn);
+	};
+
+	const renderNodeDetails = (entry: MeasurementTimelineEntry) => {
+		detailsPanel.hidden = false;
+		detailsPanel.replaceChildren();
+
+		const top = doc.createElement("div");
+		top.className = "bk-timeline-details-top";
+
+		const title = doc.createElement("span");
+		title.className = "bk-timeline-details-title";
+		title.textContent = entry.title;
+
+		const time = doc.createElement("span");
+		time.className = "bk-timeline-details-time";
+		time.textContent = stamp(entry.time);
+
+		top.append(title, time);
+
+		const desc = doc.createElement("div");
+		desc.className = "bk-timeline-details-desc";
+		let detailText = "";
+		if (entry.snapshot?.telemetry) {
+			detailText = formatSnapshotValues(entry.snapshot.telemetry);
+		}
+		if (!detailText && entry.detail) {
+			detailText = entry.detail;
+		}
+		desc.textContent = detailText;
+
+		detailsPanel.append(top, desc);
+
+		const actions = doc.createElement("div");
+		actions.className = "bk-timeline-actions";
+
+		const actionsRow = doc.createElement("div");
+		actionsRow.className = "bk-timeline-actions-row";
+
+		if (
+			entry.snapshot &&
+			isAtPastSnapshot &&
+			activeRestoredSnapshot?.id === entry.snapshot.id
+		) {
+			const continueBtn = doc.createElement("button");
+			continueBtn.type = "button";
+			continueBtn.className = "bk-timeline-action-btn bk-timeline-continue-btn";
+			continueBtn.textContent = "Resume";
+			continueBtn.title = "Resume from the selected moment";
+
+			continueBtn.addEventListener("click", () => {
+				const CustomEventCtor =
+					doc.defaultView?.CustomEvent ||
+					(globalThis.CustomEvent as typeof CustomEvent);
+				const evt = new CustomEventCtor("bk:snapshot-continue", {
+					bubbles: true,
+					composed: true,
+					detail: {
+						reason: "Resumed from snapshot",
+					},
+				});
+				container.dispatchEvent(evt);
+
+				// Fallback for standalone tests without full runtime wiring
+				if (isAtPastSnapshot) {
+					continueFromSnapshot();
+				}
+			});
+			actionsRow.append(continueBtn);
+		}
+
+		actions.append(actionsRow);
+
+		if (
+			entry.snapshot &&
+			[...branches.values()].some((branch) =>
+				branch.entries.some((item) => item.id === entry.id),
+			)
+		) {
+			const rename = doc.createElement("button");
+			rename.type = "button";
+			rename.className = "bk-timeline-action-btn";
+			rename.textContent = "Rename";
+			rename.setAttribute("aria-label", "Rename snapshot");
+			rename.addEventListener("click", () => {
+				const form = doc.createElement("form");
+				form.className = "bk-timeline-rename";
+				const input = doc.createElement("input");
+				input.value = entry.title;
+				input.maxLength = 100;
+				input.setAttribute("aria-label", "Snapshot name");
+				const save = doc.createElement("button");
+				save.type = "submit";
+				save.className = "bk-timeline-action-btn";
+				save.textContent = "Save name";
+				form.append(input, save);
+				form.addEventListener("submit", (event) => {
+					event.preventDefault();
+					renameSnapshot(entry.snapshot!.id, input.value);
+				});
+				form.addEventListener("keydown", (event) => {
+					if (event.key === "Escape") {
+						event.preventDefault();
+						event.stopPropagation();
+						renderNodeDetails(entry);
+					}
+				});
+				top.replaceWith(form);
+				input.focus();
+				input.select();
+			});
+			actionsRow.append(rename);
+			if (validSnapshotImage(entry.snapshot.imageDataUrl)) {
+				const image = doc.createElement("button");
+				image.type = "button";
+				image.className = "bk-timeline-action-btn";
+				image.textContent = "Image";
+				image.setAttribute("aria-label", "Download snapshot image");
+				image.addEventListener("click", () =>
+					downloadSnapshotImage(
+						doc,
+						entry.snapshot!.imageDataUrl!,
+						entry.title,
 					),
 				);
-			if (moment !== initial)
-				actions.append(
-					actionIcon("Delete", () => {
-						const index = moments.findIndex((m) => m.id === moment.id);
-						if (index < 0) return;
-						moments.splice(index, 1);
-						render();
-						feedback("State deleted.");
-						const undo = button("Undo", () => {
-							moments.splice(index, 0, moment);
-							render();
-							feedback("State restored.");
-							void persist().catch(() => {});
-						});
-						status.append(" ", undo);
-						void persist().catch(() => {});
-					}),
-				);
-			card.append(opener, actions);
-			if (
-				moment !== initial ||
-				validSnapshotImage(moment.snapshot.imageDataUrl)
-			) {
-				const toggle = button(
-					isCollapsed ? "Expand preview" : "Collapse preview",
-					() => {
-						autoExpanded = null;
-						if (isCollapsed) {
-							collapsed.delete(moment.id);
-							expanded.add(moment.id);
-						} else {
-							collapsed.add(moment.id);
-							expanded.delete(moment.id);
-						}
-						render();
-						[...list.querySelectorAll<HTMLElement>(".bk-saved-card")]
-							.find((c) => c.dataset.savedId === moment.id)
-							?.querySelector<HTMLButtonElement>(".bk-saved-toggle")
-							?.focus();
-					},
-				);
-				toggle.classList.add("bk-saved-toggle");
-				toggle.setAttribute(
-					"aria-label",
-					`${isCollapsed ? "Expand" : "Collapse"} preview for ${moment.name}`,
-				);
-				toggle.setAttribute("aria-expanded", String(!isCollapsed));
-				toggle.innerHTML =
-					'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-				card.append(toggle);
+				actionsRow.append(image);
 			}
-			list.append(card);
+		}
+		if (actionsRow.children.length > 0) {
+			detailsPanel.append(actions);
 		}
 	};
-	const ready = store
-		.read()
-		.then((value) => {
-			moments = value.moments;
-			moments.forEach((moment, index) => {
-				if (/^State [\d.]+ s$/.test(moment.name))
-					moment.name = `Saved state ${moments.length - index}`;
-			});
-			if (!disposed) {
-				storageLabel.textContent = "States saved on this device";
-				render();
+
+	const selectNode = (entry: MeasurementTimelineEntry) => {
+		selectedNodeId = entry.id || null;
+
+		for (const el of Array.from(
+			container.querySelectorAll(".bk-snapshot-row, .bk-timeline-live-head"),
+		) as HTMLElement[]) {
+			const isMatch = el.dataset.id === entry.id;
+			if (isMatch) {
+				el.dataset.selected = "true";
+				el.dataset.active = "true";
+			} else {
+				delete el.dataset.selected;
+				delete el.dataset.active;
 			}
-		})
-		.catch(() => {
-			loadFailed = true;
-			if (!disposed) {
-				storageLabel.textContent = "Device storage is unavailable";
-				feedback(
-					"Your saved states could not be loaded. They have not been overwritten.",
-				);
-				render();
-			}
-		});
-	render();
-	const onPageHide = () => {
-		if (moments.length) void persist().catch(() => {});
+		}
+
+		renderNodeDetails(entry);
 	};
-	win?.addEventListener("pagehide", onPageHide);
+
+	const returnToPresent = async () => {
+		const branch = branches.get(activeBranchId);
+		if (!branch?.presentPoint?.snapshot || !options.onRestoreSnapshot) {
+			showFeedback("Present state is not available yet.", "warning");
+			return;
+		}
+		const request = ++currentRestoreRequestId;
+		restorePending = true;
+		try {
+			const restored = await options.onRestoreSnapshot(
+				branch.presentPoint.snapshot,
+			);
+			if (request !== currentRestoreRequestId || restored === false) return;
+			isAtPastSnapshot = false;
+			activeRestoredSnapshot = null;
+			restoredEntryId = null;
+			selectedNodeId = null;
+			updatePastHint();
+			detailsPanel.hidden = true;
+			renderGraph();
+			notifySnapshotViewChange(false, branch.presentPoint.time);
+			setPoint(
+				liveHead,
+				"Present",
+				branch.presentPoint.time,
+				branch.presentPoint.values,
+			);
+			delete liveHead.dataset.state;
+		} catch {
+			showFeedback("Could not return to present.", "warning");
+		} finally {
+			if (request === currentRestoreRequestId) restorePending = false;
+		}
+	};
+
+	const continueFromSnapshot = (_reason?: string): string | null => {
+		if (restorePending || !isAtPastSnapshot || !activeRestoredSnapshot)
+			return null;
+		const current = branches.get(activeBranchId);
+		if (!current) return null;
+		current.presentPoint = {
+			time: activeRestoredSnapshot.time,
+			values: { ...(activeRestoredSnapshot.telemetry || {}) },
+			playing: false,
+			snapshot: activeRestoredSnapshot,
+		};
+		isAtPastSnapshot = false;
+		activeRestoredSnapshot = null;
+		restoredEntryId = null;
+		updatePastHint();
+		detailsPanel.hidden = true;
+		notifySnapshotViewChange(false, current.presentPoint.time);
+		if (options.config?.present !== false)
+			setPoint(
+				liveHead,
+				"Paused",
+				current.presentPoint.time,
+				current.presentPoint.values,
+			);
+		renderGraph();
+		return activeBranchId;
+	};
+
+	const attemptRestore = (
+		snapshot?: SimulationSnapshot,
+		entry?: MeasurementTimelineEntry,
+	): Promise<boolean> | boolean => {
+		if (!options.onRestoreSnapshot) {
+			showFeedback(
+				"This simulation does not support restoring snapshots.",
+				"warning",
+			);
+			return false;
+		}
+		if (!snapshot) {
+			showFeedback("No snapshot available for this timeline entry.", "warning");
+			return false;
+		}
+
+		if (supportsExactSnapshot === false && snapshot.isExact !== true) {
+			showFeedback(
+				"Cannot restore exact simulation state: simulation has not opted in to snapshot lifecycle (window.bkRegisterSnapshot).",
+				"warning",
+				6000,
+			);
+			return false;
+		}
+
+		const reqId = ++currentRestoreRequestId;
+		restorePending = true;
+		setSnapshotPending(entry?.id || snapshot.id, true);
+
+		const finishRestore = () => {
+			restorePending = false;
+			setSnapshotPending(entry?.id || snapshot.id, false);
+			isAtPastSnapshot = true;
+			restoredEntryId = entry?.id || null;
+			if (!restoredEntryId) {
+				const currentBranch = branches.get(activeBranchId);
+				const match = currentBranch?.entries.find(
+					(e) => e.snapshot?.id === snapshot.id,
+				);
+				if (match) {
+					restoredEntryId = match.id || null;
+				} else if (
+					snapshot.id === currentBranch?.startPoint?.snapshot?.id ||
+					snapshot.time === currentBranch?.startPoint?.time
+				) {
+					restoredEntryId = "start";
+				} else if (snapshot.id === currentBranch?.presentPoint?.snapshot?.id) {
+					restoredEntryId = "present";
+				}
+			}
+			activeRestoredSnapshot = snapshot;
+			pastSnapshotTime = snapshot.time;
+			updateGraphHeader(false);
+			updatePastHint();
+			notifySnapshotViewChange(true, snapshot.time);
+
+			if (entry) {
+				selectNode(entry);
+			}
+
+			const currentBranch = branches.get(activeBranchId);
+			const tip = currentBranch?.presentPoint;
+			setPoint(
+				liveHead,
+				tip ? "Present" : `Restored (${stamp(snapshot.time)})`,
+				tip?.time ?? snapshot.time,
+				tip?.values ?? snapshot.telemetry ?? {},
+			);
+			liveHead.dataset.state = "restored";
+			showFeedback(
+				`Restored snapshot at ${stamp(snapshot.time)}. Resume or edit controls to continue from this moment.`,
+				"neutral",
+			);
+		};
+
+		const handleFail = () => {
+			restorePending = false;
+			setSnapshotPending(entry?.id || snapshot.id, false);
+			showFeedback("Simulation could not restore this snapshot.", "danger");
+		};
+
+		try {
+			const result = options.onRestoreSnapshot?.(snapshot, entry);
+			if (typeof result === "object" && result !== null && "then" in result) {
+				return (result as Promise<boolean | void>)
+					.then((ok) => {
+						if (reqId !== currentRestoreRequestId) return false;
+						if (ok === false) {
+							handleFail();
+							return false;
+						}
+						finishRestore();
+						return true;
+					})
+					.catch(() => {
+						if (reqId !== currentRestoreRequestId) return false;
+						handleFail();
+						return false;
+					});
+			} else {
+				if (result === false) {
+					handleFail();
+					return false;
+				}
+				finishRestore();
+				return true;
+			}
+		} catch (_) {
+			handleFail();
+			return false;
+		}
+	};
+
+	const updateGraphHeader = (_isLiveTick = false) => {
+		graphHeader.hidden = !isAtPastSnapshot;
+		const branch = branches.get(activeBranchId);
+
+		headerState.dataset.state = isAtPastSnapshot
+			? "snapshot"
+			: branch?.presentPoint?.playing
+				? "live"
+				: "paused";
+
+		headerState.textContent = isAtPastSnapshot
+			? `Snapshot · ${stamp(pastSnapshotTime)}`
+			: `${branch?.presentPoint?.playing ? "Live" : "Paused"} · ${stamp(branch?.presentPoint?.time || 0)}`;
+	};
+
+	liveHead.addEventListener("click", () => {
+		if (isAtPastSnapshot) {
+			returnToPresent();
+		}
+	});
+
+	liveHead.addEventListener("keydown", (e) => {
+		if (e.key === "Enter" || e.key === " ") {
+			if (isAtPastSnapshot) {
+				returnToPresent();
+				e.preventDefault();
+			}
+		} else if (e.key === "ArrowDown") {
+			const firstRow = graphRows.querySelector<HTMLElement>(".bk-snapshot-row");
+			firstRow?.focus();
+			e.preventDefault();
+		} else if (e.key === "End") {
+			const rows = graphRows.querySelectorAll<HTMLElement>(".bk-snapshot-row");
+			if (rows.length > 0) {
+				rows[rows.length - 1]?.focus();
+				e.preventDefault();
+			}
+		}
+	});
+
+	const renderGraph = () => {
+		updateGraphHeader(false);
+		const focusedId = (doc.activeElement as HTMLElement | null)?.dataset.id;
+		const scrollTop = graphContainer.scrollTop;
+		graphRows.replaceChildren();
+
+		const activeBranch = branches.get(activeBranchId)!;
+		const activeLane = 0;
+
+		type GraphNode = {
+			entry: MeasurementTimelineEntry;
+			lane: number;
+			parent?: string;
+		};
+		const nodes: GraphNode[] = [];
+		const seen = new Set<string>();
+
+		const remember = (
+			entry: MeasurementTimelineEntry,
+			lane: number,
+			parent?: string,
+		) => {
+			const id = entry.id!;
+			if (seen.has(id)) return;
+			seen.add(id);
+			if (!nodeOrder.has(id)) nodeOrder.set(id, nextOrder++);
+			nodes.push({ entry, lane, parent });
+		};
+
+		let parent: string | undefined;
+		if (activeBranch.startPoint && options.config?.start !== false) {
+			nodeOrder.set("start", 0);
+			remember(
+				{
+					id: "start",
+					title: "Start",
+					time: activeBranch.startPoint.time,
+					snapshot: activeBranch.startPoint.snapshot,
+					branchId: "main",
+					kind: "snapshot",
+				},
+				0,
+			);
+			parent = "start";
+		}
+		for (const entry of activeBranch.entries) {
+			remember(entry, 0, parent);
+			parent = entry.id;
+		}
+
+		nodes.sort(
+			(a, b) => nodeOrder.get(b.entry.id!)! - nodeOrder.get(a.entry.id!)!,
+		);
+
+		const laneX = (_lane: number) => 24;
+		const gutter = 64;
+		const layoutRow = (row: HTMLElement) => {
+			row.style.padding = `4px 0 4px ${gutter}px`;
+			const content = row.querySelector<HTMLElement>(".bk-snapshot-content");
+			if (!content) return;
+			content.style.width = "100%";
+			content.style.marginLeft = "0";
+			content.style.textAlign = "left";
+			const meta = content.querySelector<HTMLElement>(".bk-snapshot-meta");
+			if (meta) meta.style.justifyContent = "flex-start";
+		};
+		graphRows.style.setProperty("--snapshot-gutter", `${gutter}px`);
+		graphRows.style.minWidth = `${gutter + 180}px`;
+
+		const ns = "http://www.w3.org/2000/svg";
+		const svg = doc.createElementNS(ns, "svg");
+		svg.classList.add("bk-snapshot-edges");
+		svg.setAttribute("aria-hidden", "true");
+		graphRows.append(svg);
+
+		if (options.config?.present !== false && started) {
+			liveHead.hidden = false;
+			liveHead.dataset.lane = String(activeLane);
+			const liveDot = liveHead.querySelector<HTMLElement>(".bk-snapshot-dot");
+			if (liveDot) {
+				liveDot.style.left = `${laneX(activeLane)}px`;
+			}
+			layoutRow(liveHead);
+			graphRows.append(liveHead);
+		} else {
+			liveHead.hidden = true;
+		}
+
+		const positions = new Map<string, { x: number; y: number }>();
+
+		const activeBranchHeadId: string =
+			(activeBranch && activeBranch.entries.length > 0
+				? activeBranch.entries[activeBranch.entries.length - 1].id
+				: "start") || "start";
+
+		for (const { entry, lane } of nodes) {
+			const row = doc.createElement("button");
+			row.type = "button";
+			row.className = "bk-snapshot-row";
+			row.dataset.id = entry.id;
+			row.dataset.lane = String(lane);
+			row.dataset.branchId = "main";
+			row.dataset.kind = entry.kind || (entry.snapshot ? "snapshot" : "event");
+			row.dataset.time = String(entry.time);
+			row.dataset.tone = entry.tone || "neutral";
+			if (entry.key) row.dataset.key = entry.key;
+			row.setAttribute("aria-label", `${entry.title}, ${stamp(entry.time)}`);
+
+			const isStart = entry.id === "start";
+			const isHead = entry.id === activeBranchHeadId;
+			const role = isStart ? "start" : isHead ? "head" : "node";
+			row.dataset.nodeRole = role;
+			if (isHead) row.dataset.head = "true";
+
+			if (entry.id === selectedNodeId) {
+				row.dataset.selected = "true";
+				row.dataset.active = "true";
+			}
+
+			const dot = doc.createElement("span");
+			dot.className = "bk-snapshot-dot";
+			dot.style.left = `${laneX(lane)}px`;
+			dot.setAttribute("aria-hidden", "true");
+
+			const content = doc.createElement("span");
+			content.className = "bk-snapshot-content";
+
+			const title = doc.createElement("span");
+			title.className = "bk-snapshot-title";
+			title.textContent = entry.title;
+
+			const meta = doc.createElement("span");
+			meta.className = "bk-snapshot-meta";
+			meta.textContent = stamp(entry.time);
+
+			if (role !== "node") {
+				const badge = doc.createElement("span");
+				badge.className = "bk-snapshot-role";
+				badge.dataset.role = role;
+				badge.textContent = role === "head" ? "Latest saved" : "Start";
+				meta.append(badge);
+			}
+
+			content.append(title, meta);
+			if (validSnapshotImage(entry.snapshot?.imageDataUrl)) {
+				const thumbnail = doc.createElement("img");
+				thumbnail.className = "bk-snapshot-thumbnail";
+				thumbnail.src = entry.snapshot.imageDataUrl;
+				thumbnail.alt = `Saved view at ${stamp(entry.time)}`;
+				content.append(thumbnail);
+			}
+			row.append(dot, content);
+			layoutRow(row);
+
+			row.addEventListener("click", () => {
+				if (entry.snapshot?.isExact) {
+					attemptRestore(entry.snapshot, entry);
+				} else {
+					selectNode(entry);
+					if (entry.key) options.onSelect?.(entry.key);
+				}
+			});
+
+			row.addEventListener("keydown", (event) => {
+				const allRows = [
+					liveHead,
+					...Array.from(
+						graphRows.querySelectorAll<HTMLButtonElement>(".bk-snapshot-row"),
+					),
+				].filter((el) => !el.hidden);
+
+				const currentIndex = allRows.indexOf(row as any);
+				if (event.key === "Home") {
+					allRows[0]?.focus();
+					event.preventDefault();
+				} else if (event.key === "End") {
+					allRows[allRows.length - 1]?.focus();
+					event.preventDefault();
+				} else if (event.key === "ArrowDown") {
+					const next = Math.min(allRows.length - 1, currentIndex + 1);
+					allRows[next]?.focus();
+					event.preventDefault();
+				} else if (event.key === "ArrowUp") {
+					const prev = Math.max(0, currentIndex - 1);
+					allRows[prev]?.focus();
+					event.preventDefault();
+				}
+			});
+
+			graphRows.append(row);
+		}
+
+		updateConnections = () => {
+			graphRows.style.setProperty("--snapshot-gutter", `${gutter}px`);
+			graphRows.style.minWidth = `${gutter + 180}px`;
+			for (const row of graphRows.querySelectorAll<HTMLElement>(
+				".bk-snapshot-row, .bk-timeline-live-head",
+			)) {
+				layoutRow(row);
+				const dot = row.querySelector<HTMLElement>(".bk-snapshot-dot");
+				if (dot) dot.style.left = `${laneX(0)}px`;
+			}
+			svg.replaceChildren();
+
+			if (!liveHead.hidden) {
+				const liveDot = liveHead.querySelector<HTMLElement>(".bk-snapshot-dot");
+				if (liveDot) {
+					liveDot.style.left = `${laneX(activeLane)}px`;
+				}
+				positions.set("present", {
+					x: laneX(activeLane),
+					y: liveHead.offsetTop + (liveHead.offsetHeight || 44) / 2,
+				});
+			}
+
+			for (const row of graphRows.querySelectorAll<HTMLElement>(
+				".bk-snapshot-row",
+			)) {
+				positions.set(row.dataset.id!, {
+					x: laneX(Number(row.dataset.lane)),
+					y: row.offsetTop + (row.offsetHeight || 44) / 2,
+				});
+			}
+
+			if (!liveHead.hidden) {
+				const livePos = positions.get("present");
+				const topNodePos = positions.get(activeBranchHeadId);
+				if (livePos && topNodePos) {
+					const path = doc.createElementNS(ns, "path");
+					path.setAttribute(
+						"d",
+						`M ${livePos.x} ${livePos.y} V ${topNodePos.y}`,
+					);
+					path.setAttribute("class", "bk-timeline-rail-line");
+					path.dataset.parent = activeBranchHeadId;
+					path.dataset.child = "present";
+					svg.append(path);
+				}
+			}
+
+			for (const node of nodes) {
+				const from = node.parent ? positions.get(node.parent) : undefined;
+				const to = positions.get(node.entry.id!);
+				if (!from || !to) continue;
+				const path = doc.createElementNS(ns, "path");
+				path.setAttribute("d", `M ${to.x} ${to.y} V ${from.y}`);
+				path.setAttribute("class", "bk-timeline-rail-line");
+				path.dataset.parent = node.parent;
+				path.dataset.child = node.entry.id;
+				svg.append(path);
+			}
+
+			svg.setAttribute("width", String(gutter));
+			svg.setAttribute("height", String(graphRows.offsetHeight || 500));
+		};
+
+		updateConnections();
+		graphContainer.scrollTop = scrollTop;
+
+		if (focusedId) {
+			[...graphRows.querySelectorAll<HTMLElement>("button, [tabindex]")]
+				.find((node) => node.dataset.id === focusedId)
+				?.focus({ preventScroll: true });
+		}
+	};
+
+	startNode.addEventListener("click", () => {
+		const currentBranch = branches.get(activeBranchId);
+		if (currentBranch?.startPoint?.snapshot) {
+			attemptRestore(currentBranch.startPoint.snapshot);
+		}
+	});
+
+	const reset = (isInitial = false) => {
+		currentRestoreRequestId++;
+		restorePending = false;
+		started = false;
+		empty.hidden = false;
+		startNode.hidden = true;
+		liveHead.hidden = true;
+		capabilityNotice.hidden = true;
+		pastHint.hidden = true;
+		detailsPanel.hidden = true;
+
+		if (!isInitial) {
+			notifySnapshotViewChange(false);
+		}
+
+		startNode.replaceChildren();
+		liveHead.replaceChildren();
+
+		graphRows.replaceChildren();
+		detailsPanel.replaceChildren();
+		pastHint.replaceChildren();
+
+		branches.clear();
+		branches.set("main", {
+			id: "main",
+			name: "Main timeline",
+			forkTime: 0,
+			entries: [],
+		});
+		nextOrder = 1;
+		nodeOrder.clear();
+		isAtPastSnapshot = false;
+		activeRestoredSnapshot = null;
+		restoredEntryId = null;
+		selectedNodeId = null;
+
+		updateGraphHeader(false);
+
+		if (feedbackTimer) {
+			clearTimeout(feedbackTimer);
+			feedbackTimer = null;
+		}
+	};
+
+	reset(true);
+
 	return {
-		ready,
-		returnToPresent,
-		continueFromSnapshot,
 		start(
 			time: number,
 			values: Record<string, unknown>,
 			snapshot?: SimulationSnapshot,
 		) {
-			branch.startPoint = { time, values, snapshot };
-			if (snapshot?.isExact && options.config?.start !== false) {
-				initial = {
-					id: "initial",
-					name: "Initial state",
-					savedAt: 0,
-					snapshot: clone(snapshot),
-				};
-				render();
+			if (started) return;
+			started = true;
+			empty.hidden = true;
+
+			const currentBranch = branches.get(activeBranchId)!;
+			currentBranch.startPoint = { time, values, snapshot };
+			currentBranch.presentPoint = {
+				time,
+				values,
+				playing: false,
+				snapshot,
+			};
+
+			if (options.config?.start !== false) {
+				setPoint(startNode, "Start", time, values);
+				if (snapshot) startNode.style.cursor = "pointer";
 			}
+
+			if (options.config?.present !== false) {
+				setPoint(liveHead, "Paused", time, values);
+			}
+
+			renderGraph();
 		},
+
+		record(entry: MeasurementTimelineEntry) {
+			if (entry.kind === "control" && options.config?.controls === false) {
+				return;
+			}
+			if (isAtPastSnapshot) return;
+
+			const currentBranch = branches.get(activeBranchId)!;
+			const entryToSave: MeasurementTimelineEntry = {
+				...entry,
+				id:
+					entry.id ||
+					`entry-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+				branchId: activeBranchId,
+			};
+			nodeOrder.set(entryToSave.id!, nextOrder++);
+			currentBranch.entries.push(entryToSave);
+
+			renderGraph();
+		},
+
 		update(
 			time: number,
 			values: Record<string, unknown>,
 			playing: boolean,
 			snapshot?: SimulationSnapshot,
 		) {
-			if (preview) return;
-			branch.presentPoint = { time, values, playing, snapshot };
-			if (!snapshot?.isExact) return;
-			workspace = clone(snapshot);
+			if (!started) return;
+			if (isAtPastSnapshot) return;
+
+			const currentBranch = branches.get(activeBranchId)!;
+			currentBranch.presentPoint = {
+				time,
+				values,
+				playing,
+				snapshot: snapshot ?? currentBranch.presentPoint?.snapshot,
+			};
+
+			// Stable telemetry update: DO NOT recreate DOM controls or re-render graph
+			updateGraphHeader(true);
+
+			if (options.config?.present !== false) {
+				setPoint(liveHead, playing ? "Present" : "Paused", time, values);
+				delete liveHead.dataset.state;
+			}
 		},
-		async record(entry: MeasurementTimelineEntry) {
-			if (entry.kind !== "snapshot" || !entry.snapshot?.isExact) return;
-			await ready;
-			const snapshot = clone(entry.snapshot);
-			if (!moments.some((m) => m.id === snapshot.id))
-				moments.unshift({
-					id: snapshot.id,
-					name: entry.title,
-					savedAt: Date.now(),
-					snapshot,
-				});
-			render();
-			try {
-				await persist();
-				feedback("State saved.");
-				if (entry.nameOnSave) {
-					const card = [
-						...list.querySelectorAll<HTMLElement>(".bk-saved-card"),
-					].find((c) => c.dataset.savedId === snapshot.id);
-					card
-						?.querySelector<HTMLButtonElement>(".bk-saved-card-actions button")
-						?.click();
-				}
-			} catch {}
+
+		setCapability(supported: boolean, reason?: string) {
+			supportsExactSnapshot = supported;
+			if (!supported) {
+				capabilityNotice.hidden = false;
+				capabilityNotice.dataset.tone = "warning";
+				capabilityNotice.textContent =
+					reason ||
+					"Exact snapshot restore requires simulation opt-in (window.bkRegisterSnapshot).";
+			} else {
+				capabilityNotice.hidden = true;
+			}
 		},
-		renameSnapshot(id: string, name: string) {
-			const moment = moments.find((m) => m.snapshot.id === id);
-			if (!moment || !name.trim()) return false;
-			moment.name = name.trim().slice(0, 100);
-			moment.snapshot.label = moment.name;
-			render();
-			void persist().catch(() => {});
-			return true;
-		},
+
 		restoreSnapshot(snapshot: SimulationSnapshot) {
-			const moment = [...moments, ...(initial ? [initial] : [])].find(
-				(m) => m.snapshot.id === snapshot.id,
-			);
-			if (moment) return open(moment);
-			return Promise.resolve(false);
+			return attemptRestore(snapshot);
 		},
-		setCapability(_supported: boolean, _reason?: string) {},
-		setInspectedTime(_time: number | null) {},
-		refreshLayout() {},
+
+		setInspectedTime(time: number | null) {
+			const rows = [
+				...graphRows.querySelectorAll<HTMLElement>(".bk-snapshot-row"),
+			];
+			const closest =
+				time === null
+					? null
+					: rows.reduce<HTMLElement | null>(
+							(best, row) =>
+								!best ||
+								Math.abs(Number(row.dataset.time) - time) <
+									Math.abs(Number(best.dataset.time) - time)
+									? row
+									: best,
+							null,
+						);
+			for (const row of rows)
+				row.toggleAttribute("data-inspected", row === closest);
+		},
 		getActiveBranchId() {
-			return "main";
+			return activeBranchId;
 		},
+
+		renameSnapshot,
 		getBranches() {
-			return [branch];
+			return Array.from(branches.values());
 		},
+
 		getBranchCount() {
-			return 1;
+			return branches.size;
 		},
-		canBranch() {
+
+		switchBranch(branchId: string) {
+			return branchId === "main";
+		},
+
+		deleteBranch(_branchId: string) {
 			return false;
 		},
-		branchOnContinuation(_reason?: string) {
-			return null;
+
+		canDeleteBranch(branchId: string) {
+			return {
+				allowed: false,
+				reason:
+					branchId === "main"
+						? "Main timeline cannot be deleted."
+						: "Branch not found.",
+			};
+		},
+
+		setFocusMode(_focused: boolean) {},
+
+		isFocusMode() {
+			return false;
+		},
+
+		refreshLayout() {
+			updateConnections();
 		},
 
 		isAtPast() {
-			return preview;
+			return isAtPastSnapshot;
 		},
-		showFeedback: feedback,
-		getSavedMoments() {
-			return clone(moments);
-		},
-		reset() {
-			restoreRequest++;
-			busy = false;
-			preview = false;
-			selected = null;
-			workspace = undefined;
-			normalState = undefined;
-			normalPlaying = false;
-			initial = null;
-			emit(false);
-			render();
-		},
+
+		continueFromSnapshot,
+		branchOnContinuation: continueFromSnapshot,
+
+		showFeedback,
+
+		reset,
+
 		dispose() {
-			disposed = true;
-			clearTimeout(feedbackTimer);
-			restoreRequest++;
-			win?.removeEventListener("pagehide", onPageHide);
+			graphObserver?.disconnect();
+			if (feedbackTimer) clearTimeout(feedbackTimer);
 			container.replaceChildren();
 		},
 	};

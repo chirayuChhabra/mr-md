@@ -43,8 +43,6 @@ export interface SimulationRuntime<Props extends object> {
 
 declare global {
 	interface Window {
-		/** Label a direct user edit until the returned cleanup is called. */
-		bkBeginInteraction?: (label?: string) => Unsubscribe;
 		bkSetup(draw: CanvasDraw, options?: FixedCanvasOptions): void;
 		bkSetup(
 			width: number,

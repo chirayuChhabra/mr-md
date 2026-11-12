@@ -27,17 +27,3 @@ window.addEventListener("keydown", function(event) {
   }
 }, true);
 `;
-
-export const pausedInteractionRuntime = `
-let pausedInteractionFrame = null;
-function redrawPausedInteraction() {
-  if (window.__loop || pausedInteractionFrame !== null) return;
-  pausedInteractionFrame = requestAnimationFrame(function() {
-    pausedInteractionFrame = null;
-    if (!window.__loop && !window.__bkRestoring) window.__renderFrame?.();
-  });
-}
-for (const type of ["pointerdown", "pointermove", "pointerup", "pointercancel", "keydown", "keyup"]) {
-  window.addEventListener(type, redrawPausedInteraction, { capture: true, passive: true });
-}
-`;
