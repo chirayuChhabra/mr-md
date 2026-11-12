@@ -7395,3 +7395,12 @@ body.bk-world-immersive .bk-sidebar {
 
 /* Capture is available in the expanded workspace playback controls. */
 .bk-object:not(.bk-object--maximized) [data-bk-capture-snapshot] { display: none; }
+/* A scene without inspector content uses the entire workspace. Match the
+   iframe background so fixed-ratio canvases have a continuous surround. */
+.bk-object--maximized .bk-sim-workspace:not(:has(.bk-sim-inspector)) .bk-sim-stage,
+.bk-object--maximized .bk-sim-workspace:not(:has(.bk-sim-inspector)) .bk-sim-playback {
+ background: var(--bg);
+}
+.bk-object--maximized .bk-sim-workspace:not(:has(.bk-sim-inspector)) .bk-sim-playback {
+ border-top: 0;
+}

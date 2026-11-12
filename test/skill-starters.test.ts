@@ -26,7 +26,7 @@ test("steps starter pauses, completes once, and resets on step changes", () => {
     __loop: false, __simProps: { speed: 100, target: 1 },
     bkOnStep: (fn: Function) => { onStep = fn; },
     bkOnReset: (fn: Function) => { onReset = fn; },
-    bkSetup: (_w: number, _h: number, fn: Function) => { draw = fn; },
+    bkSetup: (fn: Function) => { draw = fn; },
     bkColor: () => "#000", bkCompleteStep: () => { completions++; },
   };
   const ctx = new Proxy({}, { get: () => () => {} });

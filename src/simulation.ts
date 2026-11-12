@@ -1,6 +1,34 @@
 export type TelemetryValue = string | number | boolean | null;
 export type Unsubscribe = () => void;
 
+export interface CanvasFrameInfo {
+	width: number;
+	height: number;
+	scale: number;
+	offsetX: number;
+	offsetY: number;
+	viewportWidth: number;
+	viewportHeight: number;
+	originX: number;
+	originY: number;
+	windowWidth: number;
+	windowHeight: number;
+	framing: string;
+}
+export type CanvasDraw = (
+	context: CanvasRenderingContext2D,
+	width: number,
+	height: number,
+	frame?: CanvasFrameInfo,
+) => void;
+export interface CanvasOptions {
+	framing?: "contain" | "responsive" | "bleed";
+}
+export interface FixedCanvasOptions extends CanvasOptions {
+	width?: number;
+	height?: number;
+}
+
 export interface SimulationRuntime<Props extends object> {
 	readonly props: Readonly<Props>;
 	readonly isPlaying: boolean;
@@ -17,6 +45,19 @@ declare global {
 	interface Window {
 		/** Label a direct user edit until the returned cleanup is called. */
 		bkBeginInteraction?: (label?: string) => Unsubscribe;
+		bkSetup(draw: CanvasDraw, options?: FixedCanvasOptions): void;
+		bkSetup(
+			width: number,
+			height: number,
+			draw: CanvasDraw,
+			options?: CanvasOptions,
+		): void;
+		bkSetup(
+			width: number,
+			height: number,
+			options: CanvasOptions,
+			draw: CanvasDraw,
+		): void;
 		defineSimulation: typeof defineSimulation;
 	}
 }

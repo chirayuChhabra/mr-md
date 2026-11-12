@@ -419,19 +419,14 @@ function ensurePlaybackControls(figure: HTMLElement): void {
 		figure.querySelector("[data-bk-playback]")
 	)
 		return;
-	let inspector = figure.querySelector(".bk-sim-inspector");
-	if (!inspector) {
-		inspector = document.createElement("aside");
-		inspector.className = "bk-sim-inspector";
-		inspector.setAttribute("aria-label", "Simulation inspector");
-		figure.querySelector(".bk-sim-workspace")?.append(inspector);
-	}
+	const stage = figure.querySelector(".bk-sim-stage");
+	if (!stage) return;
 	const controls = document.createElement("div");
 	controls.className = "bk-steps-controls bk-sim-playback";
 	controls.setAttribute("role", "group");
 	controls.setAttribute("aria-label", "Simulation playback");
 	controls.innerHTML = `<div class="bk-steps-nav"><button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space" title="Pause simulation (Space)">${PAUSE_ICON}${PLAY_ICON}<span class="bk-sr-only" data-bk-playback-label>Pause</span></button><button type="button" class="bk-steps-btn" data-bk-reset-simulation aria-keyshortcuts="R" aria-label="Reset simulation" title="Reset simulation">${RESET_ICON}<span class="bk-sr-only">Reset</span></button></div>`;
-	(figure.querySelector(".bk-sim-stage") || inspector).append(controls);
+	stage.append(controls);
 	const capture = figure.querySelector("[data-bk-capture-snapshot]");
 	if (capture) controls.append(capture);
 	updatePlaybackButton(figure);
