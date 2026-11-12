@@ -272,41 +272,107 @@ export function renderMeasurementGraph(
 	if (xmaxText) xmaxText.textContent = tick(xmax);
 	if (xLabel) xLabel.textContent = axis(spec.xAxis.label, spec.xAxis.unit);
 
+	for (const node of svg.querySelectorAll(
+		".bk-chart-branch, .bk-chart-user-band, .bk-chart-user-marker, .bk-chart-interaction-legend",
+	))
+		node.remove();
 	if (trace) {
-		trace.setAttribute(
-			"points",
-			values
-				.map(
-					(point) =>
-						`${Math.round(sx(point.x) * 10) / 10},${Math.round(sy(point.y) * 10) / 10}`,
-				)
-				.join(" "),
-		);
-	}
-
-	// Split traces at branch boundaries so a rewind cannot draw a false segment.
-	for (const node of svg.querySelectorAll(".bk-chart-branch")) node.remove();
-	if (trace) {
-		const groups: MeasurementGraphPoint[][] = [];
-		for (const point of values) {
+		const groups: {
+			points: MeasurementGraphPoint[];
+			interaction?: MeasurementGraphPoint["interaction"];
+		}[] = [];
+		for (let index = 0; index < values.length; index++) {
+			const point = values[index];
+			const previous = values[index - 1];
 			const group = groups.at(-1);
-			if (!group || group.at(-1)?.branchId !== point.branchId)
-				groups.push([point]);
-			else group.push(point);
+			if (!group || previous.branchId !== point.branchId) {
+				groups.push({ points: [point], interaction: point.interaction });
+			} else if (group.interaction?.id !== point.interaction?.id) {
+				// Each edge belongs to its destination sample. Automatic motion resumes
+				// with the first untagged sample after a gesture ends.
+				groups.push({
+					points: [previous, point],
+					interaction: point.interaction,
+				});
+			} else group.points.push(point);
 		}
-		trace.setAttribute(
-			"points",
-			groups[0].map((point) => `${sx(point.x)},${sy(point.y)}`).join(" "),
-		);
-		for (const group of groups.slice(1)) {
-			const segment = doc.createElementNS(ns, "polyline");
-			segment.setAttribute("class", "bk-chart-trace bk-chart-branch");
+		for (const [index, group] of groups.entries()) {
+			const segment = index === 0 ? trace : doc.createElementNS(ns, "polyline");
+			segment.setAttribute(
+				"class",
+				`bk-chart-trace${index ? " bk-chart-branch" : ""}${group.interaction ? " bk-chart-user-trace" : ""}`,
+			);
 			segment.setAttribute("fill", "none");
 			segment.setAttribute(
 				"points",
-				group.map((point) => `${sx(point.x)},${sy(point.y)}`).join(" "),
+				group.points.map((point) => `${sx(point.x)},${sy(point.y)}`).join(" "),
 			);
-			svg.insertBefore(segment, dot);
+			segment.replaceChildren();
+			segment.removeAttribute("aria-label");
+			if (index) svg.insertBefore(segment, dot);
+			if (!group.interaction) continue;
+			const label = `User interaction: ${group.interaction.label}`;
+			const title = doc.createElementNS(ns, "title");
+			title.textContent = label;
+			segment.append(title);
+			segment.setAttribute("aria-label", label);
+			if (spec.xAxis.key === "time") {
+				let left = sx(group.points[0].x),
+					right = left;
+				for (const point of group.points) {
+					left = Math.min(left, sx(point.x));
+					right = Math.max(right, sx(point.x));
+				}
+				const width = Math.max(4, right - left);
+				const band = doc.createElementNS(ns, "rect");
+				band.setAttribute("class", "bk-chart-user-band");
+				band.setAttribute(
+					"x",
+					String(
+						Math.max(
+							64,
+							Math.min(496 - width, left - (width - (right - left)) / 2),
+						),
+					),
+				);
+				band.setAttribute("y", "36");
+				band.setAttribute("width", String(width));
+				band.setAttribute("height", "188");
+				band.setAttribute("aria-label", label);
+				band.append(title.cloneNode(true));
+				svg.insertBefore(band, trace);
+			}
+			const lastPoint = group.points.at(-1);
+			if (!lastPoint) continue;
+			const marker = doc.createElementNS(ns, "circle");
+			marker.setAttribute("class", "bk-chart-user-marker");
+			marker.setAttribute("cx", String(sx(lastPoint.x)));
+			marker.setAttribute("cy", String(sy(lastPoint.y)));
+			marker.setAttribute("r", "3");
+			marker.setAttribute("aria-label", label);
+			marker.append(title.cloneNode(true));
+			svg.insertBefore(marker, dot);
+		}
+		if (groups.some((group) => group.interaction)) {
+			const legend = doc.createElementNS(ns, "g");
+			legend.setAttribute("class", "bk-chart-interaction-legend");
+			legend.setAttribute(
+				"aria-label",
+				spec.xAxis.key === "time"
+					? "User changes are shaded and drawn with dashed lines"
+					: "User changes are drawn with dashed lines",
+			);
+			const swatch = doc.createElementNS(ns, "line");
+			swatch.setAttribute("x1", "360");
+			swatch.setAttribute("x2", "384");
+			swatch.setAttribute("y1", "28");
+			swatch.setAttribute("y2", "28");
+			const text = doc.createElementNS(ns, "text");
+			text.setAttribute("x", "392");
+			text.setAttribute("y", "32");
+			text.textContent = "User changes";
+			legend.append(swatch, text);
+			svg.append(legend);
 		}
 	}
 	svg.querySelector(".bk-chart-comparison")?.remove();
@@ -329,7 +395,7 @@ export function renderMeasurementGraph(
 		options.cursor == null
 			? null
 			: values.reduce((best, point) =>
-					Math.abs(point.time - options.cursor!) <
+					Math.abs(point.time - options.cursor!) <=
 					Math.abs(best.time - options.cursor!)
 						? point
 						: best,
@@ -345,6 +411,9 @@ export function renderMeasurementGraph(
 		const readout = doc.createElement("output");
 		readout.className = "bk-chart-readout";
 		readout.textContent = `${graphValue(selected.x)} ${spec.xAxis.unit || ""} · ${graphValue(selected.y, spec.precision)} ${spec.yAxis.unit || ""}`;
+		if (selected.interaction)
+			readout.textContent += ` · User interaction: ${selected.interaction.label}`;
+		readout.title = readout.textContent || "";
 		container.append(readout);
 	}
 	container.onpointermove = (event) => {
@@ -357,7 +426,7 @@ export function renderMeasurementGraph(
 				(xmax - xmin);
 		options.onInspect(
 			values.reduce((best, point) =>
-				Math.abs(point.x - x) < Math.abs(best.x - x) ? point : best,
+				Math.abs(point.x - x) <= Math.abs(best.x - x) ? point : best,
 			),
 		);
 	};

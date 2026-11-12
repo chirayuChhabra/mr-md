@@ -180,26 +180,13 @@ export function syncSnapshotViewingState(
 		figure.querySelector<HTMLElement>(".bk-sim-preview") ||
 		figure;
 
-	let cue = figure.querySelector<HTMLElement>(
-		".bk-sim-snapshot-cue, .bk-snapshot-stage-cue",
-	);
-	if (viewing) {
-		if (!cue) {
-			cue = doc.createElement("div");
-			cue.className = "bk-sim-snapshot-cue bk-snapshot-stage-cue";
-			cue.setAttribute("role", "status");
-			stage.append(cue);
-		}
-		const timeStr =
-			typeof time === "number" && Number.isFinite(time)
-				? ` (${Number(time.toFixed(2))} s)`
-				: "";
-		cue.textContent = `Snapshot${timeStr} · Paused`;
-		cue.hidden = false;
-	} else if (cue) {
-		cue.hidden = true;
-	}
+	figure
+		.querySelectorAll(".bk-sim-snapshot-cue, .bk-snapshot-stage-cue")
+		.forEach((cue) => {
+			cue.remove();
+		});
 
+	updatePlaybackButton(figure);
 	bkSyncLabPauseOverlay(figure);
 }
 
@@ -288,15 +275,14 @@ function editableShortcutTarget(target: Element | null): boolean {
 
 export function bkResumeSimulationIfPaused(figure: HTMLElement): void {
 	if (!figure) return;
-	// Policy: paused spatial edits and snapshot inspection must remain paused.
-	// Only explicit Play button or Space shortcut resumes simulation playback.
 	if (
 		figure.dataset.bkSnapshotViewing === "true" ||
-		figure.getAttribute("data-snapshot-viewing") === "true" ||
-		figure.dataset.bkPausedSnapshot === "true"
+		figure.hasAttribute("data-snapshot-viewing")
 	) {
+		bkSetLabPlayback(figure, true);
 		return;
 	}
+	if (figure.dataset.bkPausedSnapshot === "true") return;
 	const isSteps = figure.classList.contains("bk-steps-object");
 	if (isSteps) {
 		const playBtn = figure.querySelector<HTMLButtonElement>(
@@ -354,7 +340,14 @@ function updatePlaybackButton(figure: HTMLElement): void {
 	if (button) {
 		const playing = figure.dataset.bkPlaybackState !== "paused";
 		const label = button.querySelector("[data-bk-playback-label]");
-		if (label) label.textContent = playing ? "Pause" : "Resume";
+		const viewing = figure.dataset.bkSnapshotViewing === "true";
+		if (label) {
+			label.textContent = playing ? "Pause" : "Play";
+			button.disabled = false;
+			label.classList.add("bk-sr-only");
+		}
+		button.classList.remove("bk-resume-here");
+
 		button.classList.toggle("is-active", playing);
 		button
 			.querySelector<HTMLElement>(".bk-icon-pause")
@@ -364,7 +357,7 @@ function updatePlaybackButton(figure: HTMLElement): void {
 			?.style.setProperty("display", playing ? "none" : "");
 		button.setAttribute(
 			"aria-label",
-			playing ? "Pause simulation" : "Resume simulation",
+			playing ? "Pause simulation" : "Play simulation",
 		);
 	}
 
@@ -373,6 +366,7 @@ function updatePlaybackButton(figure: HTMLElement): void {
 	);
 	if (stepPlayBtn) {
 		const playing = figure.dataset.bkPlaybackState !== "paused";
+		stepPlayBtn.disabled = false;
 		stepPlayBtn.classList.toggle("is-active", playing);
 		stepPlayBtn.setAttribute(
 			"title",
@@ -391,6 +385,7 @@ function updatePlaybackButton(figure: HTMLElement): void {
 
 export function bkSetLabPlayback(figure: HTMLElement, playing: boolean): void {
 	if (!figure.querySelector(".bk-sim-preview")) return;
+
 	if (
 		playing &&
 		(figure.dataset.bkSnapshotViewing === "true" ||
@@ -437,6 +432,8 @@ function ensurePlaybackControls(figure: HTMLElement): void {
 	controls.setAttribute("aria-label", "Simulation playback");
 	controls.innerHTML = `<div class="bk-steps-nav"><button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space" title="Pause simulation (Space)">${PAUSE_ICON}${PLAY_ICON}<span class="bk-sr-only" data-bk-playback-label>Pause</span></button><button type="button" class="bk-steps-btn" data-bk-reset-simulation aria-keyshortcuts="R" aria-label="Reset simulation" title="Reset simulation">${RESET_ICON}<span class="bk-sr-only">Reset</span></button></div>`;
 	(figure.querySelector(".bk-sim-stage") || inspector).append(controls);
+	const capture = figure.querySelector("[data-bk-capture-snapshot]");
+	if (capture) controls.append(capture);
 	updatePlaybackButton(figure);
 }
 
@@ -927,6 +924,16 @@ export function bkToggleExpandLab(
 export function bkWireWorkspace(): void {
 	if (wiredDocument === document) return;
 	wiredDocument = document;
+	document.addEventListener("bk:timeline-live", (event) => {
+		const figure = (event.target as HTMLElement)?.closest<HTMLElement>(
+			".bk-object",
+		);
+		if (figure)
+			bkSetLabPlayback(
+				figure,
+				(event as CustomEvent<{ playing?: boolean }>).detail?.playing !== false,
+			);
+	});
 
 	document.addEventListener("bk:snapshot-view-change", (event: Event) => {
 		const customEvent = event as CustomEvent<{

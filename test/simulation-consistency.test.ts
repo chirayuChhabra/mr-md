@@ -305,7 +305,7 @@ window.bkSetup(800, 450, (ctx) => {
 				`${blockFigure} button[data-bk-playback]`,
 				(el) => el.textContent?.trim(),
 			);
-			expect(pausedText).toBe("Resume");
+			expect(pausedText).toBe("Play");
 
 			// Test reset interaction
 			await page.locator(`${blockFigure} button[data-bk-reset-simulation]`).click();

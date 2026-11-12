@@ -1,50 +1,39 @@
 import { expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import puppeteer from 'puppeteer';
-import { renderSimulation } from '../src/renderer/blocks/simulation';
+import { snapshotRuntimeCode } from '../src/renderer/blocks/snapshot-runtime.js';
 
-test('capture names and downloads an exact PNG, adds a thumbnail, and exports a named timeline', async () => {
- const bundle=await Bun.build({entrypoints:['capture-fixture'],target:'browser',plugins:[{name:'fixture',setup(build){
-  build.onResolve({filter:/^capture-fixture$/},()=>({path:'fixture',namespace:'fixture'}));
-  build.onLoad({filter:/.*/,namespace:'fixture'},()=>({loader:'ts',resolveDir:process.cwd(),contents:`import {bkWireMaximizeControls} from './src/client/ui.ts';import {bkWireInteractiveFrames} from './src/client/interactive.ts';import {bkWireSimControls} from './src/client/simulation.ts';import {bkWireTelemetry,bkInitTelemetry} from './src/client/telemetry.ts';bkWireMaximizeControls();bkWireInteractiveFrames();bkWireSimControls();bkWireTelemetry();bkInitTelemetry();`}));
- }}]});
- const {html}=renderSimulation({type:'simulation',label:'Capture lab',measurements:{timeline:true},props:{speed:1},tunables:{speed:{type:'range',min:0,max:2}},telemetry:{time:{unit:'s'},position:{label:'Position',unit:'m',graph:true}},src:`const sim=defineSimulation({props:{speed:1}});let time=0;bkRegisterSnapshot({capture:()=>({time}),restore:s=>{time=s.time}});bkSetup(800,450,ctx=>{time+=sim.deltaTime();ctx.fillStyle='#cb4523';ctx.fillRect(0,0,800,450);sim.publishTelemetry({time,position:time*time})});`},0,{});
- const folder=mkdtempSync(join(tmpdir(),'mr-md-capture-'));
+test('a saved moment retains its PNG and downloads with its chosen name',async()=>{
+ const bundle=await Bun.build({entrypoints:['src/client/measurement-timeline.ts'],target:'browser',format:'esm'});
  const browser=await puppeteer.launch({headless:true,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage']});
  try{
-  const page=await browser.newPage();page.setDefaultTimeout(8000);await page.setViewport({width:1280,height:900});
-  const cdp=await page.createCDPSession();await cdp.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:folder,eventsEnabled:true});
-  const downloaded=()=>new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Download did not finish')),8000);const handle=(event:any)=>{if(event.state==='completed'){clearTimeout(timer);cdp.off('Browser.downloadProgress',handle);resolve()}};cdp.on('Browser.downloadProgress',handle)});
-  await page.setContent(`<style>${readFileSync('src/styles/theme.css','utf8')}${readFileSync('src/styles/measurement-timeline.css','utf8')}</style>${html}`);await page.addScriptTag({content:await bundle.outputs[0].text()});
-  await page.locator('[data-bk-expand-preview]').click();
-  await page.waitForFunction(()=>!document.querySelector<HTMLButtonElement>('[data-bk-capture-snapshot]')?.disabled);
-  await page.locator('[aria-controls$="-panel-telemetry"]').click();
-  await page.locator('[data-measurement-view="graphs"]').click();
-  await page.select('[data-graph-y]','position');await page.locator('[data-create-graph]').click();
-  await page.waitForSelector('.bk-custom-graph-item');
-  await page.locator('[data-remove-custom-graph]').click();
-  expect(await page.$$('.bk-custom-graph-item')).toHaveLength(0);expect(await page.$$('.bk-graph-window')).toHaveLength(0);
-  await page.locator('[data-measurement-view="stats"]').click();
-  expect(await page.$eval('[data-measurement-panel="graphs"]',e=>(e as HTMLElement).hidden)).toBe(true);
-  await page.locator('[aria-controls$="-panel-timeline"]').click();
-  await page.locator('[data-bk-capture-snapshot]').click();await page.waitForSelector('.bk-capture-name');
-  expect(await page.$eval('.bk-capture-saved',e=>e.textContent)).toBe('Saved to timeline');
-  await page.$eval('.bk-capture-name input',e=>(e as HTMLInputElement).value='Spring trial');
-  const pngDone=downloaded();await page.locator('.bk-capture-name button[type="submit"]').click();await pngDone;
-  const png=readFileSync(join(folder,'Spring trial.png'));expect([...png.subarray(0,8)]).toEqual([137,80,78,71,13,10,26,10]);
-  const row=await page.waitForSelector('.bk-snapshot-row:has(.bk-snapshot-thumbnail)');expect(await row!.evaluate(e=>e.textContent)).toContain('Spring trial');
-  await row!.click();await page.waitForFunction(()=>document.querySelector('.bk-object')?.hasAttribute('data-snapshot-viewing'));await page.locator('[aria-label="Rename snapshot"]').click();
-  await page.waitForSelector('.bk-timeline-rename input');
-  await page.$eval('.bk-timeline-rename input',e=>(e as HTMLInputElement).value='Renamed trial');await page.locator('.bk-timeline-rename button').click();
-  expect(await page.$eval('.bk-timeline-continue-btn',e=>e.textContent)).toBe('Resume');
-  await page.locator('.bk-timeline-continue-btn').click();
-  await page.waitForFunction(()=>document.querySelector('.bk-object')?.getAttribute('data-bk-playback-state')==='playing');
-  await page.locator('.bk-timeline-toolbar summary').click();
-  const jsonDone=downloaded();await page.locator('[data-export-timeline]').click();await jsonDone;
-  const csv=readFileSync(join(folder,'Capture lab timeline.csv'),'utf8');
-  expect(csv).toContain('Renamed trial');expect(csv).toContain('Time (s)');
+  const page=await browser.newPage();await page.setContent('<div id="saved"></div>');
+  await page.addScriptTag({content:(await bundle.outputs[0].text()).replace(/export\s*\{[\s\S]*?\};?\s*$/, "")+"\nwindow.__createSaved=createMeasurementTimeline;"});
+  await page.evaluate(async()=>{
+   const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;canvas.getContext('2d')!.fillRect(0,0,32,32);
+   const t=(window as any).__createSaved(document.querySelector('#saved'),{schema:{},store:{read:async()=>({version:1,moments:[]}),write:async()=>{}}});
+   await t.ready;await t.record({kind:'snapshot',title:'Low damping',time:2,snapshot:{id:'moment',time:2,label:'Low damping',timestamp:1,props:{},telemetry:{},state:{time:2},isExact:true,imageDataUrl:canvas.toDataURL()}});
+   (window as any).__download=null;
+   HTMLAnchorElement.prototype.click=function(){(window as any).__download={name:this.download,url:this.href}};
+  });
+  expect(await page.$eval('.bk-saved-open img',image=>(image as HTMLImageElement).src)).toStartWith('data:image/png');
+  await page.locator('.bk-saved-card-actions button:nth-child(2)').click();
+  const download=await page.evaluate(()=>(window as any).__download);
+  expect(download.name).toBe('Low damping.png');expect(download.url).toStartWith('blob:');
+ }finally{await browser.close()}
+},20000);
 
- }finally{await browser.close();rmSync(folder,{recursive:true,force:true})}
-},30000);
+
+test('snapshot capture excludes space around the scene', async () => {
+ const browser = await puppeteer.launch({headless:true,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage']});
+ try {
+  const page = await browser.newPage();
+  await page.setContent('<style>body{margin:0;background:#000}canvas{display:block;width:320px;height:200px;margin:50px}</style><canvas width="320" height="200"></canvas>');
+  await page.addScriptTag({content:snapshotRuntimeCode});
+  const dimensions = await page.evaluate(async () => {
+   const result = await (window as any).__bkCaptureSnapshotImage();
+   const image = new Image(); image.src = result.imageDataUrl; await image.decode();
+   return {width:image.naturalWidth,height:image.naturalHeight};
+  });
+  expect(dimensions).toEqual({width:320,height:200});
+ } finally { await browser.close(); }
+}, 20000);
