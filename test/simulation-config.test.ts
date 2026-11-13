@@ -122,3 +122,68 @@ test("inline builder options are validated after merging defaults", () => {
 		}),
 	).toThrow("Default 10 exceeds maximum 5");
 });
+
+test("validates measurement rules and preserves optional fields", () => {
+	const item = { states: [{ when: { op: "gt", value: 2 }, tone: "warning" }], notifications: [{ id: "hot", when: { op: "eq", value: true }, message: "Hot", once: false, cooldown: 2 }], graph: true, scene: "view", changeThreshold: 0 };
+	expect(validateSimulationConfig({ telemetry: { temperature: item } }).telemetry?.temperature).toEqual(item);
+	for (const invalid of [
+		{ states: [{ when: { op: "gt", value: "2" }, tone: "warning" }] },
+		{ changeThreshold: -1 },
+		{ notifications: [{ id: "a", when: { op: "eq", value: 1 }, message: "x", cooldown: -1 }] },
+		{ notifications: [{ id: "a", when: { op: "eq", value: 1 }, message: "x" }, { id: "a", when: { op: "eq", value: 2 }, message: "y" }] },
+	]) expect(() => validateSimulationConfig({ telemetry: { temperature: invalid } })).toThrow(SimulationConfigError);
+});
+
+test("supports concise timeline config with capture default and top-level normalization", () => {
+	// Concise boolean at root level
+	const rootBoolean = validateSimulationConfig({ timeline: true });
+	expect(rootBoolean.timeline).toBe(true);
+	expect(rootBoolean.measurements?.timeline).toBe(true);
+
+	// Concise object with capture at root level
+	const rootObject = validateSimulationConfig({ timeline: { capture: true } });
+	expect(rootObject.timeline).toEqual({ capture: true });
+	expect(rootObject.measurements?.timeline).toEqual({ capture: true });
+
+	// Explicit measurements.timeline
+	const nestedBoolean = validateSimulationConfig({ measurements: { timeline: true } });
+	expect(nestedBoolean.measurements?.timeline).toBe(true);
+
+	const nestedObject = validateSimulationConfig({
+		measurements: {
+			timeline: { start: true, present: true, controls: true, capture: true },
+		},
+	});
+	expect(nestedObject.measurements?.timeline).toEqual({
+		start: true,
+		present: true,
+		controls: true,
+		capture: true,
+	});
+
+	// Preserves existing measurements while normalizing root timeline
+	const withExistingMeasurements = validateSimulationConfig({
+		timeline: true,
+		measurements: { initialTab: "timeline" },
+	});
+	expect(withExistingMeasurements.measurements?.timeline).toBe(true);
+	expect(withExistingMeasurements.measurements?.initialTab).toBe("timeline");
+
+	// Invalid timeline configurations throw SimulationConfigError
+	for (const invalid of [
+		{ timeline: "active" },
+		{ timeline: { capture: "yes" } },
+		{ measurements: { timeline: 42 } },
+		{ measurements: { timeline: { start: "no" } } },
+	]) {
+		expect(() => validateSimulationConfig(invalid as any)).toThrow(SimulationConfigError);
+	}
+});
+
+test("validates author-defined saved-state conditions and duplicate ids", () => {
+ const rule={id:"checkpoint",name:"Five seconds",when:{op:"gte",value:5}};
+ const config=validateSimulationConfig({timeline:true,telemetry:{time:{saveStates:[rule]}}},"saved.config.json");
+ expect(config.telemetry?.time.saveStates?.[0].name).toBe("Five seconds");
+ expect(()=>validateSimulationConfig({telemetry:{time:{saveStates:[rule,rule]}}},"saved.config.json")).toThrow("Duplicate saved-state rule id");
+ expect(()=>validateSimulationConfig({telemetry:{time:{saveStates:[{...rule,cooldown:-1}]}}},"saved.config.json")).toThrow();
+});

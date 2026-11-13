@@ -2,6 +2,8 @@
 
 import { bkIsPhone } from "./device.js";
 import { bkInitPhoneApp } from "./phone-app.js";
+import { bkCollapseLab } from "./workspace.js";
+import { bkExitWorld } from "./world.js";
 export function bkInitRouter() {
 	if (window.__bk_router_initialized) return;
 	window.__bk_router_initialized = true;
@@ -67,6 +69,16 @@ export function bkInitRouter() {
 		const targetUrl = new URL(url, window.location.origin);
 		if (targetUrl.origin !== window.location.origin) return false;
 
+		const pendingWorldHistory = window.__bk_pending_world_popstate;
+		if (pendingWorldHistory) {
+			const waitingId = ++navigationId;
+			pendingWorldHistory.then(() => {
+				if (waitingId === navigationId)
+					handleNavigation(targetUrl.href, addToHistory);
+			});
+			return true;
+		}
+
 		scrollPositions.set(
 			currentPathname,
 			document.querySelector(".bk-main")?.scrollTop || 0,
@@ -89,6 +101,8 @@ export function bkInitRouter() {
 				if (newMain && newNav && newHeader) {
 					const updateDOM = () => {
 						if (requestId !== navigationId) return;
+						bkCollapseLab(true);
+						bkExitWorld(undefined, { fromPopstate: true, immediate: true });
 						const mainEl = document.querySelector(".bk-main");
 						const navEl = document.querySelector(".bk-nav");
 						const headerEl = document.querySelector(".bk-sidebar-header");
@@ -281,7 +295,13 @@ export function bkInitRouter() {
 
 	document.addEventListener("click", (e) => {
 		const a = e.target.closest("a");
-		if (!a?.href) return;
+		if (
+			!a?.href ||
+			a.hasAttribute("download") ||
+			a.href.startsWith("blob:") ||
+			a.href.startsWith("data:")
+		)
+			return;
 		if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 		if (a.target === "_blank") return;
 
@@ -338,6 +358,13 @@ export function bkInitRouter() {
 			return;
 		}
 		if (
+			document.querySelector(".bk-object--maximized") &&
+			new URL(window.location.href).pathname === currentPathname
+		) {
+			bkCollapseLab(true);
+			return;
+		}
+		if (
 			document.body.classList.contains("bk-world-immersive") ||
 			document.querySelector(
 				".bk-world-fullscreen.bk-world--active, .bk-world-fullscreen.bk-world--flying, .bk-world-fullscreen.bk-world--exiting",
@@ -345,6 +372,7 @@ export function bkInitRouter() {
 		) {
 			return;
 		}
+		bkCollapseLab(true);
 		const targetUrl = new URL(window.location.href);
 		if (targetUrl.pathname === currentPathname) {
 			const hash = targetUrl.hash;

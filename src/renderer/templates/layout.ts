@@ -86,6 +86,7 @@ export function renderLayout(
 	const ui = opts.ui ?? "standard";
 	const safeFont = opts.font ? opts.font.replace(/[;{}<>\\]/g, "") : "";
 
+	const appearanceButtonHtml = `<button ${!opts.phoneApp ? 'class="bk-icon-btn bk-topbar-btn bk-fallback-appearance"' : ""} type="button" id="bk-phone-appearance" aria-label="Appearance" aria-controls="bk-sidebar" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>`;
 	return `<!DOCTYPE html>
 <html lang="en" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}>
 <head>
@@ -121,6 +122,7 @@ ${description ? `<meta name="description" content="${escHtml(description)}">` : 
 ${opts.head ?? ""}
 ${safeFont && opts.standalone === false ? `<style>:root { --font-sans: ${safeFont}, sans-serif; }</style>` : ""}
 ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=${assetVersion("styles")}">` : `<style>\n${safeFont ? `:root { --font-sans: ${safeFont}, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }` : ""}\n${pageCSS()}\n</style>`}
+
 </head>
 <body class="bk-layout-${layout} bk-density-${density} bk-tone-${tone}">
 <div class="bk-shell" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}${_isChapter ? ' data-is-chapter="true"' : ""}>
@@ -163,11 +165,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
         <span class="bk-sr-only">Exit Simulation</span>
       </button>
       ${docTelemetryButtonHtml}
-      <button class="bk-icon-btn bk-topbar-btn bk-theme-toggle" id="bk-theme-toggle" type="button" aria-label="Toggle color theme" title="Toggle dark/light mode">
-        <svg class="bk-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-        <svg class="bk-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-        <span class="bk-sr-only">Toggle theme</span>
-      </button>
+      ${!opts.phoneApp ? appearanceButtonHtml : ""}
     </div>
     ${
 			!_isChapter
@@ -179,7 +177,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
   </header>
   <header class="bk-phone-appbar" aria-label="Course toolbar">
     <button type="button" id="bk-phone-back" aria-label="Back to course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
-    <button type="button" id="bk-phone-appearance" aria-label="Appearance" aria-controls="bk-sidebar" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>
+    ${opts.phoneApp ? appearanceButtonHtml : ""}
     <button type="button" id="bk-phone-search" aria-label="Search lessons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg></button>
   </header>
   <nav class="bk-phone-nav" aria-label="Phone navigation">
@@ -201,6 +199,11 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
         </div>
         <nav class="bk-nav">${navHtml}</nav>
         <div class="bk-sidebar-footer">
+          <button class="bk-icon-btn bk-theme-toggle" id="bk-theme-toggle" type="button" aria-label="Toggle color theme" title="Toggle dark/light mode">
+            <svg class="bk-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="bk-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <span class="bk-sr-only">Toggle theme</span>
+          </button>
           <button class="bk-icon-btn bk-settings-button" id="bk-settings-button" type="button" aria-expanded="false" aria-controls="bk-theme-panel" title="Display settings">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             <span class="bk-sr-only">Display settings</span>

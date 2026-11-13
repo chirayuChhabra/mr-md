@@ -1,8 +1,10 @@
 import { canvasFramingRuntime } from "./canvas-framing.js";
 import {
+	pausedInteractionRuntime,
 	simulationAuthoringRuntime,
 	workspaceKeyboardBridge,
 } from "./simulation-runtime.js";
+import { snapshotRuntimeCode } from "./snapshot-runtime.js";
 import { escAttr } from "./utils.js";
 
 export function stepsIframeDoc(
@@ -46,6 +48,8 @@ window.__simProps = JSON.parse(document.getElementById("bk-sim-props").textConte
 window.__loop = false;
 window.bkSetupCalled = false;
 ${simulationAuthoringRuntime}
+${snapshotRuntimeCode}
+${pausedInteractionRuntime}
 ${workspaceKeyboardBridge}
 window.__bkTheme = { colors: {}, theme: "light", palette: "ink", ui: "standard" };
 window.__bkStepCallbacks = [];
@@ -232,8 +236,11 @@ window.bkSetup = function(requestedW, requestedH, loopFnOrOpts, maybeLoopFn) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  const loopFn = typeof loopFnOrOpts === "function" ? loopFnOrOpts : maybeLoopFn;
-  const options = (typeof loopFnOrOpts === "object" && loopFnOrOpts !== null) ? loopFnOrOpts : ((typeof maybeLoopFn === "object" && maybeLoopFn !== null) ? maybeLoopFn : {});
+  const setup = window.bkResolveSetup(requestedW, requestedH, loopFnOrOpts, maybeLoopFn);
+  requestedW = setup.width;
+  requestedH = setup.height;
+  const loopFn = setup.draw;
+  const options = setup.options;
   if (typeof loopFn !== "function") return;
 
   let loopId = null;

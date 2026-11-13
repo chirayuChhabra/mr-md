@@ -174,6 +174,9 @@ export function renderWorld(
   </div>
 
   ${block.caption ? `<figcaption class="bk-caption">${mdInline(block.caption)}</figcaption>` : ""}
+  <script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry ?? {})}</script>
+  <script type="application/json" class="bk-measurements-config">${escapeScriptJson(block.measurements ?? {})}</script>
+
   <script type="application/json" class="bk-world-config">${escapeScriptJson(worldConfig)}</script>
 </figure>`.trim();
 

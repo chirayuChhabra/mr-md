@@ -30,7 +30,7 @@ for (const [width, height] of [[320, 740], [390, 844], [844, 390]]) {
    await page.goto(lesson("creating-simulations"), { waitUntil: "domcontentloaded" });
    await page.waitForFunction(() => document.documentElement.dataset.isPhone === "true");
    expect(await page.$$(".bk-object iframe")).toHaveLength(0);
-   expect(await page.$$(".bk-phone-sim-notice")).toHaveLength(5);
+   expect(await page.$$(".bk-phone-sim-notice")).toHaveLength(6);
    expect(await page.evaluate(() => [...document.querySelectorAll(".bk-phone-sim-notice")].every(el => el.getBoundingClientRect().height > 0))).toBe(true);
    expect(await page.evaluate(() => [...document.querySelectorAll(".bk-sim-workspace, .bk-world-portal, .bk-pixel-gateway")].every(el => el.getBoundingClientRect().height === 0))).toBe(true);
    expect(await page.$eval(".bk-main", el => el.scrollWidth <= el.clientWidth)).toBe(true);
@@ -51,7 +51,7 @@ for (const [width, height] of [[768, 1024], [820, 1180], [1180, 820]]) {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1;
    }))).toBe(true);
-   await page.locator('button[aria-label="Exit expanded view"]').click();
+   await page.locator('#bk-lab-exit-topbar-btn').click();
    expect(await page.$(".bk-object--maximized")).toBeNull();
   } finally { await page.close(); }
  });
@@ -171,13 +171,13 @@ for (const [width, height] of [[820, 1180], [1024, 768], [1180, 820]]) {
      return {
       covers: Math.abs(r.left) < 1 && Math.abs(r.top) < 1 && Math.abs(r.right - innerWidth) < 1 && Math.abs(r.bottom - innerHeight) < 1,
       square: s.borderRadius === '0px' && s.borderTopWidth === '0px' && s.boxShadow === 'none',
-      corners: [[1,1],[innerWidth-2,1],[1,innerHeight-2],[innerWidth-2,innerHeight-2]].every(([x,y]) => el.contains(document.elementFromPoint(x,y))),
+      corners: [[1,1],[innerWidth-2,1],[1,innerHeight-2],[innerWidth-2,innerHeight-2]].every(([x,y]) => (el.contains(document.elementFromPoint(x,y)) || !!document.elementFromPoint(x,y)?.closest(".bk-sidebar:not([inert])"))),
       horizontal: innerHeight > innerWidth && innerWidth <= 1024 ? inspector.top >= stage.bottom - 1 && stage.width >= innerWidth - 1 : inspector.left >= stage.right - 1 && stage.width >= 420 && inspector.width >= 280,
       proportionate: (() => { const frame = el.querySelector('iframe')!.getBoundingClientRect(); const ratio = Number((el as HTMLElement).style.getPropertyValue('--bk-canvas-aspect')); return Math.abs(frame.width / frame.height - ratio) < 0.02; })(),
      };
     });
     expect(result).toEqual({ covers: true, square: true, corners: true, horizontal: true, proportionate: true });
-    await page.locator('button[aria-label="Exit expanded view"]').click();
+    await page.locator('#bk-lab-exit-topbar-btn').click();
     expect(await page.$('.bk-object--maximized')).toBeNull();
     expect(await page.$eval('.bk-main', el => !(el as HTMLElement).inert)).toBe(true);
    }
@@ -487,10 +487,11 @@ test('standalone phone lessons retain accessible theme and contents controls', a
  try {
   await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
   await page.goto(new URL('/standalone-test.html',docsServer.url).href);
-  expect(await page.$eval('#bk-theme-toggle',el=>el.getBoundingClientRect().height)).toBeGreaterThan(0);
-  const before=await page.evaluate(()=>document.documentElement.dataset.theme);
-  await page.locator('#bk-theme-toggle').click();
-  expect(await page.evaluate(()=>document.documentElement.dataset.theme)).not.toBe(before);
+  expect(await page.$eval('#bk-phone-appearance',el=>el.getBoundingClientRect().height)).toBeGreaterThan(0);
+  await page.locator('#bk-phone-appearance').click();
+  await page.locator('#bk-theme-panel button[data-theme="dark"]').click();
+  expect(await page.evaluate(()=>document.documentElement.dataset.theme)).toBe('dark');
+  await page.keyboard.press('Escape');
   await page.locator('#bk-topbar-sidebar-toggle').click();
   await page.waitForFunction(()=>document.querySelector('.bk-shell')?.getAttribute('data-mobile-open')==='true');
   await page.keyboard.press('Escape');

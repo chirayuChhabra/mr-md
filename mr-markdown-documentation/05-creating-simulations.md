@@ -49,7 +49,7 @@ To create a block simulation, define a script next to your lesson. `bkSetup` con
 
 ```javascript
 // mysim.js
-window.bkSetup(800, 450, (ctx, width, height) => {
+window.bkSetup((ctx, width, height) => {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = window.bkColor("accent");
   ctx.fillRect(40, 40, 80, 80);
@@ -63,6 +63,23 @@ and **Reset**. Closing pauses the model and restores the lesson position and foc
 reopening preserves control values and an explicit pause. Background lesson
 controls stay unavailable while the workspace is open. Escape also works from
 inside the simulation iframe.
+
+### A simulation without inspector controls
+
+This circular-motion example has no settings, measurements, or timeline. Expand it
+to see the scene use the full workspace, with Pause / Resume and Reset below it.
+The drawing keeps its proportions as the window changes size. Space around the
+scene shares its background.
+
+![Uniform circular motion](./sims/circular-motion.js)
+
+Its companion config only needs the presentation type:
+
+```json
+{ "type": "block" }
+```
+
+### Reset and lifecycle
 
 Reset restores authored props, clears measurements, and resets the model. Older
 scripts continue working: the host reloads their iframe to reset private state.
@@ -87,7 +104,8 @@ window.bkSetup(800, 450, (ctx, width, height) => {
 
 `sim.deltaTime()` returns seconds, zero while paused, and caps long delays at
 0.1 seconds. Call it once per draw and pass that value to model updates. A draw
-can occur while paused to refresh a changed control, theme, or viewport; drawing
+can occur while paused to refresh a pointer or keyboard interaction, changed
+control, theme, or viewport; drawing
 must not itself advance the model or append history. Reset all evolving state,
 including elapsed time, traces, drag state, and completion guards.
 
@@ -157,6 +175,12 @@ Here is a complete, coherent experiment demonstrating these capabilities in a da
 
 ![Damped Harmonic Oscillator](./sims/oscillator.js)
 
+The oscillator opts in with `"timeline": true` in its config and registers both
+`capture` and `restore` with `bkRegisterSnapshot`. Open Timeline, capture a frame,
+apply an impulse, then restore the frame to compare runs. Snapshots include the
+model parameters, displacement, velocity, simulation time, trajectory history,
+and impulse highlight. Restoring pauses playback; resuming continues the saved state.
+
 #### Control contract example
 
 A companion `.config.json` defines presets, actions, and typed tunables using collective `advancedControls`:
@@ -169,17 +193,13 @@ A companion `.config.json` defines presets, actions, and typed tunables using co
     "dampingMode": "viscous",
     "medium": "air",
     "stiffness": 25,
-    "mass": 1.0,
-    "showTrace": true,
-    "showPhase": true
+    "mass": 1.0
   },
   "advancedControls": [
     "dampingMode",
     "medium",
     "stiffness",
-    "mass",
-    "showTrace",
-    "showPhase"
+    "mass"
   ],
   "tunables": {
     "damping": {
@@ -224,18 +244,10 @@ A companion `.config.json` defines presets, actions, and typed tunables using co
       "max": 5.0,
       "step": 0.5,
       "unit": "kg"
-    },
-    "showTrace": {
-      "label": "Displacement Graph x(t)",
-      "type": "boolean"
-    },
-    "showPhase": {
-      "label": "Phase Space (x vs v)",
-      "type": "boolean"
     }
   },
   "actions": {
-    "impulse": { "label": "Apply Impulse (+Δv)" },
+    "impulse": { "label": "Apply impulse" },
     "zero": { "label": "Reset to Rest" }
   },
   "presets": {
@@ -522,7 +534,8 @@ The solar-system example uses Three.js and external resources; it requires a net
 
 | API | Purpose |
 | --- | --- |
-| `bkSetup(width, height, draw)` | Set up a responsive 2D canvas and animation loop. |
+| `bkSetup(draw, options?)` | Set up a fixed logical drawing space and animation loop. |
+| `bkSetup(width, height, draw)` | Set up a fixed logical drawing space with the specified dimensions. |
 | `bkSetupWorld(draw)` | Set up a 2D world; the callback receives the context and world state. |
 | `bkColor(name)` | Read a theme color such as `accent`, `bg`, or `text`. |
 | `bkCanvasPoint(event, canvas)` | Convert pointer coordinates to canvas coordinates. |
@@ -540,17 +553,34 @@ mr-md manages layout, scaling, theme synchronization, and interaction infrastruc
 
 ### Canvas framing and Retina scaling
 
-Block and step simulations use a responsive canvas contract. The requested size is a minimum logical area. The host scales uniformly and expands callback `width` or `height` to fill available space without stretching:
+For new block and step simulations, use `bkSetup(draw)` for a fixed 800 × 450
+logical drawing space. Resizing changes its scale, not the callback dimensions.
+For a different fixed space, pass `{ width, height }` as the second argument:
 
 ```javascript
-window.bkSetup(800, 450, (ctx, width, height) => {
-  ctx.fillStyle = window.bkColor("bg");
-  ctx.fillRect(0, 0, width, height);
-  // Derive positions and safe bounds from the current width and height.
-});
+window.bkSetup((ctx, width, height) => {
+  // Draw model state in this fixed coordinate space.
+}, { width: 1200, height: 600 });
 ```
 
-A fixed diagram can opt into `{ framing: "contain" }` as the fourth argument to preserve exact logical dimensions and proportions with letterboxing. Explicit `{ framing: "bleed" }` preserves fixed logical coordinates while exposing extended background bounds (`frame.originX`, `frame.originY`, `frame.viewportWidth`, `frame.viewportHeight`) in the fourth callback argument.
+Keep physical state in model units and calculate forces from that state, not
+from viewport or screen pixels. Use `bkCanvasPoint` for pointer positions. Test
+that resizing and opening the workspace do not change the physical state.
+
+The numeric form `bkSetup(800, 450, draw)` also keeps its logical dimensions
+fixed. Both forms fill the viewport by default while keeping logical dimensions fixed.
+The fourth draw argument supplies `originX`, `originY`, `viewportWidth`, and
+`viewportHeight` for drawing backgrounds across the full viewport.
+
+For a layout that must expand with the viewport, opt in to responsive framing:
+
+```javascript
+window.bkSetup((ctx, width, height) => {
+  // Use the current dimensions for visual layout only.
+}, { framing: "responsive" });
+```
+
+Responsive callback dimensions may change when the viewport changes. Use `{ framing: "contain" }` only when a bounded canvas with letterboxing is desired.
 
 Canvas backing bitmaps scale automatically to `window.devicePixelRatio`. Pointer coordinates mapped with `window.bkCanvasPoint(event, canvas)` translate directly to current logical coordinates.
 
@@ -566,11 +596,325 @@ Shortcuts work across the stage, the iframe sandbox, and inspector controls:
 
 Pausing displays a stage overlay with a Resume button and shortcut reminder while keeping the inspector available for inspection.
 
+### Measurement states, events, and graphs
+
+Measurements can declare optional behavior in the sibling config:
+
+```json
+{
+  "telemetry": {
+    "height": {
+      "label": "Height",
+      "unit": "m",
+      "precision": 2,
+      "graph": true,
+      "scene": "height-guide",
+      "changeThreshold": 2,
+      "states": [
+        { "when": { "op": "gte", "value": 15 }, "tone": "accent", "label": "Above 15 m" }
+      ],
+      "notifications": [
+        { "id": "height-milestone", "when": { "op": "gte", "value": 15 }, "message": "The projectile crossed 15 metres." }
+      ]
+    }
+  }
+}
+```
+
+The first matching state sets the number's color and optional explanatory label.
+Tones are `neutral`, `accent`, `success`, `warning`, and `danger`. Conditions support `gt`,
+`gte`, `lt`, `lte`, `eq`, and `neq`; ordered comparisons require numbers and
+equality is strict. Conditions contain data, never JavaScript expressions.
+
+Notifications fire when a condition changes from false to true. The first sample
+establishes the starting state. Each notification fires once per run by default;
+set `once: false` to allow later crossings and use `cooldown` (seconds) to limit
+their frequency. Use `toast: false` to record a routine event only in Timeline,
+and `tone` to mark a meaningful warning or success. IDs must be unique within a measurement. Messages appear over
+the scene at its top right and link to their measurement. The separate Timeline
+tab preserves each message, observed value, and time after the notification
+disappears.
+
+Publish `time` in seconds alongside the measurements to timestamp events and
+graphs in simulation time, including after restoring a saved state. Otherwise,
+the host uses elapsed time and rebases it to the saved time when playback
+continues. Graphs retain the current run's recorded samples and support multiple
+framework-owned floating windows. Drag each header anywhere
+in the expanded viewport, including over the inspector. Minimize retains a live
+readout; Maximize opens a separate browser tab with selectable graphs side by
+side. The tab receives live samples while its source remains open, and retains
+its last plots when the source disconnects.
+
+Reset clears recorded samples, timeline events, notification state, and unread
+indicators. It preserves scene visibility and each graph window’s measurement, position,
+and minimized state. Closing and reopening the workspace
+also preserves those viewing choices. Guided steps share this distinction
+between trial data and viewing preferences when a new trial starts. A simulation that starts a new trial after a settings change can send
+`window.parent.postMessage({ type: "bk:telemetry-reset" }, "*")` before publishing
+its new values. The host checks the message against the registered iframe.
+
+Numeric updates do not animate or flash rows. Conditional labels reserve space
+so crossing a threshold does not repeatedly move neighboring values.
+
+`changeThreshold` sets how much a numeric value must change before marking
+the closed Measurements tab as updated. A count shows how many distinct measurements changed while their tab was
+closed. Timeline counts new events independently; opening each tab clears its count.
+
+Authors can configure the first view for block, steps, and world simulations:
+
+```json
+{
+  "measurements": {
+    "visible": ["height"],
+    "graphs": [{ "key": "height", "minimized": false, "x": 24, "y": 80, "width": 420, "height": 280 }],
+    "initialTab": "telemetry",
+    "notifications": { "enabled": true, "minInterval": 12, "duration": 5, "maxVisible": 1 },
+    "timeline": { "start": true, "present": true, "controls": true }
+  }
+}
+```
+
+Saved reader choices override startup defaults. Notification intervals and durations
+are seconds; the global interval limits all toast rules together, including across
+trial resets. Suppressed toasts still enter Timeline. Start records the initial
+snapshot; Present shows current values and playback state. Settings changes enter
+the timeline after the user finishes adjusting a control.
+
+A graph can declare axes instead of `true`, for example:
+`"graph": { "x": { "key": "distance", "label": "Distance", "unit": "m" }, "y": { "label": "Speed", "unit": "m/s" } }`.
+The Y value is this measurement; X defaults to time in seconds. Custom X keys must
+refer to declared telemetry. Authors publish values; the framework draws all plots.
+
+The optional `scene` identifier makes the stat itself a scene-visibility toggle.
+Several measurements can remain visible together. The host sends a full snapshot
+of the selected measurements when a selection changes and restores it after a
+reset or iframe reload. The simulation draws the selected guides using its own
+geometry:
+
+```js
+window.addEventListener("message", (event) => {
+  if (event.source !== window.parent || event.data?.type !== "bk:measurement-visibility") return;
+  if (!Array.isArray(event.data.measurements)) return;
+  visibleGuides = new Set(event.data.measurements.map((item) => item.scene));
+});
+```
+
+See `playground/measurements-lab/spring-lab.md` for a spring experiment with a
+draggable mass, live physical controls, and spatial measurement guides.
+
+### User interactions on graphs
+
+BK records pointer and keyboard interaction periods and labels changes made
+through host controls, presets, and actions. Graphs draw these samples with an
+amber dashed line. Time graphs also shade the interaction interval; paused
+edits appear as a narrow band at the unchanged simulation time. The normal
+trace resumes with automatic updates after the interaction ends. Hover over
+an annotated sample to read its label. Custom X/Y plots use the same labeled
+segments without treating their X axis as a time interval.
+
+These labels are saved with measurement history and return when a saved state
+is opened. They identify user input during that interval, rather than attributing
+all later simulation behavior to the input. Older saved histories have no labels.
+
+Canvas and DOM scenes can name their automatic pointer interactions with
+`data-bk-interaction-label`, for example:
+
+```js
+document.querySelector("canvas").setAttribute("data-bk-interaction-label", "Cart dragged");
+```
+
+For a custom interaction, begin a labeled interval and call its returned cleanup
+when the direct edit ends, before automatic behavior resumes:
+
+```js
+const endInteraction = window.bkBeginInteraction?.("Particle repositioned");
+try {
+  particle.x = targetX;
+  particle.y = targetY;
+} finally {
+  endInteraction?.();
+}
+```
+
+Within **Measurements**, switch between **Stats** and **Graphs**. Graphs lists
+author-defined lesson plots and provides X/Y
+selectors under **Plot your own**. Custom plots can be removed with their × control. Learners can pair numeric measurements even
+when those measurements have no authored `graph` configuration. Axis labels and
+units come from the telemetry schema. Plot windows can move across the entire
+expanded lab, including the inspector, and can open in a separate browser tab.
+Use `measurements.initialTab: "graphs"` to open Measurements in the Graphs view.
+
+Set `timeline: true` (or a timeline configuration object) to show Timeline. The camera appears in Timeline after the simulation registers both capture and restore handlers with `window.bkRegisterSnapshot`. The camera button captures the rendered canvas or SVG scene alongside its exact
+state. A **Saved to timeline** cue and thumbnail confirm the capture. Enter a
+name and choose **Save image** to download a PNG; the timeline entry uses the
+same name. Entries can be renamed later, and **Image** downloads the stored frame
+again. If image capture is unavailable, the exact state remains in Timeline and
+the naming form reports the image error.
+
+**More → Export timeline** downloads timeline entries as CSV.
+
+### Controls, graphs, and timeline captures
+
+Set `timeline: true` to enable snapshot history and the host Capture button. Declare controls in `tunables` and plots in `telemetry`:
+
+```json
+{
+  "$schema": "../node_modules/mr-md/dist/simulation.schema.json",
+  "type": "block",
+  "props": {
+    "frequency": 1.5,
+    "damping": 0.12
+  },
+  "tunables": {
+    "frequency": {
+      "label": "Frequency",
+      "unit": "Hz",
+      "type": "range",
+      "min": 0.5,
+      "max": 5.0,
+      "step": 0.1
+    },
+    "damping": {
+      "label": "Damping",
+      "type": "range",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.02
+    }
+  },
+  "telemetry": {
+    "time": { "label": "Time", "unit": "s", "precision": 1 },
+    "displacement": {
+      "label": "Displacement",
+      "unit": "m",
+      "precision": 2,
+      "graph": true,
+      "notifications": [
+        {
+          "id": "first-crossing",
+          "when": { "op": "lt", "value": 0 },
+          "message": "First crossing of equilibrium",
+          "toast": false
+        }
+      ]
+    }
+  },
+  "timeline": true
+}
+```
+
+`props` sets defaults and `tunables` generates host controls. `graph: true`
+adds a plot against time. For a phase plot, use
+`graph: { "x": { "key": "displacement" } }` on the velocity measurement.
+
+`timeline: true` enables the Saved tab, an initial state, and the Save moment
+button. Use `timeline: { "capture": false }` to hide the manual button, or
+`timeline: false` to disable saved states. Telemetry `saveStates` rules define
+named automatic saves. Measurement notifications remain in the Events view.
+
+Selecting a saved state restores its exact simulation state and pauses playback.
+Graphs show the measurements recorded up to that saved time. Each saved state
+contains its own copy of the measurement history and stays unchanged when the
+simulation continues.
+
+**Live** freezes while a saved state is being inspected. Returning to Live
+restores the working run and graph history at the point you left. It resumes
+only if it was playing before inspection; a deliberately paused Live run stays
+paused. Pressing Play while viewing a saved state copies that state's
+simulation state and history into Live, then appends new measurements from that
+point. This replaces the previous Live continuation. Interacting with a saved
+scene copies it into Live while keeping playback paused. Dragged objects redraw
+immediately and stay where released until Play resumes automatic motion.
+
+Saved states and their histories are stored on this device and survive resets
+and page reloads. Reset (`R`) clears the current Live run's measurements. Open
+graphs, selected scene guides, and the active tab persist across resets in
+session storage. Older saved states created without measurement history can
+restore their simulation state, but cannot recover the missing measurements.
+
+### Simulation snapshot registration and author contract
+
+Simulations opt into exact, reversible state captures by registering snapshot handlers. This enables readers to click any milestone in the Timeline to inspect past simulation states and continue from them.
+
+#### Registering snapshot handlers
+
+Inside your simulation script, register snapshot lifecycle functions with `window.bkRegisterSnapshot`:
+
+```javascript
+const sim = window.defineSimulation({
+  props: { frequency: 1.5, damping: 0.12 }
+});
+
+let x = 1.0;
+let v = 0.0;
+let time = 0.0;
+
+// Opt into exact state restoration
+window.bkRegisterSnapshot({
+  capture: () => ({ x, v, time }),
+  restore: (snapshotState, props, snapshotTime) => {
+    x = snapshotState.x;
+    v = snapshotState.v;
+    time = snapshotTime ?? snapshotState.time;
+  }
+});
+```
+
+#### Author implementation responsibilities
+
+Snapshot handlers must follow this contract:
+
+1. **Synchronous execution**: `capture()` and `restore()` handlers must be strictly synchronous. Do not return unresolved Promises or defer state application to future ticks.
+2. **Cloneable state objects**: `capture()` must return a plain, serializable object composed of numbers, strings, booleans, plain objects, and arrays. Never return DOM elements, functions, circular structures, Three.js meshes, or WebGL buffers. The runtime clones state via `structuredClone` with a `JSON` fallback.
+3. **Seeded randomness and determinism**: Unseeded `Math.random()` calls will diverge after restoration. If your model uses stochastic behavior (such as Brownian motion or Monte Carlo sampling), include the pseudo-random generator's seed or state index in `capture()` and re-seed it in `restore()`.
+4. **Physics guard during restoration**: Inspect `window.__bkRestoring` during your setup/draw loop. When true, treat elapsed delta time as zero (`dt = 0`), pause physics advancement, and suppress `sim.publishTelemetry` calls to prevent publishing intermediate restoration frames.
+5. **In-place reset**: Register an `instance.onReset` or `window.bkOnReset` callback to reset all internal state variables and cancel any in-progress drag or interaction flags when a trial resets.
+
+#### Publishing telemetry and restore guard
+
+Publish live telemetry on each simulation tick. Guard against advancing time or publishing during state restoration by inspecting `window.__bkRestoring`:
+
+```javascript
+window.bkSetup(800, 450, (ctx, width, height) => {
+  const isRestoring = Boolean(window.__bkRestoring);
+  const dt = isRestoring ? 0 : sim.deltaTime();
+
+  if (dt > 0) {
+    time += dt;
+    // Advance physics model ...
+  }
+
+  if (!isRestoring) {
+    sim.publishTelemetry({ time, displacement: x });
+  }
+
+  // Draw scene ...
+});
+```
+
+#### Host-to-iframe communication contract
+
+Communication between the mr-md host workspace and the simulation iframe follows a strict `postMessage` protocol:
+
+| Direction | Message Type | Payload | Description |
+| --- | --- | --- | --- |
+| Host → Iframe | `bk:snapshot-query-capabilities` | `{}` | Inquires if the simulation supports exact snapshot capture and restoration. |
+| Iframe → Host | `bk:snapshot-capabilities` | `{ supported: boolean, capabilities: { exactState: boolean, customProps: boolean }, reason?: string }` | Broadcast upon registration or in response to capability query. |
+| Host → Iframe | `bk:snapshot-capture` | `{ id: string, time?: number, label?: string }` | Requests an exact state capture from the simulation at the specified moment. |
+| Iframe → Host | `bk:snapshot-data` | `{ id: string, success: boolean, isExact: boolean, state?: unknown, telemetry?: Record<string, unknown>, time?: number, props?: Record<string, unknown>, error?: string }` | Returns cloned simulation internal state and props to store in timeline snapshot. |
+| Host → Iframe | `bk:snapshot-restore` | `{ id: string, snapshot: SimulationSnapshot, resumePlayback?: boolean }` | Orders simulation to restore historical state and props. Sets `window.__bkRestoring = true` during restore. |
+| Iframe → Host | `bk:snapshot-restored` | `{ id: string, success: boolean, isExact: boolean, time?: number, props?: Record<string, unknown>, error?: string }` | Confirms snapshot restoration complete and state synchronized. |
+| Iframe → Host | `bk:telemetry` | `{ data: Record<string, unknown> }` | Delivers real-time numerical readings to host meters and graphs. |
+| Iframe → Host | `bk:telemetry-reset` | `{}` | Instructs host to clear trial history and graphs when starting a new run. |
+| Iframe → Host | `bk:scene-interaction` | `{}` | Reports a spatial interaction. The first spatial interaction with a restored snapshot continues the run from that state. |
+
 ### Inspector layout and live telemetry
 
 Block and step simulations share a structured inspector column beside the canvas:
-- **Controls tab**: Tunables organize by `group` with declared order preserved. Unlisted controls appear under Parameters or Options. Secondary controls declared in `advancedControls` tuck into "More controls".
-- **Measurements tab**: Live measurements published via `sim.publishTelemetry` or `window.bkTelemetry` coalesce with host `requestAnimationFrame` cycles to prevent layout thrashing. Values format into two-column metric cards or full-width status rows with units and precision. Missing or null values display as `—` rather than placeholder zeros.
+
+- **Settings tab**: Tunables organize by `group` with declared order preserved. Unlisted controls appear under Parameters or Options. Secondary controls declared in `advancedControls` tuck into "More controls".
+- **Measurements tab**: Live measurements published via `sim.publishTelemetry` or `window.bkTelemetry` coalesce with host `requestAnimationFrame` cycles to prevent layout thrashing. Values appear in aligned instrument rows with units and precision. Clicking a scene-enabled stat toggles its persistent scene guide. A separate graph control opens its floating window. Missing or null values display as `—` rather than placeholder zeros.
+- **Timeline tab**: Recorded events include their simulation time and observed value. Selecting an event opens its measurement without hiding an already-visible scene guide.
 - **Continuation cue**: Scrollable panels display a clickable cue to scroll down, offering "Back to top" at the end.
 
 ## Compatibility guide
@@ -598,6 +942,42 @@ Setting `advanced: false` on a specific tunable explicitly overrides the collect
 ### Block previews and steps coexistence
 
 Both block and step simulations render inline still previews and expand into the shared full-window modal workspace. Steps simulations retain their guided milestone navigation, target badges, instructions, and hints without receiving duplicate block playback controls. Trial reset resets top-level props plus step `initialProps` in place, preserving student progress and narration across trials.
+
+
+### Automatically saved states
+
+With `"timeline": true`, the Saved tab keeps states captured by the camera. Each
+state includes its screenshot, settings, and exact simulation state. Clicking a
+card restores it paused; Play continues from that point. Saving never pauses the
+running simulation. Names can be edited, states can be deleted with Undo, and
+screenshots can be downloaded from their cards. Initial state stays at the bottom.
+
+Authors can also save a named state when a published measurement meets a condition:
+
+```json
+{
+  "timeline": true,
+  "telemetry": {
+    "time": {
+      "label": "Time",
+      "unit": "s",
+      "saveStates": [
+        {
+          "id": "five-seconds",
+          "name": "At five seconds",
+          "when": { "op": "gte", "value": 5 }
+        }
+      ]
+    }
+  }
+}
+```
+
+A rule saves once per run by default. Set `"once": false` to save whenever the
+condition changes from false to true, and use `"cooldown"` to set a minimum gap
+in seconds. Automatic saves include screenshots and leave playback running.
+The simulation must register exact capture and restore handlers with
+`bkRegisterSnapshot`. Saves remain on this device across page refreshes.
 
 ## AI-assisted authoring
 

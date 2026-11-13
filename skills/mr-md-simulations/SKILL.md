@@ -120,7 +120,7 @@ change.
 Use a sibling `.config.json` as the explicit presentation contract:
 
 - `type: "block"`: a bounded experiment or diagram with generated host controls.
-  Use `.lab()` in the builder and `bkSetup(width, height, draw)` for 2D.
+  Use `.lab()` in the builder and `bkSetup(draw)` for 2D.
 - `type: "steps"`: a sequence of learner goals with instructions, hints, trial
   resets, and completion feedback. Use `.steps()` (or `.lab()` with a steps
   config). Read [references/steps.md](references/steps.md).
@@ -151,10 +151,12 @@ lesson project. Do not edit the installed skill's assets as project source.
 
 Follow this order:
 
-1. Request a minimum logical coordinate area, commonly `1280 × 720`, then
-   derive layout and a safe content rectangle from the current draw callback
-   dimensions. Default framing expands the area to fill the viewport uniformly.
-   Use explicit `framing: "contain"` only for diagrams that need fixed bounds.
+1. Use `bkSetup(draw)` for the standard fixed 800 × 450 logical space. For
+   another fixed space use `bkSetup(draw, { width, height })`. Keep physical
+   state in model units, separate from viewport dimensions and screen pixels.
+   Draw backgrounds across the fourth callback argument’s viewport bounds.
+   The canvas fills the stage while logical coordinates stay fixed.
+   Test that resizing and expanding preserve model state.
 2. Prefer `window.defineSimulation({ props: defaults })` for new scripts; existing `window.__simProps` remains supported.
 3. Use `sim.onPropsChange` (or legacy `bk:props`) when host controls change; register `sim.onReset` to restore all evolving model state.
 4. Register pointer listeners once, during initialization.

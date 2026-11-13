@@ -4,7 +4,7 @@ let x = 0, done = false;
 function reset() { x = 0; done = false; }
 window.bkOnStep(reset);
 sim.onReset(reset);
-window.bkSetup(800, 450, (ctx, width, height) => {
+window.bkSetup((ctx, width, height) => {
   const dt = sim.deltaTime();
   const { speed, target } = sim.props;
   if (dt > 0 && !done) {

@@ -60,6 +60,7 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 		const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 			executablePath: chrome,
 			headless: true,
+			args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 		});
 		try {
 			const page = await browser.newPage();

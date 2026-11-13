@@ -1,4 +1,9 @@
-import { PAUSE_ICON, PLAY_ICON, RESET_ICON } from "../simulation-toolbar.js";
+import {
+	CLOSE_ICON,
+	PAUSE_ICON,
+	PLAY_ICON,
+	RESET_ICON,
+} from "../simulation-toolbar.js";
 import { bkIsPhone } from "./device.js";
 import { bkApplyPropsToControls } from "./simulation.js";
 
@@ -9,14 +14,21 @@ interface CanvasSizeMessage {
 	responsive?: boolean;
 }
 
+const inspectorTabMemory = new WeakMap<
+	Element,
+	"controls" | "telemetry" | "timeline" | "graphs"
+>();
+
 export interface LabExpansionOptions {
 	focusReturn?: HTMLElement;
-	defaultTab?: "controls" | "telemetry";
+	defaultTab?: "controls" | "telemetry" | "timeline" | "graphs";
 }
 
 const EXPAND_ICON =
 	'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
 
+let labHistoryPushed = false;
+let savedMainScroll: number | null = null;
 let savedScrollY: number | null = null;
 let savedFocusEl: HTMLElement | null = null;
 let activeExpandedSimId: string | null = null;
@@ -24,16 +36,27 @@ let activeExpandedSimId: string | null = null;
 let wiredDocument: Document | null = null;
 let savedOverflow: string | null = null;
 let stateDocument: Document | null = null;
+let relocatedTopbar: HTMLElement | null = null;
 let topbarPlaceholder: Comment | null = null;
 
 function restoreHeader(): void {
-	const topbar = document.getElementById("bk-topbar");
-	document.getElementById("bk-lab-exit-topbar-btn")?.remove();
-	document.querySelectorAll(".bk-lab-crumb").forEach((el) => {
+	const topbar = document.getElementById("bk-topbar") || relocatedTopbar;
+	topbar?.querySelector("#bk-lab-exit-topbar-btn")?.remove();
+	(topbar || document).querySelectorAll(".bk-lab-crumb").forEach((el) => {
 		el.remove();
 	});
 	if (topbar && topbarPlaceholder) topbarPlaceholder.replaceWith(topbar);
 	topbarPlaceholder = null;
+	relocatedTopbar = null;
+}
+
+function isHTMLElement(el: unknown): el is HTMLElement {
+	if (!el || typeof el !== "object") return false;
+	const globalEl =
+		(typeof HTMLElement !== "undefined" ? HTMLElement : null) ||
+		(el as Element).ownerDocument?.defaultView?.HTMLElement;
+	if (globalEl) return el instanceof globalEl;
+	return "nodeType" in el && (el as Element).nodeType === 1;
 }
 
 const inertElements = new Map<HTMLElement, boolean>();
@@ -49,7 +72,12 @@ function isolateWorkspace(figure: HTMLElement): void {
 	let branch: Element = figure;
 	while (branch.parentElement) {
 		for (const sibling of branch.parentElement.children) {
-			if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
+			if (
+				sibling === branch ||
+				!isHTMLElement(sibling) ||
+				sibling.matches(".bk-sidebar")
+			)
+				continue;
 			inertElements.set(sibling, sibling.inert);
 			sibling.inert = true;
 		}
@@ -68,7 +96,7 @@ function isolateWorkspace(figure: HTMLElement): void {
 		);
 	}
 	figure.setAttribute?.("role", "dialog");
-	figure.setAttribute?.("aria-modal", "true");
+	figure.setAttribute?.("aria-modal", "false");
 	figure.setAttribute?.(
 		"aria-label",
 		figure.querySelector(".bk-object-title")?.textContent?.trim() ||
@@ -116,21 +144,91 @@ function postPlayback(figure: Element, playing: boolean): void {
 		);
 }
 
+export function syncSnapshotViewingState(
+	figure: HTMLElement,
+	viewing: boolean,
+	time?: number,
+): void {
+	const doc = figure.ownerDocument || document;
+	const iframe = figure.querySelector<HTMLIFrameElement>(
+		".bk-embed-frame iframe, .bk-sim-preview iframe",
+	);
+
+	if (viewing) {
+		figure.dataset.bkSnapshotViewing = "true";
+		figure.setAttribute("data-snapshot-viewing", "true");
+	} else {
+		delete figure.dataset.bkSnapshotViewing;
+		figure.removeAttribute("data-bk-snapshot-viewing");
+		figure.removeAttribute("data-snapshot-viewing");
+
+		// 1. Restore iframe pointer
+		if (iframe) {
+			if (iframe.hasAttribute("data-bk-snapshot-inert")) {
+				iframe.removeAttribute("inert");
+				iframe.removeAttribute("data-bk-snapshot-inert");
+			}
+			iframe.style.pointerEvents = "";
+			iframe.removeAttribute("data-bk-viewing-locked");
+		}
+
+		// 2. Restore host controls
+		figure
+			.querySelectorAll<
+				HTMLInputElement | HTMLSelectElement | HTMLButtonElement
+			>("[data-bk-viewing-disabled]")
+			.forEach((ctrl) => {
+				ctrl.disabled = false;
+				ctrl.removeAttribute("data-bk-viewing-disabled");
+			});
+	}
+
+	const stage =
+		figure.querySelector<HTMLElement>(".bk-sim-stage") ||
+		figure.querySelector<HTMLElement>(".bk-sim-preview") ||
+		figure;
+
+	figure
+		.querySelectorAll(".bk-sim-snapshot-cue, .bk-snapshot-stage-cue")
+		.forEach((cue) => {
+			cue.remove();
+		});
+
+	updatePlaybackButton(figure);
+	bkSyncLabPauseOverlay(figure);
+}
+
 export function bkSyncLabPauseOverlay(figure: HTMLElement): void {
 	const preview = figure.querySelector<HTMLElement>(".bk-sim-preview");
 	if (!preview) return;
-	let overlay = preview.querySelector<HTMLElement>(".bk-sim-pause-overlay");
+	const doc = figure.ownerDocument || document;
+	let overlay = figure.querySelector<HTMLElement>(".bk-sim-pause-overlay");
 	if (!overlay) {
-		overlay = document.createElement("div");
+		overlay = doc.createElement("div");
 		overlay.className = "bk-sim-pause-overlay";
 		overlay.hidden = true;
-		overlay.innerHTML = `<div class="bk-sim-pause-content"><span class="bk-sim-pause-title" role="status">Simulation paused</span><button type="button" data-bk-resume aria-label="Resume simulation">${PLAY_ICON.replace(' style="display:none;"', "")}<span>Resume</span></button><span class="bk-sim-pause-hint">Press Space to resume</span></div>`;
-		preview.append(overlay);
+		overlay.innerHTML = `<span class="bk-sim-pause-title" role="status">Paused</span>`;
+		(figure.querySelector(".bk-steps-controls") || preview).append(overlay);
 	}
-	overlay.hidden =
-		!figure.classList.contains("bk-object--maximized") ||
-		figure.dataset.bkPlaybackState !== "paused";
-	if (overlay.hidden && overlay.contains(document.activeElement)) {
+	const playbackControls = figure.querySelector(
+		".bk-sim-playback, .bk-sim-stage > .bk-steps-controls",
+	);
+	if (playbackControls && overlay.parentElement !== playbackControls) {
+		playbackControls.append(overlay);
+	}
+	const isSnapshotViewing =
+		figure.dataset.bkSnapshotViewing === "true" ||
+		figure.getAttribute("data-snapshot-viewing") === "true";
+	const isPaused =
+		!isSnapshotViewing &&
+		figure.classList.contains("bk-object--maximized") &&
+		figure.dataset.bkPlaybackState === "paused";
+	overlay.hidden = !isPaused;
+	if (
+		overlay.hidden &&
+		doc.activeElement &&
+		overlay.contains(doc.activeElement)
+	) {
 		figure
 			.querySelector<HTMLElement>("[data-bk-playback], .bk-steps-btn--play")
 			?.focus();
@@ -185,6 +283,14 @@ function editableShortcutTarget(target: Element | null): boolean {
 
 export function bkResumeSimulationIfPaused(figure: HTMLElement): void {
 	if (!figure) return;
+	if (
+		figure.dataset.bkSnapshotViewing === "true" ||
+		figure.hasAttribute("data-snapshot-viewing")
+	) {
+		bkSetLabPlayback(figure, true);
+		return;
+	}
+	if (figure.dataset.bkPausedSnapshot === "true") return;
 	const isSteps = figure.classList.contains("bk-steps-object");
 	if (isSteps) {
 		const playBtn = figure.querySelector<HTMLButtonElement>(
@@ -242,7 +348,14 @@ function updatePlaybackButton(figure: HTMLElement): void {
 	if (button) {
 		const playing = figure.dataset.bkPlaybackState !== "paused";
 		const label = button.querySelector("[data-bk-playback-label]");
-		if (label) label.textContent = playing ? "Pause" : "Resume";
+		const viewing = figure.dataset.bkSnapshotViewing === "true";
+		if (label) {
+			label.textContent = playing ? "Pause" : "Play";
+			button.disabled = false;
+			label.classList.add("bk-sr-only");
+		}
+		button.classList.remove("bk-resume-here");
+
 		button.classList.toggle("is-active", playing);
 		button
 			.querySelector<HTMLElement>(".bk-icon-pause")
@@ -252,7 +365,7 @@ function updatePlaybackButton(figure: HTMLElement): void {
 			?.style.setProperty("display", playing ? "none" : "");
 		button.setAttribute(
 			"aria-label",
-			playing ? "Pause simulation" : "Resume simulation",
+			playing ? "Pause simulation" : "Play simulation",
 		);
 	}
 
@@ -261,6 +374,7 @@ function updatePlaybackButton(figure: HTMLElement): void {
 	);
 	if (stepPlayBtn) {
 		const playing = figure.dataset.bkPlaybackState !== "paused";
+		stepPlayBtn.disabled = false;
 		stepPlayBtn.classList.toggle("is-active", playing);
 		stepPlayBtn.setAttribute(
 			"title",
@@ -279,6 +393,22 @@ function updatePlaybackButton(figure: HTMLElement): void {
 
 export function bkSetLabPlayback(figure: HTMLElement, playing: boolean): void {
 	if (!figure.querySelector(".bk-sim-preview")) return;
+
+	if (
+		playing &&
+		(figure.dataset.bkSnapshotViewing === "true" ||
+			figure.getAttribute("data-snapshot-viewing") === "true")
+	) {
+		figure.dispatchEvent(
+			new CustomEvent("bk:snapshot-continue", {
+				bubbles: true,
+				detail: { reason: "Playback resumed" },
+			}),
+		);
+	}
+	if (playing) {
+		delete figure.dataset.bkPausedSnapshot;
+	}
 	figure.dataset.bkPlaybackState = playing ? "playing" : "paused";
 	postPlayback(
 		figure,
@@ -297,19 +427,16 @@ function ensurePlaybackControls(figure: HTMLElement): void {
 		figure.querySelector("[data-bk-playback]")
 	)
 		return;
-	let inspector = figure.querySelector(".bk-sim-inspector");
-	if (!inspector) {
-		inspector = document.createElement("aside");
-		inspector.className = "bk-sim-inspector";
-		inspector.setAttribute("aria-label", "Simulation inspector");
-		figure.querySelector(".bk-sim-workspace")?.append(inspector);
-	}
+	const stage = figure.querySelector(".bk-sim-stage");
+	if (!stage) return;
 	const controls = document.createElement("div");
 	controls.className = "bk-steps-controls bk-sim-playback";
 	controls.setAttribute("role", "group");
 	controls.setAttribute("aria-label", "Simulation playback");
 	controls.innerHTML = `<div class="bk-steps-nav"><button type="button" class="bk-steps-btn" data-bk-playback aria-keyshortcuts="Space" title="Pause simulation (Space)">${PAUSE_ICON}${PLAY_ICON}<span class="bk-sr-only" data-bk-playback-label>Pause</span></button><button type="button" class="bk-steps-btn" data-bk-reset-simulation aria-keyshortcuts="R" aria-label="Reset simulation" title="Reset simulation">${RESET_ICON}<span class="bk-sr-only">Reset</span></button></div>`;
-	(figure.querySelector(".bk-sim-stage") || inspector).append(controls);
+	stage.append(controls);
+	const capture = figure.querySelector("[data-bk-capture-snapshot]");
+	if (capture) controls.append(capture);
 	updatePlaybackButton(figure);
 }
 
@@ -328,6 +455,7 @@ export function bkResetLab(figure: HTMLElement): void {
 	} catch {
 		return;
 	}
+	delete figure.dataset.bkPausedSnapshot;
 	(
 		figure as HTMLElement & { __bkCurrentProps?: Record<string, unknown> }
 	).__bkCurrentProps = { ...props };
@@ -387,9 +515,28 @@ function restoreLabEntry(btn: HTMLElement): void {
 	btn.title = isLab ? "Open lab" : "Expand Lab";
 }
 
+export function bkSelectMeasurementView(
+	figure: Element,
+	view: "stats" | "graphs",
+): void {
+	for (const button of figure.querySelectorAll<HTMLElement>(
+		"[data-measurement-view]",
+	)) {
+		button.setAttribute(
+			"aria-pressed",
+			String(button.dataset.measurementView === view),
+		);
+	}
+	for (const panel of figure.querySelectorAll<HTMLElement>(
+		"[data-measurement-panel]",
+	)) {
+		panel.hidden = panel.dataset.measurementPanel !== view;
+	}
+}
+
 export function bkSelectInspectorTab(
 	target: Element | string,
-	tabKey: "controls" | "telemetry",
+	tabKey: "controls" | "telemetry" | "timeline" | "graphs",
 	shouldFocusTab = false,
 ): void {
 	const figure =
@@ -399,6 +546,10 @@ export function bkSelectInspectorTab(
 				(target as HTMLElement);
 
 	if (!figure) return;
+	if (tabKey === "graphs") {
+		bkSelectMeasurementView(figure, "graphs");
+		tabKey = "telemetry";
+	}
 
 	const tablist = figure.querySelector(".bk-sim-tablist");
 	if (!tablist) return;
@@ -410,15 +561,14 @@ export function bkSelectInspectorTab(
 		figure.querySelectorAll<HTMLElement>('[role="tabpanel"]'),
 	);
 
-	const targetTab = tabs.find((t) =>
-		tabKey === "controls"
-			? t.id.endsWith("-tab-controls") ||
-				t.getAttribute("aria-controls")?.includes("controls")
-			: t.id.endsWith("-tab-telemetry") ||
-				t.getAttribute("aria-controls")?.includes("telemetry"),
+	const targetTab = tabs.find(
+		(t) =>
+			t.id.endsWith(`-tab-${tabKey}`) ||
+			t.getAttribute("aria-controls")?.endsWith(`-panel-${tabKey}`),
 	);
 
 	if (!targetTab) return;
+	inspectorTabMemory.set(figure, tabKey);
 
 	tabs.forEach((tab) => {
 		const isMatch = tab === targetTab;
@@ -438,7 +588,9 @@ export function bkSelectInspectorTab(
 			(tabKey === "controls" &&
 				panel.classList.contains("bk-sim-tabpanel--controls")) ||
 			(tabKey === "telemetry" &&
-				panel.classList.contains("bk-sim-tabpanel--telemetry"));
+				panel.classList.contains("bk-sim-tabpanel--telemetry")) ||
+			(tabKey === "timeline" &&
+				panel.classList.contains("bk-sim-tabpanel--timeline"));
 		if (isMatch) {
 			panel.removeAttribute("hidden");
 			panel.classList.add("is-active");
@@ -478,7 +630,7 @@ export function bkExpandLab(
 	target: Element | string,
 	options?: {
 		focusReturn?: HTMLElement;
-		defaultTab?: "controls" | "telemetry";
+		defaultTab?: "controls" | "telemetry" | "timeline" | "graphs";
 	},
 ): void {
 	if (bkIsPhone()) return;
@@ -493,6 +645,8 @@ export function bkExpandLab(
 	if (stateDocument !== document) {
 		restoreBackground();
 		modalAttributes.clear();
+		labHistoryPushed = false;
+		savedMainScroll = null;
 		savedOverflow = null;
 		savedScrollY = null;
 		savedFocusEl = null;
@@ -522,6 +676,12 @@ export function bkExpandLab(
 		}
 	}
 
+	if (!labHistoryPushed && window.history?.pushState) {
+		window.history.pushState({ ...window.history.state, bkLab: true }, "");
+		labHistoryPushed = true;
+	}
+	if (savedMainScroll === null)
+		savedMainScroll = document.querySelector?.(".bk-main")?.scrollTop ?? 0;
 	restoreHeader();
 
 	// Unexpand any other expanded figure without resetting saved scroll or focus
@@ -539,7 +699,6 @@ export function bkExpandLab(
 					.forEach((details) => {
 						details.open = false;
 					});
-				bkSelectInspectorTab(obj, "controls");
 				const otherBtn = obj.querySelector<HTMLElement>(".bk-object-maximize");
 				if (otherBtn) {
 					restoreLabEntry(otherBtn);
@@ -549,6 +708,7 @@ export function bkExpandLab(
 
 	const topbar = document.getElementById("bk-topbar");
 	if (topbar?.parentNode) {
+		relocatedTopbar = topbar;
 		topbarPlaceholder = document.createComment("topbar");
 		topbar.before(topbarPlaceholder);
 		figure.prepend(topbar);
@@ -556,13 +716,11 @@ export function bkExpandLab(
 		exit.id = "bk-lab-exit-topbar-btn";
 		exit.type = "button";
 		exit.className = "bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn";
-		exit.setAttribute("aria-label", "Exit expanded view");
-		exit.title = "Exit expanded view (Esc)";
-		exit.innerHTML =
-			'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-		exit.addEventListener("click", bkCollapseLab);
-		const theme = topbar.querySelector("#bk-theme-toggle");
-		if (theme?.parentElement) theme.before(exit);
+		exit.setAttribute("aria-label", "Back to lesson");
+		exit.title = "Back to lesson (Esc)";
+		exit.innerHTML = CLOSE_ICON;
+		exit.addEventListener("click", () => bkCollapseLab());
+		(topbar.querySelector(".bk-topbar-right") || topbar).append(exit);
 		const crumbs = topbar.querySelector(".bk-topbar-breadcrumbs");
 		const label = figure.querySelector(".bk-object-title")?.textContent?.trim();
 		if (
@@ -579,6 +737,13 @@ export function bkExpandLab(
 			item.textContent = label;
 			crumbs.append(sep, item);
 		}
+		const slash = document.createElement("button");
+		slash.type = "button";
+		slash.className = "bk-topbar-crumb-sep bk-lab-crumb bk-sim-exit-crumb";
+		slash.textContent = "/";
+		slash.setAttribute("aria-label", "Return to inline simulation");
+		slash.addEventListener("click", () => bkCollapseLab());
+		crumbs?.append(slash);
 	}
 	isolateWorkspace(figure);
 	ensurePlaybackControls(figure);
@@ -612,7 +777,14 @@ export function bkExpandLab(
 	syncMultiSimPickers(simId);
 
 	// Select default tab (Controls by default, or as requested)
-	bkSelectInspectorTab(figure, options?.defaultTab || "controls");
+	const rememberedTab = inspectorTabMemory.get(figure);
+	const defaultTab =
+		rememberedTab === "telemetry" ||
+		rememberedTab === "timeline" ||
+		rememberedTab === "graphs"
+			? rememberedTab
+			: "controls";
+	bkSelectInspectorTab(figure, options?.defaultTab || defaultTab);
 
 	// Open advanced controls details
 	figure
@@ -629,11 +801,11 @@ export function bkExpandLab(
  * Collapse the expanded lab workspace and restore normal inline layout,
  * exact prior document scroll, and prior input focus.
  */
-export function bkCollapseLab(): void {
+export function bkCollapseLab(fromNavigation = false): void {
 	const maximizedObjects = document.querySelectorAll<HTMLElement>(
 		".bk-object--maximized",
 	);
-	if (maximizedObjects.length === 0) return;
+	if (maximizedObjects.length === 0 && savedOverflow === null) return;
 
 	maximizedObjects.forEach((obj) => {
 		setPreviewActive(obj, false);
@@ -647,13 +819,18 @@ export function bkCollapseLab(): void {
 			.forEach((details) => {
 				details.open = false;
 			});
-		bkSelectInspectorTab(obj, "controls");
 		const btn = obj.querySelector<HTMLElement>(".bk-object-maximize");
 		if (btn) {
 			restoreLabEntry(btn);
 		}
 	});
 
+	if (labHistoryPushed && !fromNavigation) {
+		(window as any).__bk_suppress_router_popstate = true;
+		window.history.back();
+	}
+	labHistoryPushed = false;
+	for (const figure of modalAttributes.keys()) restoreModal(figure);
 	restoreHeader();
 	restoreBackground();
 	document.body.style.overflow = savedOverflow || "";
@@ -667,6 +844,12 @@ export function bkCollapseLab(): void {
 		topbarBtn.classList.remove("is-active");
 	}
 
+	if (savedMainScroll !== null) {
+		const main = document.querySelector?.(".bk-main");
+		if (main) main.scrollTop = savedMainScroll;
+		savedMainScroll = null;
+	}
+
 	// Restore prior document scroll
 	if (savedScrollY !== null) {
 		const y = savedScrollY;
@@ -678,7 +861,7 @@ export function bkCollapseLab(): void {
 	if (savedFocusEl && typeof savedFocusEl.focus === "function") {
 		const el = savedFocusEl;
 		savedFocusEl = null;
-		el.focus();
+		if (el.isConnected !== false) el.focus({ preventScroll: true });
 	}
 }
 
@@ -686,7 +869,7 @@ export function bkToggleExpandLab(
 	target?: Element | string,
 	options?: {
 		focusReturn?: HTMLElement;
-		defaultTab?: "controls" | "telemetry";
+		defaultTab?: "controls" | "telemetry" | "timeline" | "graphs";
 	},
 ): void {
 	if (bkIsPhone()) {
@@ -753,6 +936,31 @@ export function bkToggleExpandLab(
 export function bkWireWorkspace(): void {
 	if (wiredDocument === document) return;
 	wiredDocument = document;
+	document.addEventListener("bk:timeline-live", (event) => {
+		const figure = (event.target as HTMLElement)?.closest<HTMLElement>(
+			".bk-object",
+		);
+		if (figure)
+			bkSetLabPlayback(
+				figure,
+				(event as CustomEvent<{ playing?: boolean }>).detail?.playing !== false,
+			);
+	});
+
+	document.addEventListener("bk:snapshot-view-change", (event: Event) => {
+		const customEvent = event as CustomEvent<{
+			viewing: boolean;
+			time?: number;
+		}>;
+		const figure =
+			(customEvent.target as HTMLElement)?.closest<HTMLElement>(".bk-object") ||
+			document.querySelector<HTMLElement>(".bk-object--maximized") ||
+			(customEvent.target as HTMLElement);
+		if (!figure || !isHTMLElement(figure)) return;
+		const viewing = Boolean(customEvent.detail?.viewing);
+		syncSnapshotViewingState(figure, viewing, customEvent.detail?.time);
+	});
+
 	// Helper for keyboard navigation between inspector tabs
 	function handleTabKeydown(e: KeyboardEvent, tab: HTMLButtonElement): void {
 		const tablist = tab.closest(".bk-sim-tablist");
@@ -791,12 +999,34 @@ export function bkWireWorkspace(): void {
 					nextTab.getAttribute("aria-controls")?.includes("controls");
 				bkSelectInspectorTab(
 					figure,
-					isControls ? "controls" : "telemetry",
+					isControls
+						? "controls"
+						: nextTab.id.endsWith("-tab-graphs")
+							? "graphs"
+							: nextTab.id.endsWith("-tab-timeline")
+								? "timeline"
+								: "telemetry",
 					true,
 				);
 			}
 		}
 	}
+
+	document.addEventListener(
+		"click",
+		(event) => {
+			const target = event.target as Element;
+			if (
+				document.querySelector(".bk-object--maximized") &&
+				target.closest?.(".bk-topbar-breadcrumbs a, .bk-topbar-active-section")
+			) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				bkCollapseLab();
+			}
+		},
+		true,
+	);
 
 	// 2. Global click handling for expanded lab entry/exit affordances and inspector tabs
 	document.addEventListener("click", (e: MouseEvent) => {
@@ -825,6 +1055,37 @@ export function bkWireWorkspace(): void {
 			}
 			return;
 		}
+		const continueBtn = target.closest?.<HTMLElement>(
+			"[data-bk-continue-snapshot], .bk-timeline-continue-btn",
+		);
+		if (continueBtn) {
+			const figure = continueBtn.closest<HTMLElement>(".bk-object");
+			if (figure) {
+				figure.dispatchEvent(
+					new CustomEvent("bk:snapshot-continue", {
+						bubbles: true,
+						detail: { reason: "Continuation" },
+					}),
+				);
+				bkSetLabPlayback(figure, true);
+				figure
+					.querySelector<HTMLElement>("[data-bk-playback], .bk-steps-btn--play")
+					?.focus({ preventScroll: true });
+			}
+			return;
+		}
+		const captureBtn = target.closest?.<HTMLButtonElement>(
+			"button[data-bk-capture-snapshot]",
+		);
+		if (captureBtn && !captureBtn.disabled) {
+			const figure = captureBtn.closest<HTMLElement>(".bk-object");
+			if (figure) {
+				figure.dispatchEvent(
+					new CustomEvent("bk:capture-snapshot-request", { bubbles: true }),
+				);
+			}
+			return;
+		}
 		const entry = target.closest?.<HTMLElement>(
 			"[data-bk-expand-preview], .bk-object-maximize, .bk-sim-advanced-summary",
 		);
@@ -842,13 +1103,26 @@ export function bkWireWorkspace(): void {
 				e.preventDefault();
 				bkToggleExpandLab(figure, {
 					focusReturn: entry,
-					defaultTab: "controls",
 				});
 			}
 			return;
 		}
 
 		// Inspector tab button click
+		const measurementView = target.closest<HTMLElement>(
+			"[data-measurement-view]",
+		);
+		if (measurementView) {
+			const figure = measurementView.closest(".bk-object");
+			if (figure)
+				bkSelectMeasurementView(
+					figure,
+					measurementView.dataset.measurementView === "graphs"
+						? "graphs"
+						: "stats",
+				);
+			return;
+		}
 		const tab = target.closest?.('[role="tab"]') as HTMLButtonElement | null;
 		if (tab && tab.closest(".bk-sim-tablist")) {
 			const figure = tab.closest(".bk-object");
@@ -858,7 +1132,13 @@ export function bkWireWorkspace(): void {
 					tab.getAttribute("aria-controls")?.includes("controls");
 				bkSelectInspectorTab(
 					figure,
-					isControls ? "controls" : "telemetry",
+					isControls
+						? "controls"
+						: tab.id.endsWith("-tab-graphs")
+							? "graphs"
+							: tab.id.endsWith("-tab-timeline")
+								? "timeline"
+								: "telemetry",
 					true,
 				);
 				return;
@@ -905,6 +1185,13 @@ export function bkWireWorkspace(): void {
 				target?.closest?.(".bk-object")) as HTMLElement | null;
 
 			if (
+				e.key === "Escape" &&
+				target?.closest?.(
+					".bk-timeline-menu, .bk-capture-name, .bk-timeline-rename",
+				)
+			)
+				return;
+			if (
 				figure &&
 				e.key === "Escape" &&
 				figure.classList.contains("bk-object--maximized")
@@ -916,6 +1203,7 @@ export function bkWireWorkspace(): void {
 			if (
 				figure &&
 				e.key === "Tab" &&
+				!document.querySelector(".bk-sidebar") &&
 				figure.classList.contains("bk-object--maximized")
 			) {
 				const elements = focusableElements(figure);
@@ -1045,8 +1333,7 @@ export function bkWireWorkspace(): void {
 		"load",
 		(event) => {
 			const iframe = event.target;
-			if (!(iframe instanceof HTMLElement) || iframe.tagName !== "IFRAME")
-				return;
+			if (!isHTMLElement(iframe) || iframe.tagName !== "IFRAME") return;
 			const figure = iframe.closest<HTMLElement>(".bk-object");
 			if (!figure?.querySelector(".bk-sim-preview")) return;
 			postPlayback(
@@ -1079,6 +1366,6 @@ export function bkWireWorkspace(): void {
 	});
 
 	window.addEventListener("bk-page-loaded", () => {
-		bkCollapseLab();
+		bkCollapseLab(true);
 	});
 }

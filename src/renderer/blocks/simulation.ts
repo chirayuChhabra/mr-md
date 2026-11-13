@@ -40,7 +40,13 @@ export function renderSimulation(
 		? renderSimulationTelemetry(id, block.telemetry!)
 		: "";
 
-	const inspectorContent = renderInspectorTabs(id, controlsHtml, telemetryHtml);
+	const inspectorContent = renderInspectorTabs(
+		id,
+		controlsHtml,
+		telemetryHtml,
+		block.telemetry,
+		Boolean(block.measurements?.timeline),
+	);
 
 	const inspectorHtml = inspectorContent
 		? `<aside class="bk-sim-inspector" aria-label="Simulation inspector">
@@ -76,7 +82,8 @@ export function renderSimulation(
           ${inspectorHtml}
         </div>
         <script type="application/json" class="bk-sim-config">${escapeScriptJson(simConfig)}</script>
-        ${telemetrySchemaScript}`,
+        ${telemetrySchemaScript}
+  <script type="application/json" class="bk-measurements-config">${escapeScriptJson(block.measurements ?? {})}</script>`,
 			block.accent ?? "blue",
 			true,
 			id,

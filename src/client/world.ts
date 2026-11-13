@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { CLOSE_ICON } from "../simulation-toolbar.js";
 import { bkIsPhone } from "./device.js";
 
 let activeWorldFigure = null;
@@ -1413,6 +1414,8 @@ bkRegisterWorldTransition("pixel", pixelGatewayTransition);
 // ============================================================================
 
 let worldHistoryPushed = false;
+let sourceScroll = null;
+let worldExitGeneration = 0;
 
 function pushWorldHistoryState() {
 	if (worldHistoryPushed) return;
@@ -1446,21 +1449,32 @@ function attachTopbarWorldControls(figure) {
 		}
 	}
 
+	if (breadcrumbs && !breadcrumbs.querySelector(".bk-sim-exit-crumb")) {
+		const slash = document.createElement("button");
+		slash.type = "button";
+		slash.className =
+			"bk-topbar-crumb-sep bk-world-crumb-sep bk-sim-exit-crumb";
+		slash.textContent = "/";
+		slash.setAttribute("aria-label", "Return to inline simulation");
+		slash.addEventListener("click", () => bkExitWorld());
+		breadcrumbs.append(slash);
+	}
+
 	let exitBtn = document.getElementById("bk-world-exit-topbar-btn");
 	if (!exitBtn) {
 		exitBtn = document.createElement("button");
 		exitBtn.id = "bk-world-exit-topbar-btn";
 		exitBtn.type = "button";
 		exitBtn.className = "bk-icon-btn bk-topbar-btn bk-world-exit-topbar-btn";
-		exitBtn.setAttribute("aria-label", "Exit Simulation");
-		exitBtn.setAttribute("title", "Exit Simulation (Esc)");
-		exitBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><span class="bk-sr-only">Exit Simulation</span>`;
 		exitBtn.addEventListener("click", () => bkExitWorld());
-		const themeToggle = document.getElementById("bk-theme-toggle");
-		if (themeToggle?.parentElement) {
-			themeToggle.parentElement.insertBefore(exitBtn, themeToggle);
-		}
+		(
+			document.querySelector(".bk-topbar-right") ||
+			document.querySelector(".bk-topbar")
+		)?.append(exitBtn);
 	}
+	exitBtn.innerHTML = CLOSE_ICON;
+	exitBtn.setAttribute("aria-label", "Back to lesson");
+	exitBtn.setAttribute("title", "Back to lesson (Esc)");
 	exitBtn.removeAttribute("hidden");
 	exitBtn.style.removeProperty("display");
 }
@@ -1478,8 +1492,18 @@ function detachTopbarWorldControls() {
 	}
 }
 
+function captureWorldSource() {
+	if (!sourceScroll)
+		sourceScroll = {
+			main: document.querySelector(".bk-main")?.scrollTop || 0,
+			window: window.scrollY,
+			overflow: document.body.style.overflow,
+		};
+}
+
 export function bkEnterWorld(figure) {
 	if (!figure || bkIsPhone()) return;
+	captureWorldSource();
 	activeWorldFigure = figure;
 	figure.classList.add("bk-world--active");
 	figure.classList.remove("bk-wormhole--charging");
@@ -1532,8 +1556,13 @@ export function bkExitWorld(figure, options = {}) {
 		document.querySelector(".bk-world-fullscreen.bk-world--flying");
 
 	if (!fullscreen && !fig) return;
-	if (fullscreen?.classList?.contains("bk-world--exiting") && !bkIsPhone())
+	if (
+		fullscreen?.classList?.contains("bk-world--exiting") &&
+		!options.immediate &&
+		!bkIsPhone()
+	)
 		return;
+	const exitGeneration = ++worldExitGeneration;
 
 	if (!options?.fromPopstate && worldHistoryPushed) {
 		worldHistoryPushed = false;
@@ -1544,9 +1573,26 @@ export function bkExitWorld(figure, options = {}) {
 					window.__bk_suppress_router_popstate = false;
 				}
 			}, 300);
+			// A cached route must not push its entry before this traversal finishes.
+			let resolveHistory: () => void;
+			const pendingHistory = new Promise<void>((resolve) => {
+				resolveHistory = resolve;
+			});
+			window.__bk_pending_world_popstate = pendingHistory;
+			const completeHistory = () => {
+				window.removeEventListener("popstate", completeHistory);
+				clearTimeout(historyTimeout);
+				if (window.__bk_pending_world_popstate === pendingHistory)
+					window.__bk_pending_world_popstate = undefined;
+				resolveHistory();
+			};
+			const historyTimeout = setTimeout(completeHistory, 300);
+			window.addEventListener("popstate", completeHistory, { once: true });
 			try {
 				window.history.back();
-			} catch (_) {}
+			} catch (_) {
+				completeHistory();
+			}
 		}
 	} else {
 		worldHistoryPushed = false;
@@ -1559,6 +1605,7 @@ export function bkExitWorld(figure, options = {}) {
 	}
 
 	const cleanup = () => {
+		if (exitGeneration !== worldExitGeneration) return;
 		detachTopbarWorldControls();
 		document.body.classList.remove("bk-world-immersive");
 
@@ -1602,11 +1649,17 @@ export function bkExitWorld(figure, options = {}) {
 		try {
 			const aperture = fig?.querySelector?.(".bk-world-portal");
 			aperture?.focus?.({ preventScroll: true });
-			fig?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+			if (sourceScroll) {
+				const main = document.querySelector(".bk-main");
+				if (main) main.scrollTop = sourceScroll.main;
+				window.scrollTo(0, sourceScroll.window);
+				document.body.style.overflow = sourceScroll.overflow;
+				sourceScroll = null;
+			}
 		} catch (_) {}
 	};
 
-	if (bkIsPhone()) {
+	if (options.immediate || bkIsPhone()) {
 		cleanup();
 		return;
 	}
@@ -1934,6 +1987,7 @@ function setupWorldPortal(figure) {
 				fullscreen.setAttribute("aria-hidden", "false");
 				fullscreen.classList.add("bk-world--active", "bk-world--flying");
 				figure.classList.add("bk-world--active");
+				captureWorldSource();
 				activeWorldFigure = figure;
 				document.body.style.overflow = "hidden";
 				document.body.classList.add("bk-world-immersive");
@@ -2089,6 +2143,22 @@ export function bkWireWorldPortals() {
 			});
 		}
 	});
+	document.addEventListener(
+		"click",
+		(event) => {
+			if (
+				activeWorldFigure &&
+				event.target.closest?.(
+					".bk-topbar-breadcrumbs a, .bk-topbar-active-section",
+				)
+			) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				bkExitWorld();
+			}
+		},
+		true,
+	);
 
 	document.addEventListener("pointerdown", (e) => {
 		if (bkIsPhone()) return;
@@ -2192,6 +2262,11 @@ export function bkWireWorldPortals() {
 	window.addEventListener("message", (e) => {
 		if (!e.data) return;
 		if (e.data.type === "bk:world-exit") {
+			const fullscreen =
+				activeWorldFigure?.fullscreenEl ||
+				activeWorldFigure?.querySelector(".bk-world-fullscreen");
+			const iframe = fullscreen?.querySelector("iframe");
+			if (!iframe?.contentWindow || e.source !== iframe.contentWindow) return;
 			bkExitWorld();
 		}
 	});

@@ -139,7 +139,13 @@ export function renderSteps(
 	const telemetryHtml = hasTel
 		? renderSimulationTelemetry(id, block.telemetry!)
 		: "";
-	const inspectorContent = renderInspectorTabs(id, controlsHtml, telemetryHtml);
+	const inspectorContent = renderInspectorTabs(
+		id,
+		controlsHtml,
+		telemetryHtml,
+		block.telemetry,
+		Boolean(block.measurements?.timeline),
+	);
 	const telemetrySchemaScript = hasTel
 		? `<script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry)}</script>`
 		: "";
@@ -255,6 +261,7 @@ export function renderSteps(
   </div>
 
   ${telemetrySchemaScript}
+  <script type="application/json" class="bk-measurements-config">${escapeScriptJson(block.measurements ?? {})}</script>
   ${block.caption ? `<figcaption class="bk-caption">${mdInline(block.caption)}</figcaption>` : ""}
   <script type="application/json" class="bk-steps-default-props">${escapeScriptJson(block.props ?? {})}</script>
   <script type="application/json" class="bk-steps-data">${stepsJson}</script>

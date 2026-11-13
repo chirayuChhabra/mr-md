@@ -21,6 +21,16 @@ const action = z.object({
 	label: z.string(),
 	color: z.enum(["accent", "neutral", "red", "green", "amber"]).optional(),
 });
+const condition = z.union([
+	z.object({
+		op: z.enum(["gt", "gte", "lt", "lte"]),
+		value: z.number().finite(),
+	}),
+	z.object({
+		op: z.enum(["eq", "neq"]),
+		value: z.union([z.string(), z.number().finite(), z.boolean()]),
+	}),
+]);
 const telemetry = z.record(
 	z.string(),
 	z.object({
@@ -30,8 +40,76 @@ const telemetry = z.record(
 		group: z.string().optional(),
 		description: z.string().optional(),
 		display: z.enum(["metric", "status", "row"]).optional(),
+		states: z
+			.array(
+				z.object({
+					when: condition,
+					tone: z.enum(["neutral", "accent", "success", "warning", "danger"]),
+					label: z.string().optional(),
+				}),
+			)
+			.optional(),
+		saveStates: z
+			.array(
+				z.object({
+					id: z.string().min(1),
+					name: z.string().min(1).max(100),
+					when: condition,
+					once: z.boolean().optional(),
+					cooldown: z.number().finite().nonnegative().optional(),
+				}),
+			)
+			.optional(),
+		notifications: z
+			.array(
+				z.object({
+					id: z.string(),
+					when: condition,
+					message: z.string(),
+					once: z.boolean().optional(),
+					cooldown: z.number().finite().nonnegative().optional(),
+					tone: z
+						.enum(["neutral", "accent", "success", "warning", "danger"])
+						.optional(),
+					toast: z.boolean().optional(),
+				}),
+			)
+			.optional(),
+		graph: z
+			.union([
+				z.boolean(),
+				z.object({
+					label: z.string().optional(),
+					x: z
+						.object({
+							key: z.string().optional(),
+							label: z.string().optional(),
+							unit: z.string().optional(),
+						})
+						.optional(),
+					y: z
+						.object({
+							label: z.string().optional(),
+							unit: z.string().optional(),
+						})
+						.optional(),
+				}),
+			])
+			.optional(),
+		scene: z.string().optional(),
+		changeThreshold: z.number().finite().nonnegative().optional(),
 	}),
 );
+
+const timeline = z.union([
+	z.boolean(),
+	z.object({
+		start: z.boolean().optional(),
+		present: z.boolean().optional(),
+		controls: z.boolean().optional(),
+		capture: z.boolean().optional(),
+	}),
+]);
 
 /** Structural schema is also the source for the published editor JSON Schema. */
 export const simulationConfigSchema = z
@@ -49,6 +127,36 @@ export const simulationConfigSchema = z
 			.optional(),
 		advancedControls: z.array(z.string()).optional(),
 		telemetry: telemetry.optional(),
+		timeline: timeline.optional(),
+		measurements: z
+			.object({
+				visible: z.array(z.string()).optional(),
+				graphs: z
+					.array(
+						z.object({
+							key: z.string(),
+							minimized: z.boolean().optional(),
+							x: z.number().finite().optional(),
+							y: z.number().finite().optional(),
+							width: z.number().finite().positive().optional(),
+							height: z.number().finite().positive().optional(),
+						}),
+					)
+					.optional(),
+				initialTab: z
+					.enum(["controls", "telemetry", "timeline", "graphs"])
+					.optional(),
+				notifications: z
+					.object({
+						enabled: z.boolean().optional(),
+						minInterval: z.number().finite().nonnegative().optional(),
+						duration: z.number().finite().nonnegative().optional(),
+						maxVisible: z.number().int().min(1).max(3).optional(),
+					})
+					.optional(),
+				timeline: timeline.optional(),
+			})
+			.optional(),
 		height: z.number().positive().optional(),
 		label: z.string().optional(),
 		caption: z.string().optional(),
@@ -114,7 +222,62 @@ export function validateSimulationConfig(
 			})),
 		);
 	const config = result.data;
+	if (config.timeline !== undefined) {
+		config.measurements = config.measurements ?? {};
+		if (config.measurements.timeline === undefined) {
+			config.measurements.timeline = config.timeline;
+		}
+	}
 	const issues: SimulationConfigIssue[] = [];
+	for (const [key, item] of Object.entries(config.telemetry ?? {})) {
+		const saveIds = new Set<string>();
+		for (const [index, rule] of (item.saveStates ?? []).entries()) {
+			if (saveIds.has(rule.id))
+				issues.push({
+					field: `telemetry.${key}.saveStates.${index}.id`,
+					message: "Duplicate saved-state rule id",
+				});
+			saveIds.add(rule.id);
+		}
+		const ids = new Set<string>();
+		for (const [index, notification] of (item.notifications ?? []).entries()) {
+			if (ids.has(notification.id))
+				issues.push({
+					field: `telemetry.${key}.notifications.${index}.id`,
+					message: "Duplicate notification id",
+				});
+			ids.add(notification.id);
+		}
+	}
+	for (const [key, item] of Object.entries(config.telemetry ?? {})) {
+		const x = typeof item.graph === "object" ? item.graph.x?.key : undefined;
+		if (x && x !== "time" && !Object.hasOwn(config.telemetry ?? {}, x))
+			issues.push({
+				field: `telemetry.${key}.graph.x.key`,
+				message: "Unknown telemetry key",
+			});
+	}
+	for (const [index, key] of (config.measurements?.visible ?? []).entries()) {
+		if (!config.telemetry?.[key]?.scene)
+			issues.push({
+				field: `measurements.visible.${index}`,
+				message: "Unknown telemetry key or missing scene",
+			});
+	}
+	const graphKeys = new Set<string>();
+	for (const [index, graph] of (config.measurements?.graphs ?? []).entries()) {
+		if (graphKeys.has(graph.key))
+			issues.push({
+				field: `measurements.graphs.${index}.key`,
+				message: "Duplicate graph key",
+			});
+		if (!config.telemetry?.[graph.key]?.graph)
+			issues.push({
+				field: `measurements.graphs.${index}.key`,
+				message: "Unknown or graph-disabled telemetry key",
+			});
+		graphKeys.add(graph.key);
+	}
 	const check = (
 		controls: ValidatedSimulationConfig["tunables"],
 		defaults: Record<string, unknown>,

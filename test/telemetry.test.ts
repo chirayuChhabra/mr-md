@@ -555,6 +555,15 @@ slug: telemetry-test
 			expect(tabsHtml).toContain('120 km/s');
 		});
 
+		test("timeline requires explicit opt-in", () => {
+			const telemetry = '<div>Measurements</div>';
+			expect(renderInspectorTabs("lab", "", telemetry)).not.toContain("bk-measurement-history");
+			const enabled = renderInspectorTabs("lab", "", telemetry, {}, true);
+			expect(enabled).toContain("bk-measurement-history");
+			expect(enabled).toContain("Saved");
+			expect(enabled).not.toContain("data-export-timeline");
+		});
+
 		test("renderInspectorTabs renders a Settings heading when no telemetry exists", () => {
 			const controls = '<div class="bk-sim-controls"><input type="range" /></div>';
 			const html = renderInspectorTabs("sim-only-ctrl", controls, "");
@@ -569,8 +578,8 @@ slug: telemetry-test
 			const html = renderInspectorTabs("sim-only-tel", "", telemetry);
 
 			expect(html).toContain(telemetry);
-			expect(html).not.toContain('role="tablist"');
 			expect(html).toContain("Measurements");
+			expect(html).not.toContain("Timeline");
 		});
 
 		test("renderInspectorTabs renders nothing when controls and telemetry are empty", () => {

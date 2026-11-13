@@ -209,6 +209,8 @@ Here is the reading text.`;
 			expect(html).toContain('id="bk-scroll-progress-bar"');
 			expect(html).toContain('id="bk-settings-button"');
 			expect(html).toContain('id="bk-theme-toggle"');
+			expect(html.slice(html.indexOf('<header id="bk-topbar"'), html.indexOf("</header>"))).not.toContain('id="bk-theme-toggle"');
+			expect(html.indexOf('id="bk-theme-toggle"')).toBeGreaterThan(html.indexOf('class="bk-sidebar-footer"'));
 			expect(html).not.toContain('id="bk-reading-percent"');
 			expect(html).not.toContain('id="bk-topbar-settings-btn"');
 			expect(html).toContain('id="bk-backdrop"');

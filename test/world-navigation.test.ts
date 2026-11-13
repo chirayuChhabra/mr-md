@@ -89,6 +89,9 @@ describe("immersive world navigation and history integration", () => {
 				if (!listeners[evt]) listeners[evt] = [];
 				listeners[evt].push(cb);
 			},
+   removeEventListener(evt: string, cb: Function) {
+    listeners[evt] = (listeners[evt] || []).filter(listener => listener !== cb);
+   },
 			dispatchEvent(e: any) {},
 			__listeners: listeners,
 		};
@@ -160,5 +163,6 @@ describe("immersive world navigation and history integration", () => {
 		bkExitWorld(mockFigure);
 		expect((globalThis.window as any).__bk_suppress_router_popstate).toBe(true);
 		expect(globalThis.window.history.currentIndex).toBe(0);
+  expect((globalThis.window as any).__bk_pending_world_popstate).toBeUndefined();
 	});
 });

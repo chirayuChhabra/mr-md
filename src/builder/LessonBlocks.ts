@@ -171,6 +171,7 @@ export abstract class LessonBlocks {
 			presets: opts.presets || fileConfig?.presets,
 			advancedControls: opts.advancedControls ?? fileConfig?.advancedControls,
 			telemetry: opts.telemetry || fileConfig?.telemetry,
+			measurements: opts.measurements ?? fileConfig?.measurements,
 			height: opts.height ?? fileConfig?.height,
 			accent: opts.accent ?? fileConfig?.accent ?? "blue",
 			dependencies: fileConfig?.dependencies,

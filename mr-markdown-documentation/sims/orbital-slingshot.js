@@ -1,7 +1,7 @@
 // ============================================================
 //  Orbital Slingshot Maneuver - Step-by-Step Simulation Lab
 //  Aspect Ratio: 16:9 (800x450 logical canvas)
-//  Fully theme-integrated via window.bkColor, window.bkThemeMode, & window.bkUi
+//  Space uses a fixed dark palette regardless of the host theme.
 // ============================================================
 
 let currentStep = 0;
@@ -922,10 +922,10 @@ window.bkSetup(800, 450, (ctx, W, H, frame) => {
     stationAngle += 0.012;
   }
 
-  const isDark = window.bkThemeMode() === "dark";
-  const bg = isDark ? (window.bkColor("bg") || "#070b14") : "#f1f5f9";
-  const text = isDark ? (window.bkColor("text") || "#f8fafc") : "#09090b";
-  const textLight = isDark ? (window.bkColor("text-light") || "#94a3b8") : "#475569";
+  const isDark = true;
+  const bg = "#070b14";
+  const text = "#f8fafc";
+  const textLight = "#94a3b8";
   const accent = isDark ? "#38bdf8" : "#0284c7";
   const targetColor = solved ? "#10b981" : (isDark ? "#34d399" : "#047857");
 
