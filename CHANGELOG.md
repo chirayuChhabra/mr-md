@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phone course navigation with Continue learning, lesson-scoped contents, course and lesson search, and preserved lesson scroll positions, editor drafts, and output when revisiting lessons.
+- Compact phone code-runner controls with inline Run, Compile, and Check Answer actions, plus a menu for Hint, Reset, and Copy.
 - Persistent saved simulation states with screenshots, settings, exact state, and independent measurement histories stored in IndexedDB.
 - Named automatic saves through telemetry `saveStates` rules with per-run and cooldown options.
 - Labeled user interaction segments on time and custom X/Y graphs, preserved with saved histories.
@@ -63,6 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve concurrent saved-state changes across tabs without stale writes erasing newer saves or resurrecting deletions.
 - Reject invalid dimensions consistently across all `bkSetup` overloads.
 - Reject malformed PNG Base64 data before snapshot download decoding.
+- Ignore generated build output, `node_modules`, and `.git` changes in the development watcher to prevent repeated rebuilds.
+- Preserve nested course assets, lesson hash navigation, and ordinary video embeds during phone navigation; reject lesson slugs that escape the build output directory.
+- Improve Compile and Next lesson contrast across light and dark palettes.
 - Verify saved-card action visibility against pointer capabilities in browser tests, including touch devices and headless CI.
 - Redraw scene edits while paused without advancing simulation time.
 - Preserve samples recorded at the same simulation time when pairing custom graph axes.
@@ -74,6 +79,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Replace the mobile coming-soon screen with responsive phone and tablet lesson layouts, touch-sized controls, accessible drawers, and reduced-motion support.
+- Keep phone code editors and media inline, wrap editor lines, use 16px touch input text, and enable inline video playback.
+- Show an Open on desktop notice for simulations, guided labs, and immersive worlds on phones, with simulation frames deferred to avoid running them in the background.
+- Fit expanded tablet simulations to the viewport and authored aspect ratio, with controls below the scene in portrait and beside it in landscape; restore navigation, focus, and scrolling on close.
+- Share versioned styles, client code, and a phone route bundle across course pages for lesson navigation without full-page reloads.
 - Replace the Timeline inspector with Saved cards supporting rename, delete with Undo, image download, and return to Live.
 - Keep saved states across resets and reloads; continuing a saved state replaces Live while preserving the saved copy.
 - Move Save moment beside playback controls and use an icon-only Play button.
