@@ -45,6 +45,9 @@ export type SavedMoment = SavedCollection["moments"][number];
 export interface ExperimentStore {
 	read(): Promise<SavedCollection>;
 	write(value: SavedCollection): Promise<void>;
+	update?(
+		mutate: (current: SavedCollection) => SavedCollection,
+	): Promise<SavedCollection>;
 }
 export type ExperimentStorageError =
 	| "unavailable"
@@ -129,6 +132,36 @@ export function experimentStore(
 				if (!parsed.success)
 					throw new Error("invalid-data" satisfies ExperimentStorageError);
 				return parsed.data;
+			} finally {
+				db.close();
+			}
+		},
+		async update(mutate) {
+			const db = await database();
+			try {
+				return await new Promise<SavedCollection>((resolve, reject) => {
+					const tx = db.transaction("experiments", "readwrite");
+					const objects = tx.objectStore("experiments");
+					let next: SavedCollection;
+					let failure: unknown;
+					tx.oncomplete = () => resolve(next);
+					tx.onerror = tx.onabort = () =>
+						reject(failure || new Error("write-failed"));
+					const request = objects.get(scope);
+					request.onsuccess = () => {
+						try {
+							const current =
+								request.result === undefined
+									? { version: 1 as const, moments: [] }
+									: savedCollectionSchema.parse(request.result);
+							next = savedCollectionSchema.parse(mutate(current));
+							objects.put(next, scope);
+						} catch (error) {
+							failure = error;
+							tx.abort();
+						}
+					};
+				});
 			} finally {
 				db.close();
 			}

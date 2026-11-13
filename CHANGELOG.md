@@ -26,8 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Spring measurements playground with draggable mass, physical controls, scene guides, graphs, and snapshot registration; expanded simulation authoring documentation.
 - Unified full-width topbar with single breadcrumb navigation (`[ ◨ ] Parent / Current`) and stationary sidebar toggle button across all themes.
 - **Full-Window Simulation Workspace & Inspector**:
-  - Modal lab dialog (`role="dialog"`, `aria-modal="true"`) expanding inline block and step simulations into a focused stage and inspector column.
-  - Background isolation setting non-active elements `inert`, accessible focus trapping within the dialog, and restoring lesson scroll position and prior focus upon exit.
+  - Full-window lab dialog (`role="dialog"`) expanding inline block and step simulations into a stage and inspector column, with lesson navigation available from the topbar.
+  - Background isolation setting non-active lesson elements `inert`, with lesson scroll position, sidebar state, and prior focus restored upon exit.
   - Dual-tab inspector layout separating `Controls` and `Measurements` when telemetry is present, with continuation cues for scrollable panels.
   - Centered playback controls with Pause/Resume and in-place Reset buttons.
   - Pause overlay on the stage with a Resume trigger and keyboard hints.
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exported JSON Schema (`mr-md/simulation.schema.json`) for IDE completion in sibling `.config.json` files.
   - Ahead-of-time configuration validation (`validateSimulationConfig`) reporting invalid fields, missing defaults, out-of-bounds ranges, and unknown advanced controls with file and path diagnostics.
 - **Responsive Canvas Framing**:
-  - Responsive canvas contract in `bkSetup` sizing to a minimum logical coordinate area and expanding callback dimensions uniformly without coordinate distortion.
+  - Fixed logical dimensions by default in both `bkSetup` forms, with uniform scaling and full-viewport canvas backgrounds. Explicit `{ framing: "responsive" }` expands callback dimensions with the viewport.
   - Optional `{ framing: "contain" }` preserving fixed aspect ratios with letterboxing, and `{ framing: "bleed" }` exposing expanded background bounds through callback arguments.
   - Immediate canvas background synchronization eliminating white flash during theme switches.
 - **Expanded Host Controls Contract**:
@@ -54,6 +54,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
 
 ### Fixed
+- Include Measurements and Saved panel styles in shared chapter assets, matching standalone pages.
+- Let expanded simulation canvases fill their containers without forcing the iframe to its original aspect ratio; preserve drawing proportions and model coordinates.
+- Close the inherited sidebar when entering a simulation so it cannot cover the scene or graph windows, and restore its prior state on exit.
+- Remove collapsed desktop navigation from keyboard focus and synchronize accessibility state across sidebar controls.
+- Follow same-page lesson and breadcrumb links from expanded simulations while restoring scrolling and clearing temporary workspace history.
+- Restore snapshot measurements alongside model state, and prevent `deltaTime()` from advancing the model during restoration redraws.
+- Preserve concurrent saved-state changes across tabs without stale writes erasing newer saves or resurrecting deletions.
+- Reject invalid dimensions consistently across all `bkSetup` overloads.
+- Reject malformed PNG Base64 data before snapshot download decoding.
 - Verify saved-card action visibility against pointer capabilities in browser tests, including touch devices and headless CI.
 - Redraw scene edits while paused without advancing simulation time.
 - Preserve samples recorded at the same simulation time when pairing custom graph axes.

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildChapter } from '../src/parser/mdx.js';
 import type { Chapter } from '../src/types.js';
+import { pageCSS } from '../src/renderer/templates/assets.js';
 
 const chapter: Chapter = {meta:{title:'Course',slug:'course'},lessons:[{meta:{title:'Lesson',slug:'lesson'},blocks:[{type:'markdown',src:'Hello'}]}]};
 
@@ -15,6 +16,10 @@ test('chapter pages share stable assets instead of embedding the application', (
   const lesson=readFileSync(join(outDir,'lesson.html'),'utf8');
   expect(Buffer.byteLength(lesson)).toBeLessThan(50000);
   expect(existsSync(join(outDir,'assets/app.bundle.js'))).toBe(true);
+  const styles = readFileSync(join(outDir, 'assets/theme.css'), 'utf8');
+  expect(styles).toContain('.bk-measurement-view-switch button');
+  expect(styles).toContain('.bk-timeline-toolbar');
+  expect(styles).toBe(pageCSS());
   const asset=(html:string)=>html.match(/src="(assets\/app.bundle.js\?v=[a-f0-9]+)"/)?.[1];
   expect(asset(index)).toBeTruthy();
   expect(asset(index)).toBe(asset(lesson));

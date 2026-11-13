@@ -7875,14 +7875,6 @@ html:root .bk-object.bk-object--maximized {
   .bk-end-nav { grid-template-columns: 1fr; gap: 12px; }
 }
 
-.bk-object--maximized .bk-sim-preview { container-type: size; }
-.bk-object--maximized:not([data-bk-canvas-responsive="true"]) .bk-sim-preview iframe {
- position: absolute;
- inset: 0;
- margin: auto;
- width: min(100cqw, calc(100cqh * var(--bk-canvas-aspect, 1.6))) !important;
- height: min(100cqh, calc(100cqw / var(--bk-canvas-aspect, 1.6))) !important;
-}
 @media (pointer: coarse) {
  .bk-topbar, .bk-sidebar { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }

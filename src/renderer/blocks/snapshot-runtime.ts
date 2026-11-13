@@ -411,6 +411,7 @@ window.addEventListener("message", function(event) {
         }, "*");
         return;
       }
+      window.__bkSnapshotTelemetry = __bkDeepClone(snapshot.telemetry || {});
       if (typeof window.__renderFrame === "function") window.__renderFrame();
       window.__bkRestoring = false;
       window.parent.postMessage({

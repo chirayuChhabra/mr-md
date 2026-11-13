@@ -69,6 +69,7 @@ export function defineSimulation<Props extends object>(options: {
 	const scope = window as Window & {
 		__simProps?: Props;
 		__loop?: boolean;
+		__bkRestoring?: boolean;
 		__renderFrame?: () => void;
 		__startLoop?: () => void;
 		__stopLoop?: () => void;
@@ -177,7 +178,7 @@ export function defineSimulation<Props extends object>(options: {
 			if (!disposed) scope.bkTelemetry?.(values);
 		},
 		deltaTime(now = performance.now()) {
-			if (!playing || !scope.__loop) {
+			if (!playing || !scope.__loop || scope.__bkRestoring) {
 				lastTime = null;
 				return 0;
 			}

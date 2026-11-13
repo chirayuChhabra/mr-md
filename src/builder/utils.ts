@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { pageCSS } from "../renderer/templates/assets.js";
 import type {
 	BuildOptions,
 	MediaBlock,
@@ -81,6 +82,7 @@ export function copyAssets(outDir: string) {
 	// Copy styles
 	if (fs.existsSync(distStylesDir)) copyDir(distStylesDir, assetsDir);
 	else if (fs.existsSync(srcStylesDir)) copyDir(srcStylesDir, assetsDir);
+	fs.writeFileSync(path.join(assetsDir, "theme.css"), pageCSS());
 
 	// Always try to copy the built client dir first to get app.bundle.js
 	if (fs.existsSync(distClientDir)) copyDir(distClientDir, assetsDir);
