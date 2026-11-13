@@ -22,7 +22,7 @@ beforeAll(async () => {
 
 	browser = await puppeteer.launch({
 		headless: true,
-		args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security"],
+		args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--disable-web-security"],
 	});
 	page = await browser.newPage();
 	await page.setViewport({ width: 1280, height: 800 });
@@ -72,20 +72,20 @@ afterAll(async () => {
 	if (browser) await browser.close();
 });
 
-test("E2E: small screens show the coming-soon page in light and dark modes", async () => {
-	const mobile = await browser.newPage();
-	try {
-		await mobile.setViewport({ width: 390, height: 844 });
-		await mobile.goto(pathToFileURL(join(process.cwd(), "mr-markdown-documentation", "out", "showcase.html")).href, { waitUntil: "domcontentloaded" });
-		for (const scheme of ["light", "dark"] as const) {
-			await mobile.emulateMediaFeatures([{ name: "prefers-color-scheme", value: scheme }]);
-			expect(await mobile.$eval(".bk-mobile-coming-soon", (el) => getComputedStyle(el).display)).toBe("flex");
-			expect(await mobile.$eval(".bk-shell", (el) => getComputedStyle(el).display)).toBe("none");
-			expect(await mobile.$eval(".bk-mobile-coming-soon", (el) => getComputedStyle(el).backgroundColor)).toBe(scheme === "dark" ? "rgb(28, 37, 33)" : "rgb(243, 239, 229)");
-		}
-	} finally {
-		await mobile.close();
-	}
+test("E2E: phone reader stays available in light and dark modes", async () => {
+ const mobile = await browser.newPage();
+ try {
+  await mobile.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+  await mobile.goto(pathToFileURL(join(process.cwd(), "mr-markdown-documentation", "out", "showcase.html")).href, { waitUntil: "domcontentloaded" });
+  for (const scheme of ["light", "dark"] as const) {
+   await mobile.emulateMediaFeatures([{ name: "prefers-color-scheme", value: scheme }]);
+   expect(await mobile.$(".bk-mobile-coming-soon")).toBeNull();
+   expect(await mobile.$eval(".bk-shell", (el) => getComputedStyle(el).display)).not.toBe("none");
+   expect(await mobile.$eval(".bk-main", (el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  }
+ } finally {
+  await mobile.close();
+ }
 });
 
 test("E2E: Interactive Code Runner executes, updates output, resets, and clears", async () => {

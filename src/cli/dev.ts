@@ -268,6 +268,21 @@ export async function runDev(args: string[]) {
 				return;
 			}
 
+			const changedPath = path.resolve(contentBase, filename);
+			const relativeToOutput = path.relative(outDir, changedPath);
+			const isGenerated =
+				relativeToOutput === "" ||
+				(relativeToOutput !== ".." &&
+					!relativeToOutput.startsWith(`..${path.sep}`) &&
+					!path.isAbsolute(relativeToOutput));
+			const segments = path.relative(contentBase, changedPath).split(path.sep);
+			if (
+				isGenerated ||
+				segments.includes("node_modules") ||
+				segments.includes(".git")
+			)
+				return;
+
 			clearTimeout(timeout);
 			timeout = setTimeout(() => {
 				logger.watch(`File changed: ${filename}`);
@@ -335,6 +350,7 @@ export async function runDev(args: string[]) {
 							if (typeof e.data === "string" && e.data.startsWith("redirect:")) {
 								window.location.href = e.data.slice(9);
 							} else if (e.data === "reload") {
+                                if (document.documentElement.dataset.phoneApp === "true") { location.reload(); return; }
 								try {
 									const res = await fetch(location.href);
 									const text = await res.text();

@@ -21,11 +21,11 @@ beforeAll(async () => {
     join(tempDir, "package.json"),
     JSON.stringify({ name: "e2e-test" })
   );
-  
+
   // Launch puppeteer in headless mode
   browser = await puppeteer.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
   });
 });
 
@@ -90,7 +90,7 @@ This tests custom v3 markdown parsing capabilities.
   // 5. Build the project
   const buildResult = await $`bun run ${CLI_PATH} build 01-first-chapter.md`.cwd(tempDir).quiet();
   expect(buildResult.exitCode).toBe(0);
-  
+
   // Verify out directory and HTML files exist
   const outDir = join(tempDir, "out");
   expect(existsSync(outDir)).toBe(true);
@@ -120,7 +120,7 @@ This tests custom v3 markdown parsing capabilities.
 
   // 7. Use Puppeteer to verify rendering
   const page = await browser.newPage();
-  
+
   // Navigate to the built lesson page (the server serves it statically from /out/ or directly via JIT)
   await page.goto(`http://localhost:${PORT}/01-first-lesson.html`, { waitUntil: 'networkidle0' });
 

@@ -4,7 +4,7 @@ import puppeteer from "puppeteer";
 import { renderSimulation } from "../src/renderer/blocks/simulation.js";
 import { renderSteps } from "../src/renderer/blocks/steps.js";
 
-const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
+const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || await puppeteer.executablePath();
 
 test.skipIf(!existsSync(chrome))("fullscreen keyboard works from host, transport and iframe, including paused step navigation", async () => {
  const bundle = await Bun.build({entrypoints:["keyboard-fixture"],target:"browser",plugins:[{name:"fixture",setup(build){

@@ -19,7 +19,7 @@ test('workspace preserves shell, source scroll, sidebar geometry and route clean
  for(let i=0;i<3;i++) {
  await page.evaluate(()=>{document.querySelector('.bk-shell')!.removeAttribute('data-collapsed');document.querySelector('.bk-main')!.scrollTop=850;(window as any).expand('sim')});
  expect(await page.$eval('.bk-sidebar',el=>el.closest('[inert]')===null)).toBe(true);
- await page.waitForFunction(()=>!!document.elementFromPoint(100,150)?.closest('.bk-sidebar')); 
+ await page.waitForFunction(()=>!!document.elementFromPoint(100,150)?.closest('.bk-sidebar'));
  const width=await page.$eval('#sim',el=>el.getBoundingClientRect().width);
  await page.evaluate(()=>document.querySelector('.bk-shell')!.setAttribute('data-collapsed','true'));
  expect(await page.$eval('#sim',el=>el.getBoundingClientRect().width)).toBe(width);

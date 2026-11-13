@@ -115,6 +115,7 @@ export function bkWireThemeControls() {
 
 	document.addEventListener("click", (event) => {
 		const target = event.target as HTMLElement;
+		if (target.closest("#bk-phone-appearance")) return;
 		const themeToggle = target.closest<HTMLElement>("#bk-theme-toggle");
 		if (themeToggle) {
 			event.stopPropagation();

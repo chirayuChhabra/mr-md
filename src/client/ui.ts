@@ -1,26 +1,141 @@
 // @ts-nocheck
+import {
+	BK_PHONE_MEDIA_QUERY,
+	BK_TOUCH_MEDIA_QUERY,
+	bkIsPhone,
+	bkIsTouch,
+	bkSyncDeviceAttributes,
+	bkWatchDevice,
+} from "./device.js";
 import { bkWireWorkspace } from "./workspace.js";
+
+export {
+	BK_PHONE_MEDIA_QUERY,
+	BK_TOUCH_MEDIA_QUERY,
+	bkIsPhone,
+	bkIsTouch,
+	bkSyncDeviceAttributes,
+	bkWatchDevice,
+};
 
 export function bkWireMaximizeControls() {
 	bkWireWorkspace();
 }
 
 export function bkWireSidebarToggle() {
+	bkSyncDeviceAttributes();
+	bkWatchDevice();
+
+	function isDrawerViewport(): boolean {
+		return (
+			bkIsPhone() ||
+			(typeof window !== "undefined" && window.innerWidth <= 1024)
+		);
+	}
+
+	let phoneReturn = "#bk-phone-contents";
+	function syncPhoneNavigation() {
+		const course = document.querySelector<HTMLAnchorElement>(".bk-phone-home");
+		const parent = document.querySelector<HTMLAnchorElement>(
+			"#bk-topbar-back-btn",
+		);
+		if (course) course.href = parent?.href || "index.html";
+	}
+	syncPhoneNavigation();
 	const shell = document.querySelector(".bk-shell");
 	const saved = localStorage.getItem("bk-sidebar-collapsed");
-	if (saved === "true" && shell) {
+	if (saved === "true" && shell && !isDrawerViewport()) {
 		shell.setAttribute("data-collapsed", "true");
+	}
+
+	function updateToggleState(isOpen: boolean) {
+		if (!isOpen && bkIsPhone()) {
+			const panel = document.querySelector<HTMLElement>("#bk-theme-panel");
+			if (panel) panel.hidden = true;
+		}
+		const toggleBtn = document.querySelector<HTMLElement>(
+			"#bk-topbar-sidebar-toggle",
+		);
+		if (toggleBtn) {
+			toggleBtn.setAttribute(
+				"aria-expanded",
+				String(
+					isDrawerViewport()
+						? isOpen
+						: document
+								.querySelector(".bk-shell")
+								?.getAttribute("data-collapsed") !== "true",
+				),
+			);
+		}
+		document
+			.querySelector("#bk-phone-contents")
+			?.setAttribute(
+				"aria-expanded",
+				String(isOpen && phoneReturn === "#bk-phone-contents"),
+			);
+		document
+			.querySelector("#bk-phone-appearance")
+			?.setAttribute(
+				"aria-expanded",
+				String(isOpen && phoneReturn === "#bk-phone-appearance"),
+			);
+		const main = document.querySelector<HTMLElement>(".bk-main");
+		if (main) {
+			main.inert = isDrawerViewport() && isOpen;
+			main.style.overflowY = isDrawerViewport() && isOpen ? "hidden" : "";
+		}
+
+		const sidebar = document.querySelector<HTMLElement>(".bk-sidebar");
+		if (sidebar) {
+			if (isDrawerViewport()) {
+				sidebar.setAttribute("aria-hidden", String(!isOpen));
+				sidebar.setAttribute("role", "dialog");
+				sidebar.setAttribute("aria-modal", "true");
+				sidebar.inert = !isOpen;
+			} else {
+				sidebar.removeAttribute("aria-hidden");
+				sidebar.removeAttribute("role");
+				sidebar.removeAttribute("aria-modal");
+				sidebar.inert = false;
+			}
+		}
+	}
+
+	updateToggleState(false);
+
+	function focusableItems() {
+		return Array.from(
+			document.querySelectorAll<HTMLElement>(
+				".bk-sidebar a[href], .bk-sidebar button, .bk-sidebar input, .bk-sidebar select, .bk-sidebar textarea, .bk-sidebar [tabindex]",
+			),
+		).filter(
+			(el) =>
+				!el.hasAttribute("disabled") &&
+				el.tabIndex >= 0 &&
+				el.getClientRects().length > 0 &&
+				getComputedStyle(el).visibility !== "hidden",
+		);
 	}
 
 	function toggleSidebar() {
 		const currentShell = document.querySelector(".bk-shell");
 		if (!currentShell) return;
-		if (window.innerWidth <= 800) {
+
+		if (isDrawerViewport()) {
 			const isOpen = currentShell.getAttribute("data-mobile-open") === "true";
 			if (isOpen) {
 				currentShell.removeAttribute("data-mobile-open");
+				updateToggleState(false);
+				document
+					.querySelector<HTMLElement>(
+						bkIsPhone() ? phoneReturn : "#bk-topbar-sidebar-toggle",
+					)
+					?.focus();
 			} else {
 				currentShell.setAttribute("data-mobile-open", "true");
+				updateToggleState(true);
+				focusableItems()[0]?.focus();
 			}
 		} else {
 			const isCollapsed =
@@ -32,6 +147,7 @@ export function bkWireSidebarToggle() {
 				currentShell.setAttribute("data-collapsed", "true");
 				localStorage.setItem("bk-sidebar-collapsed", "true");
 			}
+			updateToggleState(!isCollapsed);
 		}
 	}
 
@@ -40,21 +156,94 @@ export function bkWireSidebarToggle() {
 		const currentShell = document.querySelector(".bk-shell");
 		if (
 			target.closest("#bk-sidebar-toggle-btn") ||
-			target.closest("#bk-topbar-sidebar-toggle")
+			target.closest("#bk-topbar-sidebar-toggle") ||
+			target.closest("#bk-phone-contents")
 		) {
+			phoneReturn = "#bk-phone-contents";
+			currentShell?.setAttribute("data-phone-panel", "contents");
+			const title = document.querySelector(".bk-drawer-header strong");
+			if (title) title.textContent = "Contents";
+			document
+				.querySelector("#bk-drawer-close")
+				?.setAttribute("aria-label", "Close contents");
 			toggleSidebar();
+		} else if (target.closest("#bk-phone-appearance")) {
+			phoneReturn = "#bk-phone-appearance";
+			currentShell?.setAttribute("data-phone-panel", "appearance");
+			const title = document.querySelector(".bk-drawer-header strong");
+			if (title) title.textContent = "Appearance";
+			document
+				.querySelector("#bk-drawer-close")
+				?.setAttribute("aria-label", "Close appearance");
+			const panel = document.querySelector<HTMLElement>("#bk-theme-panel");
+			if (panel) panel.hidden = false;
+			if (currentShell?.getAttribute("data-mobile-open") !== "true")
+				toggleSidebar();
 		} else if (target.closest("#bk-sidebar-collapse")) {
 			currentShell?.setAttribute("data-collapsed", "true");
 			localStorage.setItem("bk-sidebar-collapsed", "true");
 		} else if (target.closest("#bk-sidebar-expand")) {
 			currentShell?.removeAttribute("data-collapsed");
 			localStorage.setItem("bk-sidebar-collapsed", "false");
-		} else if (target.closest("#bk-backdrop")) {
+		} else if (
+			target.closest("#bk-backdrop") ||
+			target.closest("#bk-drawer-close")
+		) {
 			currentShell?.removeAttribute("data-mobile-open");
+			updateToggleState(false);
+			document
+				.querySelector<HTMLElement>(
+					bkIsPhone() ? phoneReturn : "#bk-topbar-sidebar-toggle",
+				)
+				?.focus();
+		} else if (target.closest(".bk-nav a") || target.closest(".bk-nav-item")) {
+			if (
+				isDrawerViewport() &&
+				currentShell?.getAttribute("data-mobile-open") === "true"
+			) {
+				currentShell.removeAttribute("data-mobile-open");
+				updateToggleState(false);
+				document
+					.querySelector<HTMLElement>(
+						bkIsPhone() ? phoneReturn : "#bk-topbar-sidebar-toggle",
+					)
+					?.focus();
+			}
 		}
 	});
 
 	document.addEventListener("keydown", (e) => {
+		if (
+			e.key === "Tab" &&
+			isDrawerViewport() &&
+			document.querySelector(".bk-shell")?.getAttribute("data-mobile-open") ===
+				"true"
+		) {
+			const items = focusableItems();
+			const index = items.indexOf(document.activeElement as HTMLElement);
+			if (
+				items.length &&
+				((e.shiftKey && index <= 0) ||
+					(!e.shiftKey && index === items.length - 1))
+			) {
+				e.preventDefault();
+				items[e.shiftKey ? items.length - 1 : 0].focus();
+			}
+		}
+
+		if (e.key === "Escape") {
+			const currentShell = document.querySelector(".bk-shell");
+			if (currentShell?.getAttribute("data-mobile-open") === "true") {
+				currentShell.removeAttribute("data-mobile-open");
+				updateToggleState(false);
+				const toggleBtn = document.querySelector<HTMLElement>(
+					bkIsPhone() ? phoneReturn : "#bk-topbar-sidebar-toggle",
+				);
+				toggleBtn?.focus();
+				return;
+			}
+		}
+
 		const activeEl = document.activeElement;
 		const isInput =
 			activeEl &&
@@ -71,12 +260,33 @@ export function bkWireSidebarToggle() {
 		}
 	});
 
-	window.addEventListener("bk-page-loaded", () => {
+	window.addEventListener("resize", () => {
 		const currentShell = document.querySelector(".bk-shell");
-		if (localStorage.getItem("bk-sidebar-collapsed") === "true") {
+		if (!isDrawerViewport() && currentShell?.hasAttribute("data-mobile-open")) {
+			currentShell.removeAttribute("data-mobile-open");
+			document
+				.querySelector<HTMLElement>(
+					bkIsPhone() ? phoneReturn : "#bk-topbar-sidebar-toggle",
+				)
+				?.focus();
+		}
+		updateToggleState(
+			currentShell?.getAttribute("data-mobile-open") === "true",
+		);
+	});
+
+	window.addEventListener("bk-page-loaded", () => {
+		syncPhoneNavigation();
+		bkSyncDeviceAttributes();
+		const currentShell = document.querySelector(".bk-shell");
+		if (
+			localStorage.getItem("bk-sidebar-collapsed") === "true" &&
+			!isDrawerViewport()
+		) {
 			currentShell?.setAttribute("data-collapsed", "true");
 		}
 		currentShell?.removeAttribute("data-mobile-open");
+		updateToggleState(false);
 	});
 }
 
@@ -382,7 +592,9 @@ export function bkWireScrollSpy() {
 
 export function bkWireLastLessonTracking() {
 	const path = window.location.pathname;
-	const isChapterPage = document.querySelector(".bk-chapter-timeline") !== null;
+	const isChapterPage =
+		document.querySelector(".bk-chapter-timeline, .bk-phone-catalogue") !==
+		null;
 
 	if (!isChapterPage) {
 		const lessonPath = path.replace(/\/$/, "").split("/").pop();
@@ -392,6 +604,27 @@ export function bkWireLastLessonTracking() {
 		}
 	} else {
 		const lastLesson = localStorage.getItem("mr-md-last-lesson");
+		for (const link of document.querySelectorAll<HTMLAnchorElement>(
+			"[data-phone-lesson]",
+		)) {
+			const slug = link.dataset.phoneLesson;
+			const status = link.querySelector(".bk-phone-lesson-status");
+			if (status && localStorage.getItem(`mr-md-completed:${slug}`) === "true")
+				status.textContent = " · Completed";
+			const active = slug === lastLesson;
+			link.classList.toggle("is-active", active);
+			if (active) link.setAttribute("aria-current", "location");
+			else link.removeAttribute("aria-current");
+			if (!active) continue;
+			if (status) status.textContent = " · In progress";
+			const start =
+				document.querySelector<HTMLAnchorElement>(".bk-phone-start");
+			if (start) {
+				start.href = link.href;
+				start.querySelector("span")!.textContent = "Continue learning";
+			}
+		}
+
 		const cards = document.querySelectorAll(".bk-timeline-card");
 		const continueBtn = document.getElementById("bk-hero-continue-btn");
 		let lastCardTitle = "";
@@ -419,7 +652,8 @@ export function bkWireLastLessonTracking() {
 			}
 
 			if (cardPath === lastLesson) {
-				card.scrollIntoView({ behavior: "auto", block: "center" });
+				if (!bkIsPhone())
+					card.scrollIntoView({ behavior: "auto", block: "center" });
 				card.classList.add("bk-last-opened");
 				const titleEl = card.querySelector(".bk-timeline-title");
 				if (titleEl) lastCardTitle = titleEl.textContent?.trim() || "";
@@ -476,7 +710,8 @@ export function bkWireScrollProgress() {
 		if (percent >= 85) {
 			const path = window.location.pathname;
 			const isChapterPage =
-				document.querySelector(".bk-chapter-timeline") !== null;
+				document.querySelector(".bk-chapter-timeline, .bk-phone-catalogue") !==
+				null;
 			if (!isChapterPage) {
 				const lessonSlug = path
 					.replace(/\/$/, "")

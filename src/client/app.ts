@@ -1,10 +1,12 @@
 // @ts-nocheck
 
+import { bkIsPhone, bkWatchDevice } from "./device.js";
 import { bkInitInspectors } from "./inspector.js";
 import {
 	bkInitInteractiveFrames,
 	bkWireInteractiveFrames,
 } from "./interactive.js";
+import { bkInitMedia, bkWireMedia } from "./media.js";
 import { bkWireQuizzes } from "./quiz.js";
 import { bkInitRouter } from "./router.js";
 import { bkInitCodeRunners, bkWireCodeRunners } from "./runner.js";
@@ -21,13 +23,19 @@ import {
 	bkWireScrollSpy,
 	bkWireSidebarToggle,
 } from "./ui.js";
-import { bkInitWorldPortals, bkWireWorldPortals } from "./world.js";
+import { bkCollapseLab } from "./workspace.js";
+import {
+	bkExitWorld,
+	bkInitWorldPortals,
+	bkWireWorldPortals,
+} from "./world.js";
 
 function wireOnce() {
 	if (window.__bk_wired_once) return;
 	window.__bk_wired_once = true;
 
 	bkInitRouter();
+	bkWireMedia();
 	bkWireMaximizeControls();
 	bkWireSidebarToggle();
 	bkWireThemeControls();
@@ -39,9 +47,29 @@ function wireOnce() {
 	bkWireQuizzes();
 	bkWireWorldPortals();
 	bkWireSteps();
+
+	const onDeviceChange = () => {
+		if (
+			document.querySelector('meta[name="bk-phone-app"]') &&
+			bkIsPhone() !== document.documentElement.hasAttribute("data-phone-app")
+		) {
+			location.reload();
+			return;
+		}
+		if (bkIsPhone()) {
+			bkCollapseLab();
+			bkExitWorld();
+		}
+		bkInitSimControls();
+		bkInitSteps();
+		bkInitWorldPortals();
+		bkInitInteractiveFrames();
+	};
+	bkWatchDevice(onDeviceChange);
 }
 
 function initOnPageLoad() {
+	bkInitMedia();
 	bkInitCodeCopy();
 	bkInitCodeRunners();
 	bkInitSimControls();

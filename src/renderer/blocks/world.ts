@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions, WorldBlock } from "../../types.js";
 import { escapeScriptJson } from "../markdown/index.js";
+import { mdInline } from "../markdown/sanitize.js";
 import { type NavItem, resolveContent } from "../utils.js";
 import { iframeDoc } from "./iframe.js";
 import { escAttr, escHtml } from "./utils.js";
@@ -148,6 +149,12 @@ export function renderWorld(
 
 	const html = `
 <figure id="${escAttr(id)}" class="bk-object bk-object--world bk-object--${escAttr(accent)}" data-world-block="true" data-portal="${escAttr(portalType)}" data-world-title="${escAttr(label)}">
+  <div class="bk-phone-sim-notice">
+    <svg class="bk-phone-device" aria-hidden="true" width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="25" height="18" rx="2"/><path d="M8 23h12m-6-4v4"/><rect x="23" y="9" width="8" height="14" rx="1.5"/></svg>
+    <div class="bk-phone-sim-label">${escHtml(label)}</div>
+    <div class="bk-phone-sim-notice-title">Open on desktop</div>
+    <div class="bk-phone-sim-notice-body">This simulation needs a larger screen. You can keep reading here.</div>
+  </div>
   ${cardInnerHtml}
 
   <!-- Fullscreen World Immersion Overlay (Under Topbar) -->
@@ -166,8 +173,10 @@ export function renderWorld(
     <div class="bk-world-frame-slot"></div>
   </div>
 
+  ${block.caption ? `<figcaption class="bk-caption">${mdInline(block.caption)}</figcaption>` : ""}
   <script type="application/json" class="bk-sim-telemetry-schema">${escapeScriptJson(block.telemetry ?? {})}</script>
   <script type="application/json" class="bk-measurements-config">${escapeScriptJson(block.measurements ?? {})}</script>
+
   <script type="application/json" class="bk-world-config">${escapeScriptJson(worldConfig)}</script>
 </figure>`.trim();
 

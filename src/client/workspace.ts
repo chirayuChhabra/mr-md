@@ -4,7 +4,15 @@ import {
 	PLAY_ICON,
 	RESET_ICON,
 } from "../simulation-toolbar.js";
+import { bkIsPhone } from "./device.js";
 import { bkApplyPropsToControls } from "./simulation.js";
+
+interface CanvasSizeMessage {
+	type: "bk:canvas-size";
+	width: number;
+	height: number;
+	responsive?: boolean;
+}
 
 const inspectorTabMemory = new WeakMap<
 	Element,
@@ -625,6 +633,8 @@ export function bkExpandLab(
 		defaultTab?: "controls" | "telemetry" | "timeline" | "graphs";
 	},
 ): void {
+	if (bkIsPhone()) return;
+
 	const figure =
 		typeof target === "string"
 			? document.getElementById(target)
@@ -862,6 +872,13 @@ export function bkToggleExpandLab(
 		defaultTab?: "controls" | "telemetry" | "timeline" | "graphs";
 	},
 ): void {
+	if (bkIsPhone()) {
+		if (document.querySelector(".bk-object--maximized")) {
+			bkCollapseLab();
+		}
+		return;
+	}
+
 	if (!target) {
 		// Toggle via document topbar button
 		const currentMax = document.querySelector(".bk-object--maximized");
@@ -1073,6 +1090,10 @@ export function bkWireWorkspace(): void {
 			"[data-bk-expand-preview], .bk-object-maximize, .bk-sim-advanced-summary",
 		);
 		if (entry) {
+			if (bkIsPhone()) {
+				e.preventDefault();
+				return;
+			}
 			const figure = entry.closest(".bk-object");
 			if (
 				figure &&
@@ -1129,6 +1150,10 @@ export function bkWireWorkspace(): void {
 			"#bk-doc-telemetry-btn, .bk-doc-telemetry-btn",
 		) as HTMLElement;
 		if (toggleBtn) {
+			if (bkIsPhone()) {
+				e.preventDefault();
+				return;
+			}
 			bkToggleExpandLab(undefined, {
 				focusReturn: toggleBtn,
 				defaultTab: "telemetry",
@@ -1257,6 +1282,21 @@ export function bkWireWorkspace(): void {
 			(item) => item.querySelector("iframe")?.contentWindow === event.source,
 		);
 		if (!figure || !event.data || typeof event.data !== "object") return;
+		if (event.data.type === "bk:canvas-size") {
+			const size = event.data as CanvasSizeMessage;
+			if (
+				!Number.isFinite(size.width) ||
+				!Number.isFinite(size.height) ||
+				size.width <= 0 ||
+				size.height <= 0
+			)
+				return;
+			const ratio = size.width / size.height;
+			if (ratio < 0.1 || ratio > 10) return;
+			figure.style.setProperty("--bk-canvas-aspect", String(ratio));
+			figure.dataset.bkCanvasResponsive = String(size.responsive === true);
+			return;
+		}
 		if (event.data.type === "bk:runtime-ready") {
 			figure.dataset.bkResetHandler =
 				event.data.reset === true ? "true" : "false";
@@ -1317,6 +1357,12 @@ export function bkWireWorkspace(): void {
 				figure,
 				!document.hidden && figure.dataset.bkPlaybackState !== "paused",
 			);
+	});
+
+	window.addEventListener("resize", () => {
+		if (bkIsPhone() && document.querySelector(".bk-object--maximized")) {
+			bkCollapseLab();
+		}
 	});
 
 	window.addEventListener("bk-page-loaded", () => {

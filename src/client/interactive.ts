@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { bkIsPhone } from "./device.js";
+
 let interactiveObs: IntersectionObserver | undefined;
 
 export function bkInitInteractiveFrames() {
@@ -40,6 +42,7 @@ export function bkInitInteractiveFrames() {
 	}
 
 	interactiveObs.disconnect();
+	if (bkIsPhone()) return;
 	document.querySelectorAll(".bk-embed-interactive").forEach((frame) => {
 		interactiveObs.observe(frame);
 	});
@@ -47,6 +50,7 @@ export function bkInitInteractiveFrames() {
 
 export function bkWireInteractiveFrames() {
 	const interactiveHandler = (e: Event) => {
+		if (bkIsPhone()) return;
 		const target = e.target as HTMLElement;
 		const obj = target.closest?.(".bk-object");
 		const activateFrame = obj

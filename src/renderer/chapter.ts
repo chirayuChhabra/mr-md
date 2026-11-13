@@ -1,5 +1,6 @@
 import type { BuildOptions, Chapter } from "../types.js";
 import { escAttr, escHtml } from "./blocks.js";
+import { renderPhoneChapter } from "./components/phone-chapter.js";
 import {
 	getLessonStats,
 	renderChapterTimeline,
@@ -42,6 +43,7 @@ export function renderChapter(
 		: "";
 
 	const contentHtml = `
+    ${renderPhoneChapter(chapter)}
     <article class="bk-content bk-chapter-dashboard" style="max-width: 1024px; margin: 0 auto;">
       <header class="bk-hero bk-chapter-hero">
         <div class="bk-chapter-eyebrow-row">

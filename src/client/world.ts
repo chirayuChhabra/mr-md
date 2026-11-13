@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { CLOSE_ICON } from "../simulation-toolbar.js";
+import { bkIsPhone } from "./device.js";
 
 let activeWorldFigure = null;
 const registeredPortals = new Map();
@@ -1501,7 +1502,7 @@ function captureWorldSource() {
 }
 
 export function bkEnterWorld(figure) {
-	if (!figure) return;
+	if (!figure || bkIsPhone()) return;
 	captureWorldSource();
 	activeWorldFigure = figure;
 	figure.classList.add("bk-world--active");
@@ -1557,7 +1558,8 @@ export function bkExitWorld(figure, options = {}) {
 	if (!fullscreen && !fig) return;
 	if (
 		fullscreen?.classList?.contains("bk-world--exiting") &&
-		!options.immediate
+		!options.immediate &&
+		!bkIsPhone()
 	)
 		return;
 	const exitGeneration = ++worldExitGeneration;
@@ -1571,9 +1573,26 @@ export function bkExitWorld(figure, options = {}) {
 					window.__bk_suppress_router_popstate = false;
 				}
 			}, 300);
+			// A cached route must not push its entry before this traversal finishes.
+			let resolveHistory: () => void;
+			const pendingHistory = new Promise<void>((resolve) => {
+				resolveHistory = resolve;
+			});
+			window.__bk_pending_world_popstate = pendingHistory;
+			const completeHistory = () => {
+				window.removeEventListener("popstate", completeHistory);
+				clearTimeout(historyTimeout);
+				if (window.__bk_pending_world_popstate === pendingHistory)
+					window.__bk_pending_world_popstate = undefined;
+				resolveHistory();
+			};
+			const historyTimeout = setTimeout(completeHistory, 300);
+			window.addEventListener("popstate", completeHistory, { once: true });
 			try {
 				window.history.back();
-			} catch (_) {}
+			} catch (_) {
+				completeHistory();
+			}
 		}
 	} else {
 		worldHistoryPushed = false;
@@ -1640,7 +1659,7 @@ export function bkExitWorld(figure, options = {}) {
 		} catch (_) {}
 	};
 
-	if (options.immediate) {
+	if (options.immediate || bkIsPhone()) {
 		cleanup();
 		return;
 	}
@@ -1776,6 +1795,7 @@ function setupWorldPortal(figure) {
 		},
 
 		startLoop() {
+			if (bkIsPhone()) return;
 			if (this.animId) return;
 			this.resize();
 			let lastTime = performance.now();
@@ -2093,10 +2113,16 @@ export function bkInitWorldPortals() {
 
 	const figures = document.querySelectorAll("figure.bk-object--world");
 	figures.forEach((figure) => {
-		if (registeredPortals.has(figure)) return;
+		if (bkIsPhone() || registeredPortals.has(figure)) return;
 		setupWorldPortal(figure);
 		worldObserver.observe(figure);
 	});
+
+	if (bkIsPhone()) {
+		registeredPortals.forEach((p) => {
+			p.stopLoop();
+		});
+	}
 }
 
 /**
@@ -2105,6 +2131,18 @@ export function bkInitWorldPortals() {
 export function bkWireWorldPortals() {
 	let _pointerDownTime = 0;
 
+	window.addEventListener("resize", () => {
+		if (bkIsPhone()) {
+			bkExitWorld();
+			registeredPortals.forEach((p) => {
+				p.stopLoop();
+			});
+		} else {
+			registeredPortals.forEach((p) => {
+				if (p.isVisible) p.startLoop();
+			});
+		}
+	});
 	document.addEventListener(
 		"click",
 		(event) => {
@@ -2123,6 +2161,7 @@ export function bkWireWorldPortals() {
 	);
 
 	document.addEventListener("pointerdown", (e) => {
+		if (bkIsPhone()) return;
 		if (e.button !== 0 && e.pointerType === "mouse") return;
 
 		const target = e.target;

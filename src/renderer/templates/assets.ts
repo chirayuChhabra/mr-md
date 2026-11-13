@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -19,4 +20,11 @@ export function clientScript(): string {
 		bundlePath = path.join(__dirname, "../../../dist/client/app.bundle.js");
 	}
 	return fs.readFileSync(bundlePath, "utf-8");
+}
+
+export function assetVersion(asset: "styles" | "client"): string {
+	return createHash("sha256")
+		.update(asset === "styles" ? pageCSS() : clientScript())
+		.digest("hex")
+		.slice(0, 12);
 }

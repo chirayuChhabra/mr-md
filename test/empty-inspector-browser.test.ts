@@ -6,7 +6,7 @@ import { renderSteps } from "../src/renderer/blocks/steps.js";
 
 const chrome = await puppeteer.executablePath();
 
-test.skipIf(!existsSync(chrome))("expanded scenes reserve an inspector only for authored content", async () => {
+async function fixture() {
  const bundle = await Bun.build({ entrypoints: ["./src/client/workspace.ts"], target: "browser", format: "esm" });
  expect(bundle.success).toBe(true);
  const source = `${await bundle.outputs[0]!.text()}\nbkWireWorkspace();`;
@@ -17,12 +17,17 @@ test.skipIf(!existsSync(chrome))("expanded scenes reserve an inspector only for 
   renderSimulation({type:"simulation",src,telemetry:{speed:{label:"Speed"}}},2,{}).html,
   renderSteps({type:"steps",src,steps:[{title:"Explore"}],voice:false,audio:false},3,{}).html,
  ].join("");
+ return { source, blocks };
+}
+
+test.skipIf(!existsSync(chrome))("expanded scenes reserve an inspector only for authored content", async () => {
+ const { source, blocks } = await fixture();
  const browser = await puppeteer.launch({headless:true,args:["--no-sandbox","--disable-gpu","--disable-dev-shm-usage"]});
  try {
   const page = await browser.newPage();
   await page.setContent(`<style>${readFileSync("src/styles/theme.css","utf8")}</style>${blocks}`);
   await page.addScriptTag({type:"module",content:source});
-  for (const viewport of [{width:1440,height:900},{width:390,height:844}]) {
+  for (const viewport of [{width:1440,height:900},{width:820,height:1180}]) {
    await page.setViewport(viewport);
    for (const id of ["sim-0","sim-1","sim-2","steps-3"]) {
     await page.locator(`#${id} [data-bk-expand-preview]`).click();
@@ -42,5 +47,23 @@ test.skipIf(!existsSync(chrome))("expanded scenes reserve an inspector only for 
     await page.keyboard.press('Escape');
    }
   }
+ } finally { await browser.close(); }
+});
+
+
+test.skipIf(!existsSync(chrome))("phones expose desktop notices without live simulation or graph UI", async () => {
+ const {source, blocks} = await fixture();
+ const browser = await puppeteer.launch({headless:true,args:["--no-sandbox","--disable-gpu","--disable-dev-shm-usage"]});
+ try {
+  const page = await browser.newPage();
+  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
+  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><style>${readFileSync("src/styles/theme.css","utf8")}</style>${blocks}`);
+  await page.addScriptTag({type:"module",content:source});
+  expect(await page.$$eval('.bk-phone-sim-notice', notices => notices.length === 4 && notices.every(notice => notice.getBoundingClientRect().height > 0))).toBe(true);
+  expect(await page.$$eval('.bk-sim-workspace', spaces => spaces.every(space => space.getBoundingClientRect().height === 0))).toBe(true);
+  await page.$$eval('[data-bk-expand-preview]', buttons => buttons.forEach(button => (button as HTMLButtonElement).click()));
+  expect(await page.$('.bk-object--maximized')).toBeNull();
+  expect(await page.$('iframe')).toBeNull();
+  expect(await page.$('.bk-graph-layer')).toBeNull();
  } finally { await browser.close(); }
 });

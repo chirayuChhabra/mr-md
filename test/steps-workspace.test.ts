@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import puppeteer from "puppeteer";
 import { renderSteps } from "../src/renderer/blocks/steps.js";
 
 const chrome =
 	process.env.PUPPETEER_EXECUTABLE_PATH ||
-	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+	await puppeteer.executablePath();
 
 test.skipIf(!existsSync(chrome))(
 	"guided trials restore authored defaults and preserve progress when closing",
@@ -69,7 +71,7 @@ ctx.fillStyle=window.bkColor('text');ctx.fillRect(80+window.__trial.distance,200
 			0,
 			{},
 		);
-		const browser = await puppeteer.launch({
+		const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
 			executablePath: chrome,
 			headless: true,
 		});
@@ -130,7 +132,7 @@ ctx.fillStyle=window.bkColor('text');ctx.fillRect(80+window.__trial.distance,200
 				await frame.evaluate(() => (window as any).__currentStepIndex),
 			).toBe(1);
 			await page.setViewport({ width: 390, height: 844 });
-			await page.screenshot({ path: "/tmp/mr-steps-workspace-mobile.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-steps-workspace-mobile.png") });
 		} finally {
 			await browser.close();
 		}

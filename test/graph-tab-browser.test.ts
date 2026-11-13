@@ -32,7 +32,7 @@ test('Measurements graphs view builds a custom plot from recorded values and win
   await page.locator('[aria-label="Close graph"]').click();
   await page.select('[data-graph-y]','state');await page.locator('[data-create-graph]').click();
   expect(await page.$eval('.bk-graph-builder-status',e=>e.textContent)).toContain('numeric');
-  await page.setViewport({width:390,height:844});
+  await page.setViewport({width:820,height:1180});
   expect(await page.$eval('.bk-sim-tablist',e=>e.scrollWidth<=e.clientWidth+1)).toBe(true);
  }finally{await browser.close()}
 },30000);

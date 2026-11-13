@@ -7,7 +7,7 @@ test('measurement inspector keeps labels, values and actions separated across th
  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] });
  try {
   const page = await browser.newPage();
-  await page.setViewport({ width: 390, height: 844 });
+  await page.setViewport({ width: 820, height: 1180 });
   const css = ['theme', 'measurement-timeline'].map(name => readFileSync(`src/styles/${name}.css`, 'utf8')).join('\n');
   const telemetry = renderSimulationTelemetry('lab', {
    displacement: { label: 'Displacement from equilibrium', unit: 'm', scene: true, graph: true, description: 'Signed distance from the equilibrium position.' },
@@ -56,7 +56,7 @@ test('measurement navigation stays visible while the inspector scrolls', async (
  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] });
  try {
   const page = await browser.newPage();
-  await page.setViewport({ width: 390, height: 844 });
+  await page.setViewport({ width: 820, height: 1180 });
   const css = ['theme', 'measurement-timeline'].map(name => readFileSync(`src/styles/${name}.css`, 'utf8')).join('\n');
   const schema = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`value${i}`, { label: `Value ${i}`, graph: true }]));
   const telemetry = renderSimulationTelemetry('lab', schema);

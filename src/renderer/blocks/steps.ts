@@ -164,18 +164,26 @@ export function renderSteps(
     </div>
   </div>
 
+  <div class="bk-phone-sim-notice">
+    <svg class="bk-phone-device" aria-hidden="true" width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="25" height="18" rx="2"/><path d="M8 23h12m-6-4v4"/><rect x="23" y="9" width="8" height="14" rx="1.5"/></svg>
+    <div class="bk-phone-sim-notice-title">Open on desktop</div>
+    <div class="bk-phone-sim-notice-body">This simulation needs a larger screen. You can keep reading here.</div>
+  </div>
+
   <div class="bk-sim-workspace">
     <div class="bk-sim-stage">
       <div class="bk-embed-frame bk-steps-frame bk-embed-interactive bk-sim-preview" ${frameHeightAttr}>
         <button type="button" class="bk-embed-overlay" data-bk-expand-preview aria-label="Expand step-by-step simulation">
           <span class="bk-embed-overlay-text">Click to expand</span>
         </button>
-        <iframe title="${escAttr(label)}" srcdoc="${stepsIframeDoc(simSrc, propsJson, block.dependencies)}"
-          sandbox="allow-scripts"
-          allow="autoplay"
-          style="width:100%;height:100%;border:none;display:block;background:transparent;">
-        </iframe>
-
+        <template class="bk-steps-frame-template">
+          <iframe title="${escAttr(label)}" srcdoc="${stepsIframeDoc(simSrc, propsJson, block.dependencies)}"
+            sandbox="allow-scripts"
+            allow="autoplay"
+            style="width:100%;height:100%;border:none;display:block;background:transparent;">
+          </iframe>
+        </template>
+        <div class="bk-steps-frame-slot" style="width:100%;height:100%;display:contents;"></div>
       </div>
             <div class="bk-steps-controls" role="group" aria-label="Simulation playback">
         <div class="bk-steps-nav">

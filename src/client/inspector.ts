@@ -1,3 +1,5 @@
+import { bkIsPhone } from "./device.js";
+
 interface InspectorBinding {
 	dispose: () => void;
 }
@@ -21,7 +23,14 @@ export function bkInitInspectors(): void {
 		const update = () => {
 			scheduled = null;
 			const panel = activePanel();
-			if (!panel || !tabs.closest(".bk-object--maximized")) {
+			const isPhone =
+				typeof bkIsPhone === "function"
+					? bkIsPhone()
+					: typeof window !== "undefined" &&
+						window.matchMedia(
+							"(max-width: 767px), (max-height: 500px) and (pointer: coarse)",
+						).matches;
+			if (isPhone || !panel || !tabs.closest(".bk-object--maximized")) {
 				if (!cue.hidden) cue.hidden = true;
 				return;
 			}
