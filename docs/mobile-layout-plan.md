@@ -16,7 +16,7 @@ Standalone lessons retain their existing toolbar, theme control, and contents dr
 
 Simulations show an Open on desktop notice on phones. The route bundle removes their runtime frames and preserves ordinary video embeds and inert quiz data. Quiz behavior remains unchanged.
 
-Code uses the desktop code-surface colors against the selected page background. Phone editors wrap lines, retain 16px touch input text, and run inline. The compact header puts language and title beside Run, Compile, or Check Answer. Hint, Reset, and Copy are in a three-dot popover. Touch targets remain at least 44px. Reduced-motion settings disable navigation and popup motion.
+Code uses the desktop code-surface colors against the selected page background. Phone editors wrap lines, retain 16px touch input text, and run inline. The compact header puts language and title beside Run, Compile, or Check Answer. Hint, Reset, and Copy are in a three-dot popover. Compile and Next use contrasting foregrounds across light and dark palettes, including the compiled-binary state. The Next arrow inherits its link foreground. Touch targets remain at least 44px. Reduced-motion settings disable navigation and popup motion.
 
 ## Tablet simulations
 
@@ -24,6 +24,6 @@ Expanded simulations cover the viewport without theme card borders, shadows, or 
 
 ## Release verification
 
-`bun run test` passes: 343 tests across 39 files, followed by TypeScript checking. Coverage includes 320px and 390px phones, phone landscape, tablet portrait and landscape, desktop simulation workspaces, search scope and history, editor draft/reset behavior, compact actions, keyboard viewport anchoring, nested assets, standalone controls, output path boundaries, and video preservation.
+`bun run test` passes: 421 tests across 62 files, followed by TypeScript checking. Coverage includes 320px and 390px phones, phone landscape, tablet portrait and landscape, desktop simulation workspaces, search scope and history, editor draft/reset behavior, compact actions, keyboard viewport anchoring, nested assets, standalone controls, output path boundaries, and video preservation.
 
-`bun run lint` passes with 11 non-blocking warnings. `git diff --check` passes. Light and dark phone layouts were inspected in the shared browser. Physical-device Safari validation remains outstanding; keyboard anchoring is covered with a simulated visual viewport in managed Chromium.
+`bun run lint` passes with 44 non-blocking warnings. `git diff --check` passes. Light and dark phone layouts were inspected in the shared browser. Physical-device Safari validation remains outstanding; keyboard anchoring is covered with a simulated visual viewport in managed Chromium.

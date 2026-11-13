@@ -33,6 +33,7 @@
 	--rose: #e11d48;
 	--violet: #7c3aed;
 	--accent: var(--blue);
+	--accent-foreground: #ffffff;
 	--accent-soft: rgba(37, 99, 235, 0.1);
 	--correct-bg: rgba(16, 185, 129, 0.1);
 	--correct-line: #10b981;
@@ -47,6 +48,7 @@ html[data-palette="field"], .bk-shell[data-palette="field"] {
 	--line: #e2f5e9;
 	--line-strong: #bbf7d0;
 	--accent: var(--teal);
+	--accent-foreground: #09090b;
 	--accent-soft: rgba(13, 148, 136, 0.1);
 }
 
@@ -56,6 +58,7 @@ html[data-palette="ember"], .bk-shell[data-palette="ember"] {
 	--line: #fce8d5;
 	--line-strong: #fed7aa;
 	--accent: #ea580c;
+	--accent-foreground: #09090b;
 	--accent-soft: rgba(234, 88, 12, 0.1);
 }
 
@@ -65,6 +68,7 @@ html[data-palette="elixir"], .bk-shell[data-palette="elixir"] {
 	--line: #ede5f6;
 	--line-strong: #d8b4fe;
 	--accent: #a855f7;
+	--accent-foreground: #09090b;
 	--accent-soft: rgba(168, 85, 247, 0.1);
 }
 
@@ -83,6 +87,7 @@ html[data-palette="lava"], .bk-shell[data-palette="lava"] {
 	--line: #fce8e8;
 	--line-strong: #fca5a5;
 	--accent: #ef4444;
+	--accent-foreground: #09090b;
 	--accent-soft: rgba(239, 68, 68, 0.1);
 }
 
@@ -96,6 +101,7 @@ html[data-palette="lava"], .bk-shell[data-palette="lava"] {
 	--code-property: #38bdf8;
 	--code-class: #34d399;
 	--code-secondary: #a1a1aa;
+	--accent-foreground: #09090b;
 	--bg: #07090c;
 	--paper: #121212;
 	--panel: #1a1a1a;
@@ -177,6 +183,7 @@ html[data-palette="lava"][data-theme="dark"], .bk-shell[data-palette="lava"][dat
 		--code-property: #38bdf8;
 		--code-class: #34d399;
 		--code-secondary: #a1a1aa;
+		--accent-foreground: #09090b;
 	--bg: #07090c;
 		--paper: #121212;
 		--panel: #1a1a1a;
@@ -1959,13 +1966,14 @@ hr.bk-divider,
 
 .bk-run-btn.bk-compile-btn {
 	background: var(--blue, #2563eb);
+	color: var(--paper);
 }
 .bk-run-btn.bk-check-btn {
 	background: var(--accent);
 }
 .bk-run-btn.binary-ready {
 	background: var(--correct-line, #10b981) !important;
-	color: #ffffff;
+	color: #09090b;
 	box-shadow: 0 0 12px color-mix(in srgb, var(--correct-line, #10b981) 40%, transparent);
 }
 .bk-run-btn.binary-ready:hover {
@@ -7958,7 +7966,7 @@ html:root .bk-object.bk-object--maximized {
   background-color: var(--accent-soft);
   color: var(--ink);
  }
- .bk-shell .bk-phone-start:is(.bk-touch-pressed, [data-bk-pending]) { background: var(--accent); color: var(--paper); opacity: .8; }
+ .bk-shell .bk-phone-start:is(.bk-touch-pressed, [data-bk-pending]) { background: var(--accent); color: var(--accent-foreground); opacity: 1; box-shadow: inset 0 0 0 2px currentColor; }
  .bk-phone-catalogue a:active { opacity: 1; }
  .bk-sidebar { transition: transform 160ms cubic-bezier(.2,.8,.2,1) !important; }
 }
@@ -8014,7 +8022,7 @@ html:root .bk-object.bk-object--maximized {
  html[data-phone-app] .bk-phone-catalogue > header > span { display: none; }
  html[data-phone-app] .bk-phone-catalogue li a { min-height: 80px; gap: 12px; }
  html[data-phone-app] .bk-phone-catalogue li a > span:last-child { flex-shrink: 0; }
- html[data-phone-app] .bk-phone-start { min-height: 52px; box-sizing: border-box; background: var(--accent); color: var(--paper); border-radius: 8px; margin-block: 24px; }
+ html[data-phone-app] .bk-phone-start { min-height: 52px; box-sizing: border-box; background: var(--accent); color: var(--accent-foreground); border-radius: 8px; margin-block: 24px; }
  html[data-phone-app] .bk-phone-catalogue a.is-active { position: relative; }
  html[data-phone-app] .bk-phone-catalogue a.is-active::before { content: ''; position: absolute; left: -12px; top: 24px; bottom: 24px; width: 2px; border-radius: 2px; background: var(--accent); }
  html[data-phone-app] .is-active :is(.bk-phone-lesson-number,.bk-phone-lesson-status) { color: var(--accent); font-weight: 600; }
@@ -8030,12 +8038,12 @@ html:root .bk-object.bk-object--maximized {
  html[data-phone-app] .bk-markdown blockquote { padding-left: 16px; margin-inline: 0; border-left: 2px solid var(--line-strong); background: transparent; }
  html[data-phone-app] .bk-end-nav { display: flex; flex-direction: column; gap: 8px; padding-block: 24px 0; margin-top: 32px; border-top: 1px solid var(--line); }
  html[data-phone-app] .bk-end-link { display: grid; grid-template-columns: minmax(0,1fr) 24px; align-items: center; gap: 4px 16px; min-height: 64px; padding: 12px 16px; box-sizing: border-box; margin: 0; border: 0; border-radius: 8px; box-shadow: none; background: transparent; text-align: left; }
- html[data-phone-app] .bk-end-link--next { order: -1; color: var(--paper); background: var(--accent); }
+ html[data-phone-app] .bk-end-link--next { order: -1; color: var(--accent-foreground); background: var(--accent); }
  html[data-phone-app] .bk-end-link[style*="visibility:hidden"] { display: none; }
  html[data-phone-app] .bk-end-link::before, html[data-phone-app] .bk-end-link::after { content: none; }
  html[data-phone-app] .bk-end-link > span:not(.bk-phone-action-icon) { grid-column: 1; color: inherit; font: 500 12px/1.4 var(--font-sans); text-transform: none; letter-spacing: 0; }
  html[data-phone-app] .bk-end-link strong { grid-column: 1; color: inherit; font: 600 16px/1.4 var(--font-sans); overflow-wrap: anywhere; }
- html[data-phone-app] .bk-phone-action-icon { grid-column: 2; grid-row: 1 / 3; }
+ html[data-phone-app] .bk-phone-action-icon { color: inherit; grid-column: 2; grid-row: 1 / 3; }
  html[data-phone-app] .bk-phone-action-icon svg { width: 20px; height: 20px; }
  html[data-phone-app] .bk-code-runner { border: 1px solid var(--line-strong); border-radius: 8px; background: color-mix(in srgb,var(--accent) 2%,var(--code-bg)); box-shadow: none; overflow: hidden; }
  html[data-phone-app] .bk-runner-header { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; min-height: 56px; padding: 4px 8px 4px 12px; gap: 8px; border-bottom: 1px solid var(--line-strong); background: color-mix(in srgb,var(--bg) 60%,transparent); }
@@ -8046,6 +8054,8 @@ html:root .bk-object.bk-object--maximized {
  html[data-phone-app] .bk-runner-header :is(.bk-run-btn,.bk-hint-btn) { padding: 8px; font-size: 13px; color: var(--ink); }
  html[data-phone-app] .bk-runner-header .bk-run-btn { order: 3; margin-left: 0; color: var(--accent); font-weight: 600; }
  html[data-phone-app] .bk-runner-header .bk-run-icon { display: none; }
+ html[data-phone-app] .bk-runner-header .bk-run-btn.bk-compile-btn { background: var(--blue); color: var(--paper); }
+ html[data-phone-app] .bk-runner-header .bk-run-btn.binary-ready { color: #09090b; }
  html[data-phone-app] .bk-runner-header .bk-reset-btn { margin-left: 0; }
  html[data-phone-app] .bk-runner-header .bk-hint-btn { order: 0; }
  html[data-phone-app] .bk-phone-code-more { order: 1; color: var(--muted); }
@@ -8077,7 +8087,7 @@ html:root .bk-object.bk-object--maximized {
  html[data-phone-app] .bk-diff-col { min-width: 0; }
  html[data-phone-app] .bk-shell :is(a,button,summary) { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
  html[data-phone-app] .bk-shell :is(button,a):active { background-color: var(--accent-soft); }
- html[data-phone-app] .bk-shell :is(.bk-phone-start,.bk-end-link--next):active { background: var(--accent); color: var(--paper); opacity: .8; }
+ html[data-phone-app] .bk-shell :is(.bk-phone-start,.bk-end-link--next):active { background: var(--accent); color: var(--accent-foreground); opacity: 1; box-shadow: inset 0 0 0 2px currentColor; }
  html[data-phone-app] .bk-shell :is(a,button,summary):focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
  html[data-phone-app] .bk-shell a:is(:hover,:active) { text-decoration: none; }
  html[data-phone-app] .bk-phone-route-error { position: absolute; bottom: max(16px,env(safe-area-inset-bottom)); inset-inline: 16px; padding: 16px; border-radius: 8px; background: var(--ink); color: var(--paper); z-index: 100; }
