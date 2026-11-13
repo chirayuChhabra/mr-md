@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import puppeteer from "puppeteer";
 import { renderSimulation } from "../src/renderer/blocks/simulation.js";
 import { renderSteps } from "../src/renderer/blocks/steps.js";
@@ -216,10 +218,10 @@ window.bkSetup(800, 450, (ctx) => {
 			expect(inlinePickerSteps).toBe("none");
 
 			// Visual snapshots of inline state
-			await page.screenshot({ path: "/tmp/mr-consistency-block-inline.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-consistency-block-inline.png") });
 
 			await page.$eval(`${stepsFigure}`, (el) => el.scrollIntoView());
-			await page.screenshot({ path: "/tmp/mr-consistency-steps-inline.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-consistency-steps-inline.png") });
 
 			// Scroll back to top
 			await page.evaluate(() => window.scrollTo(0, 0));
@@ -311,7 +313,7 @@ window.bkSetup(800, 450, (ctx) => {
 			await page.locator(`${blockFigure} button[data-bk-reset-simulation]`).click();
 
 			// Screenshot of expanded block simulation
-			await page.screenshot({ path: "/tmp/mr-consistency-block-expanded.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-consistency-block-expanded.png") });
 
 			// Exit block expanded view via Escape
 			await page.keyboard.press("Escape");
@@ -388,11 +390,11 @@ window.bkSetup(800, 450, (ctx) => {
 			expect(await page.$eval(`${stepsFigure}`, el => (el as HTMLElement).dataset.bkPlaybackState)).toBe("playing");
 
 			// Screenshot of expanded steps simulation
-			await page.screenshot({ path: "/tmp/mr-consistency-steps-expanded.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-consistency-steps-expanded.png") });
 
 			// Test mobile viewport consistency
 			await page.setViewport({ width: 390, height: 844 });
-			await page.screenshot({ path: "/tmp/mr-consistency-mobile.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-consistency-mobile.png") });
 
 			// Exit steps expanded view
 			await page.keyboard.press("Escape");

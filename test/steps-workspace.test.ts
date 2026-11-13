@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import puppeteer from "puppeteer";
 import { renderSteps } from "../src/renderer/blocks/steps.js";
 
@@ -130,7 +132,7 @@ ctx.fillStyle=window.bkColor('text');ctx.fillRect(80+window.__trial.distance,200
 				await frame.evaluate(() => (window as any).__currentStepIndex),
 			).toBe(1);
 			await page.setViewport({ width: 390, height: 844 });
-			await page.screenshot({ path: "/tmp/mr-steps-workspace-mobile.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-steps-workspace-mobile.png") });
 		} finally {
 			await browser.close();
 		}

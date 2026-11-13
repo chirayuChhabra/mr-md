@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test';
-import { resolve } from 'node:path';
+import { resolve, sep } from 'node:path';
 import puppeteer, {type Browser} from 'puppeteer';
 let browser: Browser;
 let server: ReturnType<typeof Bun.serve>;
@@ -7,7 +7,7 @@ beforeAll(async () => {
  const root=resolve('mr-markdown-documentation/out');
  server=Bun.serve({port:0,async fetch(req){
   const filePath=resolve(root, `.${decodeURIComponent(new URL(req.url).pathname)}`);
-  if(!filePath.startsWith(`${root}/`)) return new Response(null,{status:404});
+  if(!filePath.startsWith(`${root}${sep}`)) return new Response(null,{status:404});
   const file=Bun.file(filePath);
   return await file.exists()?new Response(file):new Response(null,{status:404});
  }});

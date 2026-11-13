@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { render } from "../src/renderer/index.js";
 
@@ -14,7 +14,7 @@ beforeAll(async () => {
   if (new URL(req.url).pathname === "/standalone-test.html") return new Response(standalone, {headers:{"Content-Type":"text/html"}});
   const root = resolve("mr-markdown-documentation/out");
   const filePath = resolve(root, `.${decodeURIComponent(new URL(req.url).pathname)}`);
-  if (!filePath.startsWith(`${root}/`)) return new Response('', {status:404});
+  if (!filePath.startsWith(`${root}${sep}`)) return new Response('', {status:404});
   const file = Bun.file(filePath);
   return await file.exists() ? new Response(file) : new Response('', {status:404});
  }});

@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import puppeteer from "puppeteer";
 import { renderSimulation } from "../src/renderer/blocks/simulation.js";
 
@@ -184,7 +186,7 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 				),
 			).toBe("none");
 			await page.screenshot({
-				path: "/tmp/mr-simulation-preview.png",
+				path: join(tmpdir(), "mr-simulation-preview.png"),
 				timeout: 3000,
 			});
 			await preview.click();
@@ -195,12 +197,12 @@ ctx.fillStyle=window.bkColor('text'); ctx.fillRect(300,180,200,140);
 					(el) => (el as HTMLInputElement).value,
 				),
 			).toBe("3");
-			await page.screenshot({ path: "/tmp/mr-simulation-expanded.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-simulation-expanded.png") });
 			await page.keyboard.press("Escape");
 			await page.setViewport({ width: 390, height: 844 });
    expect(await page.$(".bk-object--maximized")).toBeNull();
    expect(await page.$eval('[aria-label="Expand simulation"]', el => getComputedStyle(el).display)).toBe("none");
-			await page.screenshot({ path: "/tmp/mr-simulation-mobile.png" });
+			await page.screenshot({ path: join(tmpdir(), "mr-simulation-mobile.png") });
 		} finally {
 			await browser.close();
 		}
