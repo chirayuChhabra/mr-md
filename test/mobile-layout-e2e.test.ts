@@ -46,7 +46,15 @@ for (const [width, height] of [[768, 1024], [820, 1180], [1180, 820]]) {
    await page.goto(lesson("creating-simulations"), { waitUntil: "domcontentloaded" });
    await page.waitForSelector(".bk-sim-preview iframe");
    await page.locator('button[aria-label="Expand simulation"]').click();
-   await page.waitForSelector(".bk-object--maximized");
+   await page.waitForFunction(() => {
+    const lab = document.querySelector('.bk-object--maximized');
+    if (!lab?.hasAttribute('data-bk-canvas-responsive')) return false;
+    const panels = [...lab.querySelectorAll('.bk-sim-stage, .bk-sim-inspector')];
+    return panels.length === 2 && panels.every(el => {
+     const r = el.getBoundingClientRect();
+     return r.width > 0 && r.height > 0 && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1;
+    });
+   });
    expect(await page.evaluate(() => [...document.querySelectorAll(".bk-object--maximized .bk-sim-stage, .bk-object--maximized .bk-sim-inspector")].every(el => {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1;
@@ -83,7 +91,10 @@ for (const [width, height] of [[390, 844], [844, 390]]) {
    await page.setViewport({ width, height, isMobile: true, hasTouch: true });
    await page.goto(lesson("coding"));
    await page.locator(contentsSelector(page)).click();
-   await page.waitForFunction(() => document.querySelector('.bk-sidebar')?.getBoundingClientRect().top! >= 0);
+   await page.waitForFunction(() => {
+    const r = document.querySelector('.bk-sidebar')?.getBoundingClientRect();
+    return !!r && r.width > 0 && r.height > 0 && r.top >= 0 && r.left >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1;
+   });
    expect(await page.$eval('.bk-drawer-header', el => el.getBoundingClientRect().height > 0)).toBe(true);
    expect(await page.$eval('.bk-sidebar', el => { const r = el.getBoundingClientRect(); return r.width <= innerWidth && r.bottom <= innerHeight + 1; })).toBe(true);
   } finally { await page.close(); }
@@ -252,11 +263,18 @@ test('phone catalogue uses compact rows and code swipes scroll the lesson', asyn
   expect(await page.$eval('.bk-phone-catalogue li a', el => el.getBoundingClientRect().height < 140)).toBe(true);
   await page.goto(lesson('coding'));
   await page.waitForSelector('.cm-content');
-  await page.$eval('.cm-content', el => el.scrollIntoView({block:'center'}));
+  await page.waitForFunction(() => document.documentElement.dataset.phoneAppReady === 'true');
+  await page.evaluate(async () => {
+   await document.fonts.ready;
+   document.querySelector('.cm-content')!.scrollIntoView({block:'center', behavior:'instant'});
+   // Wait for the scroll handler and toolbar layout before measuring the gesture origin.
+   await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
   const before = await page.$eval('.bk-main', el => el.scrollTop);
   const box = await page.$eval('.cm-content', el => {const r=el.getBoundingClientRect();return {x:r.x+50,y:Math.min(r.bottom-10,innerHeight-150)};});
   const cdp = await page.createCDPSession();
   await cdp.send('Input.synthesizeScrollGesture', {x:box.x,y:box.y,yDistance:-300,gestureSourceType:'touch'});
+  await page.waitForFunction(before => document.querySelector('.bk-main')!.scrollTop > before + 50, {}, before);
   expect(await page.$eval('.bk-main', el => el.scrollTop)).toBeGreaterThan(before+50);
   await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.setViewport({width:820,height:1180,isMobile:true,hasTouch:true})]);
   await page.goto(lesson('index'));
