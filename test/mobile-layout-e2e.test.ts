@@ -271,9 +271,22 @@ test('phone catalogue uses compact rows and code swipes scroll the lesson', asyn
    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   const before = await page.$eval('.bk-main', el => el.scrollTop);
-  const box = await page.$eval('.cm-content', el => {const r=el.getBoundingClientRect();return {x:r.x+50,y:Math.min(r.bottom-10,innerHeight-150)};});
+  const box = await page.$eval('.cm-content', el => {
+   const r = el.getBoundingClientRect();
+   const x = r.left + Math.min(50, r.width / 2);
+   const y = Math.min(r.bottom - 10, innerHeight - 150);
+   if (!el.contains(document.elementFromPoint(x, y))) throw new Error('Touch origin is outside the visible editor');
+   return {x, y};
+  });
   const cdp = await page.createCDPSession();
-  await cdp.send('Input.synthesizeScrollGesture', {x:box.x,y:box.y,yDistance:-300,gestureSourceType:'touch'});
+  // Dispatch trusted touch events directly; synthetic scroll gestures depend on the platform compositor.
+  await cdp.send('Input.dispatchTouchEvent', {type:'touchStart', touchPoints:[{x:box.x, y:box.y}]});
+  for (let step = 1; step <= 12; step++) {
+   await cdp.send('Input.dispatchTouchEvent', {type:'touchMove', touchPoints:[{x:box.x, y:box.y - step * 20}]});
+   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+  }
+  await cdp.send('Input.dispatchTouchEvent', {type:'touchEnd', touchPoints:[]});
+  await cdp.detach();
   await page.waitForFunction(before => document.querySelector('.bk-main')!.scrollTop > before + 50, {}, before);
   expect(await page.$eval('.bk-main', el => el.scrollTop)).toBeGreaterThan(before+50);
   await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.setViewport({width:820,height:1180,isMobile:true,hasTouch:true})]);
