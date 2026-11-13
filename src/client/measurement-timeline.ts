@@ -79,6 +79,7 @@ export function createMeasurementTimeline(
 				`${win?.location.pathname}:${container.closest(".bk-object")?.id}`,
 		);
 	let moments: SavedMoment[] = [];
+	let persistedMoments: SavedMoment[] = [];
 	let workspace: SimulationSnapshot | undefined;
 	let selected: SavedMoment | null = null;
 	let initial: SavedMoment | null = null;
@@ -90,6 +91,7 @@ export function createMeasurementTimeline(
 	let loadFailed = false;
 	let restoreRequest = 0;
 	let queue: Promise<void> = Promise.resolve();
+	let persistSequence = 0;
 	let collapseAll = false;
 	let autoExpanded: string | null = null;
 	const collapsed = new Set<string>();
@@ -149,7 +151,58 @@ export function createMeasurementTimeline(
 			moments,
 			workspace: undefined,
 		});
-		const write = queue.catch(() => {}).then(() => store.write(value));
+		const sequence = ++persistSequence;
+		const write = queue
+			.catch(() => {})
+			.then(async () => {
+				if (!store.update) {
+					await store.write(value);
+					persistedMoments = clone(value.moments);
+					return;
+				}
+				const previous = new Map(
+					persistedMoments.map((moment) => [moment.id, moment]),
+				);
+				const next = new Map(
+					value.moments.map((moment) => [moment.id, moment]),
+				);
+				const removed = new Set(
+					[...previous.keys()].filter((id) => !next.has(id)),
+				);
+				const changed = value.moments.filter(
+					(moment) =>
+						JSON.stringify(previous.get(moment.id)) !== JSON.stringify(moment),
+				);
+				// Unchanged local records must not overwrite another tab's edits or deletions.
+				if (!removed.size && !changed.length) return;
+				const merged = await store.update((current) => {
+					const changes = new Map(changed.map((moment) => [moment.id, moment]));
+					const additions = changed.filter(
+						(moment) => !previous.has(moment.id),
+					);
+					return {
+						version: 1,
+						moments: [
+							...additions.filter(
+								(moment) =>
+									!current.moments.some((item) => item.id === moment.id),
+							),
+							...current.moments
+								.filter((moment) => !removed.has(moment.id))
+								.map((moment) => changes.get(moment.id) || moment),
+						],
+					};
+				});
+				persistedMoments = clone(value.moments);
+				if (
+					sequence === persistSequence &&
+					JSON.stringify(moments) === JSON.stringify(value.moments)
+				) {
+					moments = clone(merged.moments);
+					persistedMoments = clone(merged.moments);
+					render();
+				}
+			});
 		queue = write;
 		try {
 			await write;
@@ -473,6 +526,7 @@ export function createMeasurementTimeline(
 		.read()
 		.then((value) => {
 			moments = value.moments;
+			persistedMoments = clone(value.moments);
 			moments.forEach((moment, index) => {
 				if (/^State [\d.]+ s$/.test(moment.name))
 					moment.name = `Saved state ${moments.length - index}`;

@@ -318,13 +318,18 @@ export function bkInitRouter() {
 				targetUrl.pathname === window.location.pathname &&
 				targetUrl.search === window.location.search
 			) {
+				const leavingLab = !!document.querySelector(".bk-object--maximized");
+				if (leavingLab) {
+					bkCollapseLab(true);
+					window.history.replaceState({}, "", targetUrl.href);
+				}
 				const hash = targetUrl.hash;
 				if (hash && hash !== "#" && hash !== "#top") {
 					e.preventDefault();
 					const targetEl = document.getElementById(hash.slice(1));
 					if (targetEl) {
 						targetEl.scrollIntoView({ behavior: "smooth" });
-						if (window.history.pushState) {
+						if (!leavingLab && window.history.pushState) {
 							window.history.pushState({}, "", targetUrl.href);
 						}
 						window.dispatchEvent(

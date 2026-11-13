@@ -474,6 +474,7 @@ slug: telemetry-test
 						},
 					},
 					documentElement: { scrollTop: 250 },
+					querySelector: () => null,
 					getElementById: (id: string) =>
 						id === "sim-0"
 							? mockFigure
@@ -772,6 +773,7 @@ slug: telemetry-test
 				(globalThis as any).document = {
 					body: { style: { overflow: "" }, classList: { add: () => {}, remove: () => {} } },
 					documentElement: { scrollTop: 0 },
+					querySelector: () => null,
 					getElementById: (id: string) => (id === "sim-test-default" ? mockFig : null),
 					querySelectorAll: () => [],
 					activeElement: null,

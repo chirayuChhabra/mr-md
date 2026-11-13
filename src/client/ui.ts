@@ -94,10 +94,14 @@ export function bkWireSidebarToggle() {
 				sidebar.setAttribute("aria-modal", "true");
 				sidebar.inert = !isOpen;
 			} else {
-				sidebar.removeAttribute("aria-hidden");
+				const collapsed =
+					document
+						.querySelector(".bk-shell")
+						?.getAttribute("data-collapsed") === "true";
+				sidebar.setAttribute("aria-hidden", String(collapsed));
 				sidebar.removeAttribute("role");
 				sidebar.removeAttribute("aria-modal");
-				sidebar.inert = false;
+				sidebar.inert = collapsed;
 			}
 		}
 	}
@@ -182,9 +186,11 @@ export function bkWireSidebarToggle() {
 		} else if (target.closest("#bk-sidebar-collapse")) {
 			currentShell?.setAttribute("data-collapsed", "true");
 			localStorage.setItem("bk-sidebar-collapsed", "true");
+			updateToggleState(false);
 		} else if (target.closest("#bk-sidebar-expand")) {
 			currentShell?.removeAttribute("data-collapsed");
 			localStorage.setItem("bk-sidebar-collapsed", "false");
+			updateToggleState(true);
 		} else if (
 			target.closest("#bk-backdrop") ||
 			target.closest("#bk-drawer-close")

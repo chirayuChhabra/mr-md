@@ -54,3 +54,23 @@ test.skipIf(!existsSync(chrome))("block and step canvases preserve model coordin
   }
  } finally {await browser.close();}
 }, 20000);
+
+test("expanded fixed-coordinate simulations fill their host without an aspect-ratio strip", async () => {
+ const { pageCSS } = await import("../src/renderer/templates/assets.js");
+ const browser = await puppeteer.launch({headless:true,args:["--no-sandbox","--disable-gpu","--disable-dev-shm-usage"]});
+ try {
+  const page = await browser.newPage();
+  await page.setViewport({width:1400,height:1000});
+  for (const makeDoc of [iframeDoc, stepsIframeDoc]) {
+   const source = `bkSetup(1280,300,(ctx,w,h,frame)=>{window.layout={w,h};ctx.fillStyle='#ff0000';ctx.fillRect(frame.originX,frame.originY,frame.viewportWidth,frame.viewportHeight);});`;
+   await page.setContent(`<style>${pageCSS()}.bk-sim-preview{position:relative;width:1000px;height:800px}.bk-sim-preview iframe{position:absolute;width:100%;height:100%;border:0}</style><figure class="bk-object--maximized" data-bk-canvas-responsive="false" style="--bk-canvas-aspect:4.2666667"><div class="bk-sim-preview"><iframe srcdoc="${makeDoc(source,"{}")}"></iframe></div></figure>`);
+   const sim = (await (await page.$("iframe"))!.contentFrame())!;
+   await sim.waitForFunction("window.layout");
+   const bounds=await page.$eval('iframe',el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
+   expect(bounds).toEqual({width:1000,height:800});
+   const result=await sim.evaluate(()=>{const c=document.querySelector('canvas')!;return {layout:(window as any).layout,pixel:Array.from(c.getContext('2d')!.getImageData(c.width-1,c.height-1,1,1).data)};});
+   expect(result.layout).toEqual({w:1280,h:300});
+   expect(result.pixel).toEqual([255,0,0,255]);
+  }
+ } finally {await browser.close();}
+});

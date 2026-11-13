@@ -184,10 +184,10 @@ for (const [width, height] of [[820, 1180], [1024, 768], [1180, 820]]) {
       square: s.borderRadius === '0px' && s.borderTopWidth === '0px' && s.boxShadow === 'none',
       corners: [[1,1],[innerWidth-2,1],[1,innerHeight-2],[innerWidth-2,innerHeight-2]].every(([x,y]) => (el.contains(document.elementFromPoint(x,y)) || !!document.elementFromPoint(x,y)?.closest(".bk-sidebar:not([inert])"))),
       horizontal: innerHeight > innerWidth && innerWidth <= 1024 ? inspector.top >= stage.bottom - 1 && stage.width >= innerWidth - 1 : inspector.left >= stage.right - 1 && stage.width >= 420 && inspector.width >= 280,
-      proportionate: (() => { const frame = el.querySelector('iframe')!.getBoundingClientRect(); const ratio = Number((el as HTMLElement).style.getPropertyValue('--bk-canvas-aspect')); return Math.abs(frame.width / frame.height - ratio) < 0.02; })(),
+      fillsScene: (() => { const frame = el.querySelector('iframe')!.getBoundingClientRect(); const playback = el.querySelector('.bk-sim-playback')!.getBoundingClientRect(); return Math.abs(frame.width - stage.width) < 2 && Math.abs(frame.height + playback.height - stage.height) < 2; })(),
      };
     });
-    expect(result).toEqual({ covers: true, square: true, corners: true, horizontal: true, proportionate: true });
+    expect(result).toEqual({ covers: true, square: true, corners: true, horizontal: true, fillsScene: true });
     await page.locator('#bk-lab-exit-topbar-btn').click();
     expect(await page.$('.bk-object--maximized')).toBeNull();
     expect(await page.$eval('.bk-main', el => !(el as HTMLElement).inert)).toBe(true);

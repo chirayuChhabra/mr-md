@@ -7,3 +7,9 @@ test('download names remain filenames and snapshot images accept only bounded PN
  expect(validSnapshotImage('https://example.com/image.png')).toBe(false);
  expect(validSnapshotImage('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
 });
+
+test('snapshot downloads reject malformed base64 before decoding', () => {
+ for (const payload of ['A', 'AAAA=', 'AA===', '=AAA', '']) {
+  expect(validSnapshotImage(`data:image/png;base64,${payload}`)).toBe(false);
+ }
+});

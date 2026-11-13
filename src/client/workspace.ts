@@ -39,6 +39,74 @@ let stateDocument: Document | null = null;
 let relocatedTopbar: HTMLElement | null = null;
 let topbarPlaceholder: Comment | null = null;
 
+interface SidebarState {
+	shell: HTMLElement;
+	collapsed: string | null;
+	mobileOpen: string | null;
+	sidebar: HTMLElement | null;
+	sidebarInert: boolean;
+	sidebarHidden: string | null;
+	toggle: HTMLElement | null;
+	expanded: string | null;
+	main: HTMLElement | null;
+	mainInert: boolean;
+	overflowY: string;
+}
+let savedSidebar: SidebarState | null = null;
+
+function hideWorkspaceSidebar(): void {
+	const shell = document.querySelector<HTMLElement>(".bk-shell");
+	if (!shell) return;
+	const sidebar = shell.querySelector<HTMLElement>(".bk-sidebar");
+	const toggle = document.getElementById("bk-topbar-sidebar-toggle");
+	const main = shell.querySelector<HTMLElement>(".bk-main");
+	savedSidebar ??= {
+		shell,
+		collapsed: shell.getAttribute("data-collapsed"),
+		mobileOpen: shell.getAttribute("data-mobile-open"),
+		sidebar,
+		sidebarInert: sidebar?.inert ?? false,
+		sidebarHidden: sidebar?.getAttribute("aria-hidden") ?? null,
+		toggle,
+		expanded: toggle?.getAttribute("aria-expanded") ?? null,
+		main,
+		mainInert: main?.inert ?? false,
+		overflowY: main?.style.overflowY ?? "",
+	};
+	shell.setAttribute("data-collapsed", "true");
+	shell.removeAttribute("data-mobile-open");
+	if (sidebar) {
+		sidebar.inert = true;
+		sidebar.setAttribute("aria-hidden", "true");
+	}
+	toggle?.setAttribute("aria-expanded", "false");
+	if (main) {
+		main.inert = false;
+		main.style.overflowY = "";
+	}
+}
+
+function restoreWorkspaceSidebar(): void {
+	const state = savedSidebar;
+	savedSidebar = null;
+	if (!state) return;
+	for (const [el, name, value] of [
+		[state.shell, "data-collapsed", state.collapsed],
+		[state.shell, "data-mobile-open", state.mobileOpen],
+		[state.sidebar, "aria-hidden", state.sidebarHidden],
+		[state.toggle, "aria-expanded", state.expanded],
+	] as const) {
+		if (!el) continue;
+		if (value === null) el.removeAttribute(name);
+		else el.setAttribute(name, value);
+	}
+	if (state.sidebar) state.sidebar.inert = state.sidebarInert;
+	if (state.main) {
+		state.main.inert = state.mainInert;
+		state.main.style.overflowY = state.overflowY;
+	}
+}
+
 function restoreHeader(): void {
 	const topbar = document.getElementById("bk-topbar") || relocatedTopbar;
 	topbar?.querySelector("#bk-lab-exit-topbar-btn")?.remove();
@@ -643,6 +711,7 @@ export function bkExpandLab(
 
 	if (!figure) return;
 	if (stateDocument !== document) {
+		restoreWorkspaceSidebar();
 		restoreBackground();
 		modalAttributes.clear();
 		labHistoryPushed = false;
@@ -745,6 +814,7 @@ export function bkExpandLab(
 		slash.addEventListener("click", () => bkCollapseLab());
 		crumbs?.append(slash);
 	}
+	hideWorkspaceSidebar();
 	isolateWorkspace(figure);
 	ensurePlaybackControls(figure);
 	figure.classList.add("bk-object--maximized");
@@ -833,6 +903,7 @@ export function bkCollapseLab(fromNavigation = false): void {
 	for (const figure of modalAttributes.keys()) restoreModal(figure);
 	restoreHeader();
 	restoreBackground();
+	restoreWorkspaceSidebar();
 	document.body.style.overflow = savedOverflow || "";
 	savedOverflow = null;
 	document.body.classList.remove("bk-expanded-lab-active");
@@ -1018,7 +1089,7 @@ export function bkWireWorkspace(): void {
 			const target = event.target as Element;
 			if (
 				document.querySelector(".bk-object--maximized") &&
-				target.closest?.(".bk-topbar-breadcrumbs a, .bk-topbar-active-section")
+				target.closest?.(".bk-topbar-active-section:not(a)")
 			) {
 				event.preventDefault();
 				event.stopImmediatePropagation();

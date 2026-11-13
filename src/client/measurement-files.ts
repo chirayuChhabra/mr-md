@@ -25,8 +25,11 @@ export function measurementFilename(
 export function validSnapshotImage(value: unknown): value is string {
 	return (
 		typeof value === "string" &&
+		value.length > "data:image/png;base64,".length &&
 		value.length < 32 * 1024 * 1024 &&
-		/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(value)
+		/^data:image\/png;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+			value,
+		)
 	);
 }
 

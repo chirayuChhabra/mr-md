@@ -17,6 +17,9 @@ window.bkResolveSetup = function(widthOrDraw, heightOrOptions, drawOrOptions, ma
     }
     return { width, height, draw: widthOrDraw, options: options };
   }
+  if (!Number.isFinite(widthOrDraw) || widthOrDraw <= 0 || !Number.isFinite(heightOrOptions) || heightOrOptions <= 0) {
+    throw new RangeError("bkSetup: width and height must be positive finite numbers");
+  }
   return {
     width: widthOrDraw,
     height: heightOrOptions,
