@@ -110,6 +110,10 @@ export function renderPage(
 	const authorName = author ? author.replace(/^by\s+/i, "").trim() : "";
 
 	const contentHtml = `
+    <nav class="bk-phone-reading-header" aria-label="Lesson navigation">
+      <a href="${escAttr(parentSlug)}.html"><span aria-hidden="true">‹</span> ${escHtml(parentTitle)}</a>
+      <a href="#top">Back to top</a>
+    </nav>
     <article class="bk-content">
       <header class="bk-hero">
         ${eyebrowRowHtml}

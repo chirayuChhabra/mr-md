@@ -1,6 +1,11 @@
 /** Shared 2D canvas and pointer contract for block and guided workspaces. */
 export function canvasFramingRuntime(defaultHeight = 500): string {
 	return `
+window.addEventListener("message", function(event) {
+  if (event.source === window.parent && event.data?.type === "bk:runtime-query" && window.__bkCanvasSize) {
+    window.parent.postMessage(window.__bkCanvasSize, "*");
+  }
+});
 window.bkCanvasPoint = function(event, canvas) {
   const c = canvas || event.currentTarget || event.target;
   if (!c || typeof c.getBoundingClientRect !== "function") return { x: 0, y: 0 };
@@ -33,6 +38,12 @@ window.bkFitCanvas = function(c, requestedW, requestedH, options) {
   const w = requestedW || 800;
   const h = requestedH || ${defaultHeight};
   const opts = options || {};
+  if (c.__bkReportedW !== w || c.__bkReportedH !== h) {
+    c.__bkReportedW = w;
+    c.__bkReportedH = h;
+    window.__bkCanvasSize = { type: "bk:canvas-size", width: w, height: h, responsive: opts.framing === "responsive" || opts.fit === "responsive" };
+    window.parent.postMessage(window.__bkCanvasSize, "*");
+  }
   const framing = opts.framing || opts.fit || (opts.bleed === false ? "contain" : "responsive");
   const isResponsive = framing === "responsive";
   const isBleed = framing === "bleed" || framing === "fill" || framing === "edge-to-edge" || isResponsive;

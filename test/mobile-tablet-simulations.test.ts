@@ -21,8 +21,8 @@ describe("Mobile/Tablet Simulation Policy & Structure", () => {
 		const result = renderSimulation(block, 0, { strict: false });
 
 		expect(result.html).toContain("bk-phone-sim-notice");
-		expect(result.html).toContain("Open this simulation on a larger screen");
-		expect(result.html).toContain("Continue on a tablet or desktop to interact with it.");
+		expect(result.html).toContain("Open on desktop");
+		expect(result.html).toContain("This simulation needs a larger screen. You can keep reading here.");
 		expect(result.html).toContain("Wave Interference Lab");
 		expect(result.html).toContain("Observe interference patterns");
 
@@ -48,8 +48,8 @@ describe("Mobile/Tablet Simulation Policy & Structure", () => {
 		const result = renderSteps(block, 0, { strict: false });
 
 		expect(result.html).toContain("bk-phone-sim-notice");
-		expect(result.html).toContain("Open this simulation on a larger screen");
-		expect(result.html).toContain("Continue on a tablet or desktop to interact with it.");
+		expect(result.html).toContain("Open on desktop");
+		expect(result.html).toContain("This simulation needs a larger screen. You can keep reading here.");
 		expect(result.html).toContain("Orbital Mechanics");
 		expect(result.html).toContain("Follow guided trial steps");
 
@@ -68,8 +68,8 @@ describe("Mobile/Tablet Simulation Policy & Structure", () => {
 		const result = renderWorld(block, 0, { strict: false });
 
 		expect(result.html).toContain("bk-phone-sim-notice");
-		expect(result.html).toContain("Open this simulation on a larger screen");
-		expect(result.html).toContain("Continue on a tablet or desktop to interact with it.");
+		expect(result.html).toContain("Open on desktop");
+		expect(result.html).toContain("This simulation needs a larger screen. You can keep reading here.");
 		expect(result.html).toContain("Cosmic Horizon");
 		expect(result.html).toContain("Explorable 3D celestial environment");
 

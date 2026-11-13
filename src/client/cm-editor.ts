@@ -905,10 +905,10 @@ export function createCodeMirrorEditor(
 	const isEditable = runner.getAttribute("data-editable") !== "false";
 
 	const extensions = [
+		...(isPhoneDevice() ? [EditorView.lineWrapping] : []),
 		mrMdEditorTheme,
 		syntaxHighlighting(mrMdHighlightStyle),
-		lineNumbers(),
-		highlightActiveLineGutter(),
+		...(isPhoneDevice() ? [] : [lineNumbers(), highlightActiveLineGutter()]),
 		history(),
 		closeBrackets(),
 		autocompletion({

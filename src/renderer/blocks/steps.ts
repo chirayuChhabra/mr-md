@@ -159,8 +159,9 @@ export function renderSteps(
   </div>
 
   <div class="bk-phone-sim-notice">
-    <div class="bk-phone-sim-notice-title">Open this simulation on a larger screen</div>
-    <div class="bk-phone-sim-notice-body">Continue on a tablet or desktop to interact with it.</div>
+    <svg class="bk-phone-device" aria-hidden="true" width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="25" height="18" rx="2"/><path d="M8 23h12m-6-4v4"/><rect x="23" y="9" width="8" height="14" rx="1.5"/></svg>
+    <div class="bk-phone-sim-notice-title">Open on desktop</div>
+    <div class="bk-phone-sim-notice-body">This simulation needs a larger screen. You can keep reading here.</div>
   </div>
 
   <div class="bk-sim-workspace">

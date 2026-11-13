@@ -453,21 +453,55 @@ export function parseChapter(
 
 import { copyAssets } from "../builder/utils.js";
 import { validateLesson } from "../builder/validation.js";
+import type { PhoneAppData } from "../phone-app-data.js";
 import { render, renderChapter } from "../renderer/index.js";
+import { phoneRouteFromHtml } from "../renderer/phone-app.js";
+
+function safeOutputPath(outDir: string, filename: string): string {
+	const output = path.resolve(outDir, filename);
+	const relative = path.relative(outDir, output);
+	if (
+		relative === ".." ||
+		relative.startsWith(`..${path.sep}`) ||
+		path.isAbsolute(relative)
+	)
+		throw new Error("Page slug resolves outside the output directory");
+	return output;
+}
+
+function pageBuildOptions(
+	options: BuildOptions,
+	outDir: string,
+	outPath: string,
+): BuildOptions {
+	if (options.standalone !== false) return options;
+	const relativeRoot = path
+		.relative(path.dirname(outPath), outDir)
+		.split(path.sep)
+		.join("/");
+	const documentBase = relativeRoot ? `${relativeRoot}/` : "./";
+	return {
+		...options,
+		documentBase,
+		phoneApp: options.phoneApp
+			? `${documentBase}${options.phoneApp}`
+			: undefined,
+	};
+}
 
 export function buildLesson(
 	lesson: Lesson,
 	options: BuildOptions = {},
 ): string {
+	const outDir = path.resolve(options.outDir || "./out");
+	const filename = `${lesson.meta.slug}.html`;
+	const outPath = safeOutputPath(outDir, filename);
 	const lessonOptions = {
-		...options,
+		...pageBuildOptions(options, outDir, outPath),
 		contentBase: lesson.meta.contentBase || options.contentBase,
 	};
 	validateLesson(lesson.meta, lesson.blocks, lessonOptions);
 	const html = render(lesson, lessonOptions);
-	const outDir = path.resolve(lessonOptions.outDir || "./out");
-	const filename = `${lesson.meta.slug}.html`;
-	const outPath = path.join(outDir, filename);
 	const outPathDir = path.dirname(outPath);
 	if (!fs.existsSync(outPathDir)) fs.mkdirSync(outPathDir, { recursive: true });
 	fs.writeFileSync(outPath, html, "utf-8");
@@ -485,22 +519,53 @@ export function buildChapter(
 	chapter: Chapter,
 	options: BuildOptions = {},
 ): string {
-	// Build all nested lessons first
+	options = { ...options, standalone: options.standalone ?? false };
+	if (!options.standalone) options.phoneApp = "assets/phone-app.json";
+	const phoneData: PhoneAppData = {
+		version: 1,
+		home: "index.html",
+		routes: {},
+	};
+	// A chapter shares its runtime across pages; single-file export is opt-in.
 	for (const lesson of chapter.lessons) {
-		buildLesson(lesson, options);
+		const lessonPath = buildLesson(lesson, options);
+		if (options.phoneApp)
+			phoneData.routes[`${lesson.meta.slug}.html`] = phoneRouteFromHtml(
+				fs.readFileSync(lessonPath, "utf8"),
+				lesson.meta.title,
+				false,
+			);
 	}
-	const html = renderChapter(chapter, options);
 	const outDir = path.resolve(options.outDir || "./out");
 	const outPath = path.join(outDir, "index.html");
+	const html = renderChapter(
+		chapter,
+		pageBuildOptions(options, outDir, outPath),
+	);
 	const outPathDir = path.dirname(outPath);
 	if (!fs.existsSync(outPathDir)) fs.mkdirSync(outPathDir, { recursive: true });
 	fs.writeFileSync(outPath, html, "utf-8");
 	if (chapter.meta.slug && chapter.meta.slug !== "index") {
-		const aliasPath = path.join(outDir, `${chapter.meta.slug}.html`);
-		fs.writeFileSync(aliasPath, html, "utf-8");
+		const aliasPath = safeOutputPath(outDir, `${chapter.meta.slug}.html`);
+		fs.mkdirSync(path.dirname(aliasPath), { recursive: true });
+		const aliasHtml =
+			path.dirname(aliasPath) === outDir
+				? html
+				: renderChapter(chapter, pageBuildOptions(options, outDir, aliasPath));
+		fs.writeFileSync(aliasPath, aliasHtml, "utf-8");
 	}
 	if (options.standalone === false) {
 		copyAssets(outDir);
+	}
+	if (options.phoneApp) {
+		const courseRoute = phoneRouteFromHtml(html, chapter.meta.title, true);
+		phoneData.routes["index.html"] = courseRoute;
+		if (chapter.meta.slug)
+			phoneData.routes[`${chapter.meta.slug}.html`] = courseRoute;
+		fs.writeFileSync(
+			path.join(outDir, "assets/phone-app.json"),
+			JSON.stringify(phoneData),
+		);
 	}
 	const relPath = path.relative(process.cwd(), outPath);
 	logger.log(

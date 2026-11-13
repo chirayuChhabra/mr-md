@@ -2,6 +2,13 @@ import { PAUSE_ICON, PLAY_ICON, RESET_ICON } from "../simulation-toolbar.js";
 import { bkIsPhone } from "./device.js";
 import { bkApplyPropsToControls } from "./simulation.js";
 
+interface CanvasSizeMessage {
+	type: "bk:canvas-size";
+	width: number;
+	height: number;
+	responsive?: boolean;
+}
+
 export interface LabExpansionOptions {
 	focusReturn?: HTMLElement;
 	defaultTab?: "controls" | "telemetry";
@@ -987,6 +994,21 @@ export function bkWireWorkspace(): void {
 			(item) => item.querySelector("iframe")?.contentWindow === event.source,
 		);
 		if (!figure || !event.data || typeof event.data !== "object") return;
+		if (event.data.type === "bk:canvas-size") {
+			const size = event.data as CanvasSizeMessage;
+			if (
+				!Number.isFinite(size.width) ||
+				!Number.isFinite(size.height) ||
+				size.width <= 0 ||
+				size.height <= 0
+			)
+				return;
+			const ratio = size.width / size.height;
+			if (ratio < 0.1 || ratio > 10) return;
+			figure.style.setProperty("--bk-canvas-aspect", String(ratio));
+			figure.dataset.bkCanvasResponsive = String(size.responsive === true);
+			return;
+		}
 		if (event.data.type === "bk:runtime-ready") {
 			figure.dataset.bkResetHandler =
 				event.data.reset === true ? "true" : "false";

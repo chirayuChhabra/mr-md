@@ -1,6 +1,6 @@
 import type { BuildOptions } from "../../types.js";
-import { escHtml } from "../blocks.js";
-import { clientScript, pageCSS } from "./assets.js";
+import { escAttr, escHtml } from "../blocks.js";
+import { assetVersion, clientScript, pageCSS } from "./assets.js";
 
 function renderThemePanelContent(
 	theme: string,
@@ -89,12 +89,16 @@ export function renderLayout(
 	return `<!DOCTYPE html>
 <html lang="en" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}>
 <head>
+${opts.documentBase ? `<base data-bk-course-root href="${escAttr(opts.documentBase)}">` : ""}
 <script>
 (function() {
+	var courseBase = document.querySelector("base[data-bk-course-root]");
+	if (courseBase) courseBase.href = courseBase.href;
 	var t = localStorage.getItem("bk-theme") || "auto";
 	var p = localStorage.getItem("bk-palette");
 	var u = localStorage.getItem("bk-ui");
 	var root = document.documentElement;
+    ${opts.phoneApp ? `if (window.matchMedia("(max-width: 767px), (max-height: 500px) and (pointer: coarse)").matches) root.dataset.phoneApp = "true";` : ""}
 	
 	var resolvedTheme = t;
 	if (t === "auto") {
@@ -107,6 +111,7 @@ export function renderLayout(
 })();
 </script>
 <meta charset="UTF-8">
+${opts.phoneApp ? `<meta name="bk-phone-app" content="${escAttr(opts.phoneApp)}">` : ""}
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${escHtml(title)}</title>
 ${description ? `<meta name="description" content="${escHtml(description)}">` : ""}
@@ -114,7 +119,8 @@ ${description ? `<meta name="description" content="${escHtml(description)}">` : 
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,650;9..144,760&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@600;700;800&family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
 
 ${opts.head ?? ""}
-${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=${Date.now()}">` : `<style>\n${safeFont ? `:root { --font-sans: ${safeFont}, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }` : ""}\n${pageCSS()}\n</style>`}
+${safeFont && opts.standalone === false ? `<style>:root { --font-sans: ${safeFont}, sans-serif; }</style>` : ""}
+${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=${assetVersion("styles")}">` : `<style>\n${safeFont ? `:root { --font-sans: ${safeFont}, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }` : ""}\n${pageCSS()}\n</style>`}
 </head>
 <body class="bk-layout-${layout} bk-density-${density} bk-tone-${tone}">
 <div class="bk-shell" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}${_isChapter ? ' data-is-chapter="true"' : ""}>
@@ -139,9 +145,10 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
   <div class="bk-backdrop" id="bk-backdrop" aria-hidden="true"></div>
   <header class="bk-topbar" id="bk-topbar">
     <div class="bk-topbar-left">
-      <button class="bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Toggle sidebar" title="Toggle sidebar (⌘B)">
+      <button class="bk-topbar-sidebar-toggle" id="bk-topbar-sidebar-toggle" type="button" aria-label="Contents" aria-controls="bk-sidebar" title="Contents (⌘B)">
         <svg class="bk-icon-panel-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="3"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg>
         <svg class="bk-icon-panel-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="3"></rect><path d="M9 3v18"></path><path d="m14 9 3 3-3 3"></path></svg>
+        <span class="bk-contents-label">Contents</span>
       </button>
       <nav class="bk-topbar-breadcrumbs" aria-label="Breadcrumb">
         ${breadcrumbsHtml || `<span class="bk-topbar-crumb-item bk-topbar-crumb-current">Overview</span>`}
@@ -170,13 +177,23 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
 				: ""
 		}
   </header>
+  <header class="bk-phone-appbar" aria-label="Course toolbar">
+    <button type="button" id="bk-phone-back" aria-label="Back to course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
+    <button type="button" id="bk-phone-appearance" aria-label="Appearance" aria-controls="bk-sidebar" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>
+    <button type="button" id="bk-phone-search" aria-label="Search lessons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg></button>
+  </header>
+  <nav class="bk-phone-nav" aria-label="Phone navigation">
+    <button type="button" id="bk-phone-contents" aria-controls="bk-sidebar" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h12M4 12h12M4 18h12M20 6h.01M20 12h.01M20 18h.01"/></svg><span>Contents</span></button>
+    <a href="index.html" class="bk-phone-home" hidden>Course</a>
+  </nav>
   <button class="bk-sidebar-collapse" id="bk-sidebar-collapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar" style="display:none" aria-hidden="true">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
   ${docTelemetryPanelHtml}
   <div class="bk-body" id="bk-body">
-    <aside class="bk-sidebar">
+    <aside class="bk-sidebar" id="bk-sidebar" aria-label="Contents">
       <div class="bk-sidebar-inner">
+        <div class="bk-drawer-header"><strong>Contents</strong><button type="button" id="bk-drawer-close" aria-label="Close contents">×</button></div>
         <div class="bk-sidebar-header" style="display:none" aria-hidden="true">
           ${topBarHtml ? `<div class="bk-sidebar-top-bar" style="display:none" aria-hidden="true">${topBarHtml}</div>` : ""}
           <div class="bk-sidebar-title">${escHtml(sidebarTitle ?? title)}</div>
@@ -202,7 +219,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
     </main>
   </div>
 </div>
-${opts.standalone === false ? `<script type="module" src="assets/app.bundle.js?v=${Date.now()}"></script>` : `<script type="module">\n${clientScript()}\n</script>`}
+${opts.standalone === false ? `<script type="module" src="assets/app.bundle.js?v=${assetVersion("client")}"></script>` : `<script type="module">\n${clientScript()}\n</script>`}
 </body>
 </html>`;
 }

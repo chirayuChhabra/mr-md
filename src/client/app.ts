@@ -49,6 +49,13 @@ function wireOnce() {
 	bkWireSteps();
 
 	const onDeviceChange = () => {
+		if (
+			document.querySelector('meta[name="bk-phone-app"]') &&
+			bkIsPhone() !== document.documentElement.hasAttribute("data-phone-app")
+		) {
+			location.reload();
+			return;
+		}
 		if (bkIsPhone()) {
 			bkCollapseLab();
 			bkExitWorld();

@@ -161,7 +161,7 @@ Some text here.`;
 			expect(html).toContain('<div class="bk-sidebar-title">Quantum Physics</div>');
 
 			// Sidebar should NOT contain author badge or avatar
-			const sidebarContent = html.substring(html.indexOf('<aside class="bk-sidebar">'), html.indexOf('</aside>'));
+			const sidebarContent = html.substring(html.indexOf('<aside class="bk-sidebar"'), html.indexOf('</aside>'));
 			expect(sidebarContent).not.toContain("bk-sidebar-author");
 			expect(sidebarContent).not.toContain("bk-sidebar-avatar");
 
