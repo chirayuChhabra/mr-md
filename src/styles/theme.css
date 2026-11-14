@@ -7860,8 +7860,8 @@ html:root .bk-object.bk-object--maximized {
   .bk-shell[data-phone-panel="appearance"] .bk-sidebar { height: auto; }
   .bk-shell[data-phone-panel="appearance"] .bk-sidebar-inner { min-height: 0; height: auto; }
   .bk-shell[data-phone-panel="appearance"] .bk-nav { display: none; }
-  .bk-shell[data-phone-panel="appearance"] .bk-sidebar-footer { padding: 16px 20px 24px; }
-  .bk-shell[data-phone-panel="appearance"] #bk-settings-button { display: none; }
+  .bk-shell[data-phone-panel="appearance"] .bk-sidebar-footer { display: block; padding: 16px 20px 24px; }
+  .bk-shell[data-phone-panel="appearance"] :is(#bk-settings-button, #bk-theme-toggle) { display: none; }
   .bk-shell[data-phone-panel="appearance"] #bk-theme-panel { position: static; width: 100%; max-width: none; padding: 0; border: 0; box-shadow: none; background: transparent; }
   .bk-theme-row { padding-block: 12px; }
   .bk-theme-row button { min-width: 44px; min-height: 44px; }
