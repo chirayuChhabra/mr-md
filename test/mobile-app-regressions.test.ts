@@ -172,3 +172,32 @@ test("search keeps its screen anchor when the keyboard reduces the visual viewpo
 		expect(await page.$eval('.bk-phone-search-dialog', el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(440);
 	} finally { await page.close(); }
 });
+
+test("phone appearance sheet aligns controls without a duplicate theme toggle", async () => {
+	for (const width of [320, 390, 600]) {
+		const page = await phone(width);
+		try {
+			await open(page, "index");
+			await page.locator('button[aria-label="Appearance"]').click();
+			await page.waitForSelector('.bk-shell[data-mobile-open="true"]');
+			const layout = await page.evaluate(() => {
+				const panel = document.querySelector('#bk-theme-panel')!.getBoundingClientRect();
+				const footer = document.querySelector('.bk-sidebar-footer')!.getBoundingClientRect();
+				return {
+					toggleHidden: getComputedStyle(document.querySelector('#bk-theme-toggle')!).display === 'none',
+					left: panel.left - footer.left,
+					right: footer.right - panel.right,
+					controlsFit: [...document.querySelectorAll('.bk-segment-btn')].every(button => {
+						const rect = button.getBoundingClientRect();
+						return rect.left >= panel.left && rect.right <= panel.right && rect.width >= 44 && rect.height >= 44;
+					}),
+				};
+			});
+			expect(layout.toggleHidden).toBe(true);
+			expect(layout.left).toBe(layout.right);
+			expect(layout.controlsFit).toBe(true);
+			await page.locator('button[aria-label="Dark theme"]').click();
+			expect(await page.$eval('html', html => html.dataset.theme)).toBe('dark');
+		} finally { await page.close(); }
+	}
+});
