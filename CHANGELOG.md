@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Oscillator spring and kinetic energy measurements with graphs and toggleable scene annotations, plus arrow-key cart controls ([#69](https://github.com/chirayuChhabra/mr-md/pull/69)).
 - Phone course navigation with Continue learning, lesson-scoped contents, course and lesson search, and preserved lesson scroll positions, editor drafts, and output when revisiting lessons.
 - Compact phone code-runner controls with inline Run, Compile, and Check Answer actions, plus a menu for Hint, Reset, and Copy.
 - Persistent saved simulation states with screenshots, settings, exact state, and independent measurement histories stored in IndexedDB.
@@ -56,6 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
 
 ### Fixed
+- Align the phone Appearance sheet controls with consistent padding and remove the duplicate theme toggle ([#68](https://github.com/chirayuChhabra/mr-md/pull/68)).
+- Stabilize oscillator viscous, quadratic, and dry-friction damping, scale impulses by mass, and support cart dragging along the diagonal track ([#69](https://github.com/chirayuChhabra/mr-md/pull/69)).
 - Include Measurements and Saved panel styles in shared chapter assets, matching standalone pages.
 - Let expanded simulation canvases fill their containers without forcing the iframe to its original aspect ratio; preserve drawing proportions and model coordinates.
 - Close the inherited sidebar when entering a simulation so it cannot cover the scene or graph windows, and restore its prior state on exit.
@@ -79,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Redesign the oscillator example as a diagonal 3D apparatus with mass stacking and damping visuals that respond to its settings ([#69](https://github.com/chirayuChhabra/mr-md/pull/69)).
 - Replace the mobile coming-soon screen with responsive phone and tablet lesson layouts, touch-sized controls, accessible drawers, and reduced-motion support.
 - Keep phone code editors and media inline, wrap editor lines, use 16px touch input text, and enable inline video playback.
 - Show an Open on desktop notice for simulations, guided labs, and immersive worlds on phones, with simulation frames deferred to avoid running them in the background.
