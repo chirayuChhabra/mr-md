@@ -3,7 +3,7 @@
   "timeline": true,
   "label": "Damped Harmonic Oscillator",
   "caption": "Explore how damping changes spring–mass motion. For viscous damping, the damping ratio ζ = c_eff / (2√(km)) identifies the motion. Drag the cart to set it moving.",
-  "height": 320,
+  "height": 480,
   "props": {
     "damping": 1.5,
     "dampingMode": "viscous",
@@ -169,7 +169,8 @@
           },
           "tone": "accent"
         }
-      ]
+      ],
+      "scene": "displacement"
     },
     "velocity": {
       "label": "Velocity v",
@@ -203,7 +204,8 @@
           "tone": "accent",
           "label": "Moving left"
         }
-      ]
+      ],
+      "scene": "velocity"
     },
     "angularFrequency": {
       "label": "Natural angular frequency ω₀",
@@ -213,19 +215,26 @@
     "dampingRatio": {
       "label": "Damping ratio ζ",
       "precision": 3
+    },
+    "springEnergy": {
+      "label": "Spring energy",
+      "unit": "J",
+      "precision": 2,
+      "graph": true,
+      "scene": "springEnergy"
+    },
+    "kineticEnergy": {
+      "label": "Kinetic energy",
+      "unit": "J",
+      "precision": 2,
+      "graph": true,
+      "scene": "kineticEnergy"
     }
   },
   "measurements": {
     "initialTab": "telemetry",
-    "graphs": [
-      {
-        "key": "displacement",
-        "x": 24,
-        "y": 80,
-        "width": 420,
-        "height": 290
-      }
-    ],
-    "timeline": true
+    "graphs": [],
+    "timeline": true,
+    "visible": []
   }
 }

@@ -152,10 +152,11 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 			const canvas=await frame!.$("canvas");
 			const bounds=(await canvas!.boundingBox())!;
 			const logical=await frame!.evaluate(()=>{const c=document.querySelector("canvas")!,r=c.getBoundingClientRect();const point=(x:number)=>(window as any).bkCanvasPoint({clientX:x,clientY:r.top},c).x;return {left:point(r.left),width:point(r.right)-point(r.left)};});
-			const x=(position:number)=>bounds.x+(640+position*160-logical.left)/logical.width*bounds.width;
-			await page.mouse.move(x(before.state.x),bounds.y+bounds.height/2);
+			const x=(position:number)=>bounds.x+(776+position*128-logical.left)/logical.width*bounds.width;
+			const cartY = bounds.y + (Math.max(0, (bounds.height / (bounds.width / logical.width) - 720) / 2) + 420) * (bounds.width / logical.width);
+			await page.mouse.move(x(before.state.x),cartY);
 			await page.mouse.down();
-			await page.mouse.move(x(-0.5),bounds.y+bounds.height/2,{steps:8});
+			await page.mouse.move(x(-0.5),cartY + (x(-0.5)-x(before.state.x))*0.28,{steps:8});
 			await page.mouse.up();
 			await frame!.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
 			const after=await frame!.evaluate(()=>({state:(window as any).__bkSnapshotHandlers.capture(),pixels:(document.querySelector("canvas") as HTMLCanvasElement).toDataURL(),playing:(window as any).__loop}));
@@ -352,6 +353,58 @@ describe("Damped Oscillator - Real Iframe Browser Runtime Regression", () => {
 		expect(hasError).toBe(false);
 
 		await page.close();
+	});
+
+	test("keeps the scene text-free, honors measurement visibility, and depicts every physical control while paused", async () => {
+		const page = await browser.newPage();
+		try {
+			await page.setContent(`<iframe sandbox="allow-scripts" style="width:1240px;height:720px" srcdoc="${iframeDoc(bundledJs, JSON.stringify(config.props), false)}"></iframe>`);
+			const frame = await (await page.waitForSelector("iframe"))!.contentFrame();
+			await frame!.waitForFunction(() => (window as any).__bkSnapshotHandlers);
+			const result = await frame!.evaluate(() => {
+				const w = window as any;
+				w.__loop = false;
+				const canvas = document.querySelector("canvas")!;
+				const ctx = canvas.getContext("2d")!;
+				const text: string[] = [];
+				const original = ctx.fillText.bind(ctx);
+				ctx.fillText = ((value: string, x: number, y: number) => { text.push(value); original(value, x, y); }) as any;
+				const render = () => { text.length = 0; w.__renderFrame(); return canvas.toDataURL(); };
+				const baseline = render(), defaultText = [...text];
+				const time = w.__bkSnapshotHandlers.capture().time;
+				const send = (data: unknown, source = window.parent) => window.dispatchEvent(new MessageEvent("message", { source, data }));
+				const visible = { type: "bk:measurement-visibility", measurements: [{ scene: "displacement" }, { scene: "velocity" }, { scene: "springEnergy" }] };
+				send(visible, window); render(); const foreignText = [...text];
+				send(visible); const selectedPixels = render(); const selectedText = [...text];
+				send({ type: "bk:measurement-visibility", measurements: [] }); render(); const hiddenText = [...text];
+				const selectedIndividually: Record<string, boolean> = {};
+				const originalState = w.__bkSnapshotHandlers.capture();
+				w.__bkSnapshotHandlers.restore({ ...originalState, v: 2 });
+				const movingBaseline = render();
+				for (const scene of ["displacement", "velocity", "springEnergy", "kineticEnergy"]) {
+					send({ type: "bk:measurement-visibility", measurements: [{ scene }] });
+					selectedIndividually[scene] = render() !== movingBaseline && text.length === 0;
+				}
+				send({ type: "bk:measurement-visibility", measurements: [] });
+				w.__bkSnapshotHandlers.restore(originalState);
+				const changed: Record<string, boolean> = {};
+				for (const [name, props] of Object.entries({ mass: { mass: 5 }, stiffness: { stiffness: 60 }, damping: { damping: 25 }, water: { medium: "water" }, glycerin: { medium: "glycerin" }, vacuum: { medium: "vacuum" }, quadratic: { dampingMode: "quadratic" }, friction: { dampingMode: "friction" } })) {
+					send({ type: "bk:set-props", props: { damping: 1.5, mass: 1, stiffness: 25, medium: "air", dampingMode: "viscous", ...props } });
+					changed[name] = render() !== baseline;
+				}
+				return { defaultText, foreignText, selectedText, selectedChanged: selectedPixels !== baseline, selectedIndividually, hiddenText, changed, timeUnchanged: w.__bkSnapshotHandlers.capture().time === time };
+			});
+			expect(config.measurements.visible).toEqual([]);
+			expect(result.defaultText).toEqual([]);
+			expect(result.foreignText).toEqual([]);
+			expect(result.selectedText).toEqual([]);
+			expect(result.selectedChanged).toBe(true);
+			for (const changed of Object.values(result.selectedIndividually)) expect(changed).toBe(true);
+			expect(result.hiddenText).toEqual([]);
+			for (const changed of Object.values(result.changed)) expect(changed).toBe(true);
+			expect(result.timeUnchanged).toBe(true);
+			for (const key of ["displacement", "velocity", "springEnergy", "kineticEnergy"]) expect(config.telemetry[key].scene).toBe(key);
+		} finally { await page.close(); }
 	});
 
 	test("renders without runtime errors across all UI modes (standard, neo, playful)", async () => {
