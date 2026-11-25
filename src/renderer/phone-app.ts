@@ -1,5 +1,11 @@
-import { type DefaultTreeAdapterMap, parse, serialize } from "parse5";
+import { createRequire } from "node:module";
+import type { DefaultTreeAdapterMap } from "parse5";
 import type { PhoneRouteData } from "../phone-app-data.js";
+
+// Use the same synchronous loader as jsdom for the shared parse5 dependency.
+const { parse, serialize } = createRequire(import.meta.url)(
+	"parse5",
+) as typeof import("parse5");
 
 type Node = DefaultTreeAdapterMap["node"];
 type Element = DefaultTreeAdapterMap["element"];

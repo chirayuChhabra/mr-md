@@ -1,8 +1,7 @@
 import * as fs from "fs";
-import { createRequire } from "module";
 import * as path from "path";
-
-const require = createRequire(import.meta.url);
+import { discoverLessons } from "../compiler.js";
+import { configuredLessons, loadMrmdConfig } from "../config.js";
 
 import { logger } from "./logger.js";
 import { getOriginalCwd } from "./utils.js";
@@ -61,29 +60,14 @@ function generateSingle(rawName: string) {
 		});
 	}
 
-	let maxIndex = 0;
-
-	if (files.length > 0) {
-		const matter = require("@11ty/gray-matter");
-		for (const f of files) {
-			try {
-				const content = fs.readFileSync(path.join(targetDir, f), "utf-8");
-				const parsed = matter(content);
-				if (parsed.data.index !== undefined && parsed.data.index !== null) {
-					const index = Number(parsed.data.index);
-					if (Number.isInteger(index) && index > maxIndex) {
-						maxIndex = index;
-					}
-				}
-			} catch (e: unknown) {
-				logger.warn(
-					`Failed to parse file while determining max index: ${e instanceof Error ? e.message : String(e)}`,
-				);
-			}
-		}
-	}
-
-	const newIndex = maxIndex + 1;
+	const config = loadMrmdConfig(targetDir);
+	const existing = files.length ? discoverLessons(targetDir, config) : [];
+	const maxPrefix = files.reduce(
+		(maximum, file) =>
+			Math.max(maximum, Number(file.match(/^(\d+)-/)?.[1] ?? 0)),
+		0,
+	);
+	const newIndex = Math.max(maxPrefix, existing.length) + 1;
 	const prefix = String(newIndex).padStart(2, "0");
 	const fileName = `${prefix}-${rawName}.md`;
 	const targetPath = path.resolve(targetDir, fileName);
@@ -96,7 +80,6 @@ function generateSingle(rawName: string) {
 	const currentDate = new Date().toISOString().split("T")[0];
 
 	const content = `---
-index: ${newIndex}
 date: ${currentDate}
 author: ""
 tags: []
@@ -108,6 +91,14 @@ Start writing your lesson here.
 
 `;
 
+	const lessons = [...(configuredLessons(config) ?? existing), fileName];
+	const updatedConfig = config.lessons
+		? { ...config, lessons }
+		: { ...config, content: { ...config.content, lessons } };
 	fs.writeFileSync(targetPath, content);
-	logger.info(`Generated ${fileName} with index ${newIndex}`);
+	fs.writeFileSync(
+		path.join(targetDir, "mrmd.config.json"),
+		`${JSON.stringify(updatedConfig, null, 2)}\n`,
+	);
+	logger.info(`Generated ${fileName} and updated mrmd.config.json`);
 }

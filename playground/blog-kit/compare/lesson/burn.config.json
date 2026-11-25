@@ -1,0 +1,14 @@
+{
+  "type": "block",
+  "controls": "interactive",
+  "props": { "speed": 0.85 },
+  "tunables": {
+    "speed": {
+      "type": "range",
+      "label": "Speed (× escape speed)",
+      "min": 0.75,
+      "max": 1.25,
+      "step": 0.01
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "title": "Default Mr. Markdown",
+  "description": "A lesson with the built-in page shell, lab, code block, and quiz.",
+  "content": { "lessons": ["escape-burn.md"] }
+}

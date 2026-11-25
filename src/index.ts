@@ -1,3 +1,55 @@
+export { configuredBuildOptions } from "./blog-kit/configured.js";
+export type {
+	BlockEngine,
+	BlockRenderContext,
+	BlockRenderResult,
+	BlogKit,
+	BlogKitEngine,
+	BlogKitEngineIssue,
+	BlogKitEngines,
+	ChapterEngine,
+	LayoutEngine,
+} from "./blog-kit/contracts.js";
+export {
+	BLOG_KIT_API_VERSION,
+	BlogKitEngineError,
+} from "./blog-kit/contracts.js";
+export {
+	blogKit,
+	createBlogKit,
+	defaultBlogKitEngines,
+} from "./blog-kit/engine.js";
+export type {
+	CodeEngine,
+	ContentEngine,
+	EngineContext,
+	EngineOutput,
+	SectionEngine,
+	SectionEngines,
+	SimulationEngine,
+	TestingEngine,
+	ThemeEngine,
+} from "./blog-kit/sections.js";
+export type { CompiledDocument } from "./compiler.js";
+export { buildProject, compileProject } from "./compiler.js";
+export type {
+	BlogKitSettings,
+	ConfigIssue,
+	EngineSectionName,
+	MrmdConfig,
+} from "./config.js";
+export {
+	blogKitSettingsSchema,
+	configuredLessons,
+	engineSectionSchema,
+	engineSections,
+	loadMrmdConfig,
+	MrmdConfigError,
+	mrmdConfigJsonSchema,
+	mrmdConfigSchema,
+	resolveSettings,
+	validateMrmdConfig,
+} from "./config.js";
 export {
 	buildChapter,
 	buildLesson,
@@ -10,12 +62,12 @@ export {
 	initHighlighter,
 	normalizeLanguage,
 	preloadLanguagesFromMarkdown,
+	renderCodeBlock,
 } from "./renderer/markdown/index.js";
 export type {
 	SimulationConfigIssue,
 	ValidatedSimulationConfig,
 } from "./simulation-config.js";
-
 export {
 	SimulationConfigError,
 	simulationConfigJsonSchema,

@@ -1,0 +1,162 @@
+:root {
+	color-scheme: light;
+	--field-paper: #fbf8ed;
+	--field-ink: #242831;
+	--field-blue: #203a9f;
+	--field-rule: #a5b2d5;
+	--field-line: #cbcfde;
+	--quiz-surface: #f3efdc;
+	--quiz-ink: var(--field-ink);
+	--quiz-line: var(--field-rule);
+	--quiz-accent: var(--field-blue);
+	background: #e7e6dc;
+	color: var(--field-ink);
+	font: 1rem/1.55 Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: var(--field-blue); text-underline-offset: .2em; }
+:focus-visible { outline: 2px solid var(--field-blue); outline-offset: 4px; }
+
+.field-top,
+.field-sheet {
+	width: min(100% - 2rem, 70rem);
+	margin-inline: auto;
+}
+
+.field-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem 0;
+	font: 600 .875rem/1.4 system-ui, sans-serif;
+}
+
+.field-name { text-decoration: none; }
+
+.field-sheet {
+	overflow-wrap: anywhere;
+	margin-block-end: 3rem;
+	background: var(--field-paper);
+	border: 1px solid var(--field-rule);
+	box-shadow: 0 .25rem 0 -.0625rem var(--field-paper), 0 .25rem var(--field-rule);
+}
+
+.field-cover {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(8rem, 23%);
+	align-items: center;
+	gap: 1rem;
+	min-height: 16rem;
+	padding: clamp(1.25rem, 5vw, 4rem);
+	border-block-end: 3px double var(--field-rule);
+	color: var(--field-blue);
+}
+
+.field-cover h1 {
+	margin: 0;
+	font-size: clamp(2.5rem, 6vw, 5rem);
+	letter-spacing: -.055em;
+	line-height: .98;
+	font-weight: normal;
+}
+
+.field-cover p {
+	max-width: 46ch;
+	margin: 1.25rem 0 0;
+	color: var(--field-ink);
+	font-size: 1.125rem;
+}
+
+.field-orbits {
+	position: relative;
+	inline-size: 100%;
+	aspect-ratio: 1;
+	background: repeating-linear-gradient(0deg, transparent 0 15px, #203a9f19 15px 16px),
+		repeating-linear-gradient(90deg, transparent 0 15px, #203a9f19 15px 16px);
+}
+
+.field-orbits::after {
+	content: "";
+	position: absolute;
+	inset: 46%;
+	border-radius: 50%;
+	background: var(--field-blue);
+}
+
+.field-orbits span {
+	position: absolute;
+	inset: var(--orbit, 18%);
+	border: 1px solid var(--field-blue);
+	border-radius: 50%;
+}
+
+.field-orbits span:nth-child(2) { --orbit: 27%; border-style: dashed; }
+.field-orbits span:nth-child(3) { --orbit: 36%; }
+
+.field-body {
+	display: grid;
+	grid-template-columns: minmax(10rem, 22%) minmax(0, 1fr);
+}
+
+.field-index {
+	align-self: start;
+	padding: 1.5rem 1rem 2rem clamp(1rem, 4vw, 3rem);
+	font: .875rem/1.6 system-ui, sans-serif;
+}
+
+.field-index p {
+	margin-block: 0 .5rem;
+	font-weight: 650;
+}
+
+.field-index ol {
+	margin: 0;
+	padding-inline-start: 1.25rem;
+	color: var(--field-blue);
+}
+
+.field-index li { padding-block: .25rem; }
+
+.field-entry {
+	min-width: 0;
+	grid-column: 2;
+	border-inline-start: 1px solid var(--field-rule);
+	padding: clamp(1.25rem, 4vw, 3rem);
+}
+
+.field-prose { max-width: 64ch; }
+.field-prose > :first-child { margin-top: 0; }
+.field-prose > :last-child { margin-bottom: 1.5rem; }
+
+.field-prose h2,
+.field-prose h3 {
+	margin-block: 1.5rem .75rem;
+	padding-block-end: .375rem;
+	border-block-end: 1px solid var(--field-line);
+	color: var(--field-blue);
+	font-size: clamp(1.5rem, 3vw, 2rem);
+	font-weight: normal;
+	line-height: 1.2;
+}
+
+.field-prose p { margin-block: .75rem; }
+.field-prose pre { overflow-x: auto; }
+.field-prose code { font-size: .9em; }
+.field-prose img { max-width: 100%; height: auto; }
+.field-chapter { margin: 0; padding-inline-start: 1.25rem; }
+.field-chapter p { margin-block-start: .25rem; }
+
+@media (max-width: 42rem) {
+	.field-top, .field-sheet { width: calc(100% - 1rem); }
+	.field-sheet { margin-block-end: 1rem; }
+	.field-cover { grid-template-columns: minmax(0, 1fr); min-height: auto; }
+	.field-orbits { display: none; }
+	.field-body { display: block; }
+	.field-index { padding: 1rem 1.25rem; border-block-end: 1px solid var(--field-rule); }
+	.field-index ol { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; padding: 0; }
+	.field-entry { border-inline-start: 0; }
+}

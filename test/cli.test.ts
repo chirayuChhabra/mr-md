@@ -8,17 +8,20 @@ import { $ } from "bun";
 delete process.env.INIT_CWD;
 delete process.env.npm_config_local_prefix;
 
-async function waitForServer(url: string, timeout = 10000) {
+async function waitForServer(
+  url: string,
+  timeout = 10000,
+  ready: (response: Response) => boolean | Promise<boolean> = () => true,
+) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     try {
       const res = await fetch(url);
-      return res;
-    } catch (e) {
-      await new Promise(r => setTimeout(r, 200));
-    }
+      if (await ready(res)) return res;
+    } catch { /* The server may still be coming up. */ }
+    await Bun.sleep(100);
   }
-  throw new Error(`Server at ${url} did not start within ${timeout}ms`);
+  throw new Error(`Server at ${url} did not return the expected response within ${timeout}ms`);
 }
 
 describe("CLI Deep Tests", () => {
@@ -45,7 +48,9 @@ describe("CLI Deep Tests", () => {
       expect(existsSync(filePath)).toBe(true);
       
       const content = await readFile(filePath, "utf-8");
-      expect(content).toContain("index: 1");
+      expect(content).not.toContain("index:");
+      const config = JSON.parse(await readFile(join(tempDir, "mrmd.config.json"), "utf-8"));
+      expect(config.content.lessons).toEqual(["01-test-lesson.md"]);
       expect(content).toContain("# test-lesson");
 
       const buildResult = await $`bun run ${CLI_PATH} build 01-test-lesson.md`.cwd(tempDir).quiet();
@@ -53,12 +58,14 @@ describe("CLI Deep Tests", () => {
       expect(existsSync(join(tempDir, "out", "01-test-lesson.html"))).toBe(true);
     });
 
-    test("Should correctly increment index for subsequent files", async () => {
+    test("Should append subsequent lessons to configuration order", async () => {
       await $`bun run ${CLI_PATH} generate "first"`.cwd(tempDir).quiet();
       await $`bun run ${CLI_PATH} generate "second"`.cwd(tempDir).quiet();
       
       const content = await readFile(join(tempDir, "02-second.md"), "utf-8");
-      expect(content).toContain("index: 2");
+      expect(content).not.toContain("index:");
+      const config = JSON.parse(await readFile(join(tempDir, "mrmd.config.json"), "utf-8"));
+      expect(config.content.lessons).toEqual(["01-first.md", "02-second.md"]);
     });
   });
 
@@ -157,15 +164,11 @@ describe("CLI Deep Tests", () => {
         const oldHtml = await Bun.file(join(tempDir, "out", "lesson.html")).text();
         expect(oldHtml).toContain("Old Heading");
 
-        // Update the file with a new heading
         await writeFile(filePath, "# New Heading\n\nContent");
-        
-        // Wait for watcher debounce and rebuild
-        await new Promise(r => setTimeout(r, 1000));
-
+        await waitForServer("http://localhost:4010/lesson.html", 10000, async (response) =>
+          response.ok && (await response.text()).includes("New Heading"),
+        );
         expect(existsSync(join(tempDir, "out", "lesson.html"))).toBe(true);
-        const newHtml = await Bun.file(join(tempDir, "out", "lesson.html")).text();
-        expect(newHtml).toContain("New Heading");
 
         // Verify root and index.html redirect in single file mode
         const rootRes = await fetch("http://localhost:4010/", { redirect: "manual" });
@@ -178,7 +181,7 @@ describe("CLI Deep Tests", () => {
       } finally {
         devProc.kill();
       }
-    }, 15000);
+    }, 25000);
 
     test("Should filter static asset logs in dev mode and log on 404", async () => {
       await writeFile(join(tempDir, "chapter.md"), "---\nindex: 1\n---\ntest");

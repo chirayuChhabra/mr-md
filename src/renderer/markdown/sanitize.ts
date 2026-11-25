@@ -77,162 +77,115 @@ export function sanitizeHtml(htmlRaw: string): string {
 
 import type { BuildOptions } from "../../types.js";
 
-export function mdToHtml(
-	md: string,
-	options?: BuildOptions,
-	_callerDir?: string,
-): {
-	html: string;
-	title: string;
-	headings: { id: string; text: string; level: number }[];
-} {
-	let title = "";
+export function renderCodeBlock(text: string, lang?: string): string {
+	const raw = (lang || "").trim();
+	const tokens = raw.split(/\s+/);
+	const rawLang = tokens[0] || "";
+	const flags = tokens.slice(1);
 
-	// Extract first H1 or H2 as title
-	const titleMatch = md.match(/^(?:#|##)\s+(.+)$/m);
-	if (titleMatch) {
-		title = titleMatch[1].trim();
-	}
+	let studentCode = text;
+	let frontmatterData: Record<string, unknown> = {};
 
-	const headings: { id: string; text: string; level: number }[] = [];
-	let headingIdCounter = 0;
-
-	const renderer = new marked.Renderer();
-	renderer.heading = function (token) {
-		const depth = token.depth;
-		const rawText = token.text;
-		const plainText = DOMPurify.sanitize(rawText.replace(/`/g, ""), {
-			ALLOWED_TAGS: [],
-		});
-		const slug = plainText
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/(^-|-$)/g, "");
-		const id = `bk-${slug}-${headingIdCounter++}`;
-		if (depth === 2 || depth === 3) {
-			headings.push({ id, text: plainText, level: depth });
-		}
-		const parsedText = sanitizeHtml(this.parser.parseInline(token.tokens));
-		return `<h${depth} id="${id}" class="bk-heading-${depth}">${parsedText}</h${depth}>`;
-	};
-
-	renderer.hr = () => {
-		return '<hr class="bk-divider">';
-	};
-
-	renderer.code = ({ text, lang }) => {
-		const raw = (lang || "").trim();
-		const tokens = raw.split(/\s+/);
-		const rawLang = tokens[0] || "";
-		const flags = tokens.slice(1);
-
-		let studentCode = text;
-		let frontmatterData: Record<string, unknown> = {};
-
-		if (text.startsWith("---")) {
-			try {
-				const parsed = matter(text);
-				studentCode = parsed.content.replace(/^\r?\n/, "");
-				frontmatterData = parsed.data || {};
-			} catch (_e) {
-				// Forgiving fallback for unquoted YAML special characters (e.g., regex brackets [1-6])
-				const fmMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-				if (fmMatch) {
-					studentCode = text.slice(fmMatch[0].length).replace(/^\r?\n/, "");
-					for (const line of fmMatch[1].split("\n")) {
-						const colonIdx = line.indexOf(":");
-						if (colonIdx !== -1) {
-							const k = line.slice(0, colonIdx).trim().toLowerCase();
-							const v = line
-								.slice(colonIdx + 1)
-								.trim()
-								.replace(/^["'](.*)["']$/, "$1");
-							frontmatterData[k] = v;
-						}
+	if (text.startsWith("---")) {
+		try {
+			const parsed = matter(text);
+			studentCode = parsed.content.replace(/^\r?\n/, "");
+			frontmatterData = parsed.data || {};
+		} catch (_e) {
+			// Forgiving fallback for unquoted YAML special characters (e.g., regex brackets [1-6])
+			const fmMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+			if (fmMatch) {
+				studentCode = text.slice(fmMatch[0].length).replace(/^\r?\n/, "");
+				for (const line of fmMatch[1].split("\n")) {
+					const colonIdx = line.indexOf(":");
+					if (colonIdx !== -1) {
+						const k = line.slice(0, colonIdx).trim().toLowerCase();
+						const v = line
+							.slice(colonIdx + 1)
+							.trim()
+							.replace(/^["'](.*)["']$/, "$1");
+						frontmatterData[k] = v;
 					}
 				}
 			}
 		}
+	}
 
-		const isChallengeFlag = flags.some(
-			(f) => f === "challenge" || f === "quiz" || f === "test",
+	const isChallengeFlag = flags.some(
+		(f) => f === "challenge" || f === "quiz" || f === "test",
+	);
+	const isChallenge =
+		isChallengeFlag ||
+		Boolean(frontmatterData.expected) ||
+		raw.includes("expected=");
+
+	const isRunnable =
+		isChallenge ||
+		flags.some((f) => f === "run" || f === "runnable" || f.startsWith("run="));
+
+	const safeLang = rawLang || "text";
+	const normalizedLang = normalizeLanguage(rawLang);
+
+	if (isRunnable) {
+		const isEditable = !flags.some(
+			(f) => f === "readonly" || f === "editable=false",
 		);
-		const isChallenge =
-			isChallengeFlag ||
-			Boolean(frontmatterData.expected) ||
-			raw.includes("expected=");
+		const autorun = flags.some((f) => f === "autorun" || f === "autorun=true");
 
-		const isRunnable =
-			isChallenge ||
-			flags.some(
-				(f) => f === "run" || f === "runnable" || f.startsWith("run="),
-			);
+		const timeoutMatch = raw.match(/\btimeout=(\d+)\b/);
+		const timeout =
+			(frontmatterData.timeout as number) ||
+			(timeoutMatch ? parseInt(timeoutMatch[1], 10) : 3000);
 
-		const safeLang = rawLang || "text";
-		const normalizedLang = normalizeLanguage(rawLang);
+		const titleMatch = raw.match(/\btitle=(["'])(.*?)\1/);
+		const title =
+			(frontmatterData.title as string) || (titleMatch ? titleMatch[2] : "");
 
-		if (isRunnable) {
-			const isEditable = !flags.some(
-				(f) => f === "readonly" || f === "editable=false",
-			);
-			const autorun = flags.some(
-				(f) => f === "autorun" || f === "autorun=true",
-			);
+		let displayTitle = title;
+		if (isChallenge && displayTitle) {
+			displayTitle = displayTitle.replace(/^(quiz|challenge)\s*:\s*/i, "");
+		}
 
-			const timeoutMatch = raw.match(/\btimeout=(\d+)\b/);
-			const timeout =
-				(frontmatterData.timeout as number) ||
-				(timeoutMatch ? parseInt(timeoutMatch[1], 10) : 3000);
+		const stdinMatch = raw.match(/\bstdin=(["'])(.*?)\1/);
+		const stdin =
+			(frontmatterData.stdin as string) || (stdinMatch ? stdinMatch[2] : "");
 
-			const titleMatch = raw.match(/\btitle=(["'])(.*?)\1/);
-			const title =
-				(frontmatterData.title as string) || (titleMatch ? titleMatch[2] : "");
+		const expectedMatch = raw.match(/\bexpected=(["'])(.*?)\1/);
+		const expected =
+			frontmatterData.expected != null
+				? String(frontmatterData.expected).trimEnd()
+				: expectedMatch
+					? expectedMatch[2]
+					: "";
 
-			let displayTitle = title;
-			if (isChallenge && displayTitle) {
-				displayTitle = displayTitle.replace(/^(quiz|challenge)\s*:\s*/i, "");
-			}
+		const matchMatch = raw.match(/\bmatch=(["'])(.*?)\1/);
+		const match =
+			(frontmatterData.match as string) ||
+			(matchMatch ? matchMatch[2] : "exact");
 
-			const stdinMatch = raw.match(/\bstdin=(["'])(.*?)\1/);
-			const stdin =
-				(frontmatterData.stdin as string) || (stdinMatch ? stdinMatch[2] : "");
+		const hintMatch = raw.match(/\bhint=(["'])(.*?)\1/);
+		const hint =
+			(frontmatterData.hint as string) || (hintMatch ? hintMatch[2] : "");
 
-			const expectedMatch = raw.match(/\bexpected=(["'])(.*?)\1/);
-			const expected =
-				frontmatterData.expected != null
-					? String(frontmatterData.expected).trimEnd()
-					: expectedMatch
-						? expectedMatch[2]
-						: "";
+		const modeMatch = raw.match(/\bmode=(["'])(compile|run|two-step)\1/);
+		const defaultMode = isChallenge
+			? "run"
+			: COMPILED_LANGUAGES.has(normalizedLang)
+				? "two-step"
+				: "run";
+		const mode =
+			(frontmatterData.mode as string) ||
+			(modeMatch ? modeMatch[2] : defaultMode);
 
-			const matchMatch = raw.match(/\bmatch=(["'])(.*?)\1/);
-			const match =
-				(frontmatterData.match as string) ||
-				(matchMatch ? matchMatch[2] : "exact");
+		const lineCount = Math.max(1, studentCode.split("\n").length);
+		const linesHtml = Array.from({ length: lineCount }, (_, i) => i + 1).join(
+			"\n",
+		);
+		const highlightedCode = highlightCode(studentCode, normalizedLang);
 
-			const hintMatch = raw.match(/\bhint=(["'])(.*?)\1/);
-			const hint =
-				(frontmatterData.hint as string) || (hintMatch ? hintMatch[2] : "");
+		const langLabel = getLanguageDisplay(safeLang, normalizedLang);
 
-			const modeMatch = raw.match(/\bmode=(["'])(compile|run|two-step)\1/);
-			const defaultMode = isChallenge
-				? "run"
-				: COMPILED_LANGUAGES.has(normalizedLang)
-					? "two-step"
-					: "run";
-			const mode =
-				(frontmatterData.mode as string) ||
-				(modeMatch ? modeMatch[2] : defaultMode);
-
-			const lineCount = Math.max(1, studentCode.split("\n").length);
-			const linesHtml = Array.from({ length: lineCount }, (_, i) => i + 1).join(
-				"\n",
-			);
-			const highlightedCode = highlightCode(studentCode, normalizedLang);
-
-			const langLabel = getLanguageDisplay(safeLang, normalizedLang);
-
-			return `<div class="bk-code-runner" data-lang="${escAttr(normalizedLang)}" data-initial-code="${escAttr(studentCode)}" data-editable="${isEditable ? "true" : "false"}" data-autorun="${autorun ? "true" : "false"}" data-timeout="${timeout}" data-mode="${escAttr(mode)}" ${isChallenge ? 'data-challenge="true"' : ""} ${expected ? `data-expected="${escAttr(expected)}"` : ""} ${match ? `data-match="${escAttr(match)}"` : ""} ${hint ? `data-hint="${escAttr(hint)}"` : ""} ${title ? `data-title="${escAttr(title)}"` : ""} ${stdin ? `data-stdin="${escAttr(stdin)}"` : ""}>
+		return `<div class="bk-code-runner" data-lang="${escAttr(normalizedLang)}" data-initial-code="${escAttr(studentCode)}" data-editable="${isEditable ? "true" : "false"}" data-autorun="${autorun ? "true" : "false"}" data-timeout="${timeout}" data-mode="${escAttr(mode)}" ${isChallenge ? 'data-challenge="true"' : ""} ${expected ? `data-expected="${escAttr(expected)}"` : ""} ${match ? `data-match="${escAttr(match)}"` : ""} ${hint ? `data-hint="${escAttr(hint)}"` : ""} ${title ? `data-title="${escAttr(title)}"` : ""} ${stdin ? `data-stdin="${escAttr(stdin)}"` : ""}>
   <div class="bk-runner-header">
     <div class="bk-runner-header-left">
       ${
@@ -326,24 +279,24 @@ export function mdToHtml(
     <div class="bk-runner-logs"></div>
   </div>
 </div>`;
+	}
+
+	let highlightedHtml = `<pre><code>${escHtml(text)}</code></pre>`;
+
+	if (shiki && normalizedLang !== "text") {
+		try {
+			highlightedHtml = shiki.codeToHtml(text, {
+				lang: normalizedLang,
+				theme: "mr-md",
+			});
+		} catch (_e) {
+			highlightedHtml = `<pre><code>${escHtml(text)}</code></pre>`;
 		}
+	}
 
-		let highlightedHtml = `<pre><code>${escHtml(text)}</code></pre>`;
+	const langLabel = getLanguageDisplay(safeLang, normalizedLang);
 
-		if (shiki && normalizedLang !== "text") {
-			try {
-				highlightedHtml = shiki.codeToHtml(text, {
-					lang: normalizedLang,
-					theme: "mr-md",
-				});
-			} catch (_e) {
-				highlightedHtml = `<pre><code>${escHtml(text)}</code></pre>`;
-			}
-		}
-
-		const langLabel = getLanguageDisplay(safeLang, normalizedLang);
-
-		return `<div class="bk-code-block">
+	return `<div class="bk-code-block">
   <div class="bk-code-header">
     <div class="bk-code-header-left">
       <span class="bk-code-badge bk-code-lang">${escHtml(langLabel)}</span>
@@ -361,7 +314,50 @@ export function mdToHtml(
     ${highlightedHtml}
   </div>
 </div>`;
+}
+
+export function mdToHtml(
+	md: string,
+	options?: BuildOptions,
+	_callerDir?: string,
+): {
+	html: string;
+	title: string;
+	headings: { id: string; text: string; level: number }[];
+} {
+	let title = "";
+
+	const headings: { id: string; text: string; level: number }[] = [];
+	let headingIdCounter = 0;
+
+	const renderer = new marked.Renderer();
+	renderer.heading = function (token) {
+		const depth = token.depth;
+		const rawText = token.text;
+		if (!title && (depth === 1 || depth === 2)) title = rawText.trim();
+		const plainText = DOMPurify.sanitize(rawText.replace(/`/g, ""), {
+			ALLOWED_TAGS: [],
+		});
+		const slug = plainText
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/(^-|-$)/g, "");
+		const id = `bk-${slug}-${headingIdCounter++}`;
+		if (depth === 2 || depth === 3) {
+			headings.push({ id, text: plainText, level: depth });
+		}
+		const parsedText = sanitizeHtml(this.parser.parseInline(token.tokens));
+		return `<h${depth} id="${id}" class="bk-heading-${depth}">${parsedText}</h${depth}>`;
 	};
+
+	renderer.hr = () => {
+		return '<hr class="bk-divider">';
+	};
+
+	renderer.code = ({ text, lang }) =>
+		options?.codeRenderer
+			? options.codeRenderer({ code: text, language: lang ?? "", options })
+			: renderCodeBlock(text, lang);
 
 	renderer.image = ({ href, title, text }) => {
 		let resolvedHref = href;

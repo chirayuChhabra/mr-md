@@ -1,0 +1,70 @@
+.flight-deck {
+	margin-block: 1.25rem 2.5rem;
+	border: 1px solid var(--mission-line);
+	background: var(--mission-panel);
+	scroll-margin-top: 1rem;
+}
+
+.flight-deck-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: .75rem 1rem;
+	border-bottom: 1px solid var(--mission-line);
+}
+
+.flight-deck-bar h3 { margin: 0; font: 700 1.4rem/1 var(--mission-heading); }
+.flight-deck-bar > span { display: inline-flex; align-items: center; gap: .5rem; color: var(--mission-muted); font: .75rem/1.3 var(--mission-mono); }
+.flight-deck-bar i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--mission-sky); }
+
+.flight-deck-body { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; }
+.flight-map { margin: 0; min-width: 0; background: #070d1c; }
+.flight-map canvas { display: block; width: 100%; height: clamp(16rem, 36vw, 28rem); }
+
+.flight-map figcaption {
+	display: flex;
+	justify-content: space-between;
+	gap: .5rem 1rem;
+	flex-wrap: wrap;
+	padding: .75rem 1rem;
+	color: var(--mission-muted);
+	border-top: 1px solid var(--mission-line);
+	font: .75rem/1.4 var(--mission-mono);
+}
+
+.flight-controls {
+	display: flex;
+	flex-direction: column;
+	gap: .75rem;
+	padding: 1rem;
+	border-left: 1px solid var(--mission-line);
+	font: .8rem/1.4 var(--mission-mono);
+}
+
+.flight-controls label { display: block; color: var(--mission-ink); }
+.flight-controls output { display: block; margin-block: .25rem .5rem; color: var(--mission-orange); font-size: 2rem; font-variant-numeric: tabular-nums; }
+.flight-controls input { display: block; width: 100%; min-height: 2.75rem; margin: 0; accent-color: var(--mission-orange); }
+.flight-scale { display: flex; justify-content: space-between; color: var(--mission-muted); font-size: .72rem; }
+.flight-controls #mission-speed-units { margin-block: .5rem; color: var(--mission-muted); }
+.flight-controls button {
+	min-height: 2.75rem;
+	padding: .65rem .75rem;
+	border: 1px solid var(--mission-line);
+	font: inherit;
+	font-weight: 600;
+	color: var(--mission-ink);
+	background: transparent;
+	cursor: pointer;
+}
+
+.flight-controls button:hover { border-color: var(--mission-sky); }
+.flight-controls [data-fire-burn] { display: flex; justify-content: space-between; color: var(--mission-space); border-color: transparent; background: var(--mission-orange); }
+.flight-controls [data-fire-burn]:hover { background: #ffab82; }
+.flight-controls button:disabled { opacity: .65; cursor: wait; }
+.flight-result { min-height: 2.25rem; margin: .25rem 0 0; color: var(--mission-sky); }
+
+@media (max-width: 43rem) {
+	.flight-deck-body { grid-template-columns: minmax(0, 1fr); }
+	.flight-controls { border-left: 0; border-top: 1px solid var(--mission-line); }
+}

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BlogKit architecture</title></head>
+<body>
+<style>
+*{box-sizing:border-box}body{margin:0}#bk-map{font-family:var(--font-sans,system-ui);color:var(--foreground);line-height:1.5}#bk-map .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}#bk-map button{font:inherit;color:inherit;border:1px solid var(--border);background:var(--secondary);padding:8px 12px;border-radius:var(--radius,8px)}#bk-map button[aria-selected=true]{border-color:var(--primary);background:var(--accent);color:var(--accent-foreground)}#bk-map .panel[hidden]{display:none}#bk-map h2{font-size:20px;margin:0 0 16px}#bk-map h3{font-size:15px;margin:0 0 6px}#bk-map p{margin:4px 0;font-size:13px}#bk-map .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#bk-map .node{padding:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius,8px);min-width:0}#bk-map .arrow{text-align:center;color:var(--muted-foreground);padding:8px}#bk-map .wide{grid-column:1/-1}#bk-map .engine-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}#bk-map .engine-grid button{padding:10px 4px;font-size:13px}#bk-map .detail{margin-top:12px;min-height:94px;border-left:3px solid var(--primary);padding:12px 16px;background:var(--secondary)}#bk-map .state{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground);margin-bottom:6px}#bk-map code{font:12px var(--font-mono,monospace);overflow-wrap:anywhere}#bk-map .planned{border-style:dashed}#bk-map .flow-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}#bk-map .num{border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:grid;place-items:center;flex-shrink:0;font-size:13px}#bk-map .flow-step .node{flex:1}#bk-map .small{color:var(--muted-foreground)}@media(max-width:500px){#bk-map .grid{grid-template-columns:1fr}#bk-map .engine-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+<div id="bk-map">
+<div class="tabs" role="tablist" aria-label="BlogKit architecture diagrams">
+<button type="button" role="tab" id="t-flow" aria-controls="p-flow" aria-selected="true">Build flow</button>
+<button type="button" role="tab" id="t-files" aria-controls="p-files" aria-selected="false">File ownership</button>
+<button type="button" role="tab" id="t-swap" aria-controls="p-swap" aria-selected="false">Swap an engine</button>
+<button type="button" role="tab" id="t-studio" aria-controls="p-studio" aria-selected="false">Future studio</button>
+</div>
+<section class="panel" id="p-flow" role="tabpanel" aria-labelledby="t-flow">
+<h2>One lesson → routed blocks → one document</h2>
+<div class="grid"><div class="node"><h3>mrmd.config.json</h3><p>Selected implementations, section settings, lesson order.</p></div><div class="node"><h3>Lesson + companion files</h3><p>Markdown, question sources, code, simulation script and config.</p></div></div>
+<div class="arrow" aria-label="flows into">↓</div>
+<div class="node"><h3>Compiler + shared parser</h3><p>Resolve lesson order and settings. Produce ordered, typed blocks. Some blocks reference source files.</p></div>
+<div class="arrow" aria-label="flows into">↓</div>
+<div class="engine-grid" role="tablist" aria-label="Inspect a rendering section"><button type="button" role="tab" aria-selected="true" data-section="content">content</button><button type="button" role="tab" aria-selected="false" data-section="testing">testing</button><button type="button" role="tab" aria-selected="false" data-section="simulation">simulation</button><button type="button" role="tab" aria-selected="false" data-section="code">code</button><button type="button" role="tab" aria-selected="false" data-section="theme">theme</button></div>
+<div class="detail" aria-live="polite"><h3 id="detail-title">content</h3><p id="detail-input">Input: Markdown, headings, callouts, columns and media blocks.</p><p id="detail-output">Output: rendered HTML, optional navigation items, CSS and browser JS.</p></div>
+<div class="arrow" aria-label="flows into">↓</div>
+<div class="node"><h3>BlogKit assembles the page</h3><p>Keep block order → theme wraps body → collect distinct CSS/JS → write final HTML.</p></div>
+<div class="arrow" aria-label="flows into">↓</div>
+<div class="node"><h3>Browser</h3><p>Displays HTML and runs returned browser modules. Replacement pages use full page navigation.</p></div>
+</section>
+<section class="panel" id="p-files" role="tabpanel" aria-labelledby="t-files" hidden>
+<h2>Each change has one owning file</h2>
+<div class="grid"><div class="node"><h3>Chapter settings</h3><p><code>mrmd.config.json</code></p><p>Engine choices, theme settings, testing settings, chapter metadata and lesson order.</p></div><div class="node"><h3>Authored lesson</h3><p><code>lesson.md</code></p><p>Prose, block order and references to questions, code and simulations.</p></div><div class="node"><h3>Simulation settings</h3><p><code>experiment.config.json</code></p><p>Props, tunables, controls, measurements and explicitly authored dimensions.</p></div><div class="node"><h3>Implementation behavior</h3><p><code>testing.js</code> or installed package</p><p>Renderer, optional settings validator, returned CSS and browser behavior.</p></div><div class="node wide"><h3>Generated output</h3><p><code>out/*.html</code> and shared assets</p><p>Rebuilt from sources. A future studio should edit the owning source file, rather than generated HTML.</p></div></div>
+</section>
+<section class="panel" id="p-swap" role="tabpanel" aria-labelledby="t-swap" hidden>
+<h2>Replacement happens during the build</h2>
+<div class="flow-step"><div class="num">1</div><div class="node"><h3>Provide a compatible module</h3><p>Export <code>render(context)</code>; optionally export <code>schema.parse(settings)</code>.</p><p><code>render → { html, css?, js?, navItems? }</code></p></div></div>
+<div class="flow-step"><div class="num">2</div><div class="node"><h3>Choose it in the chapter config</h3><p><code>testing.engine = "./my-testing.js"</code></p><p><code>testing.settings = { …settings for that implementation… }</code></p></div></div>
+<div class="flow-step"><div class="num">3</div><div class="node"><h3>Load, validate, route</h3><p>Build loads trusted local/package code. That module now receives every quiz and guided-step block in the chapter.</p></div></div>
+<div class="flow-step"><div class="num">4</div><div class="node"><h3>Rebuild + reload</h3><p>Lesson source stays the same. Generated markup and browser behavior come from the new implementation.</p></div></div>
+<div class="node"><h3>Return to the built-in implementation</h3><p><code>testing.engine = "default"</code></p><p class="small">Settings are not migrated automatically. There is no in-place production hot module swap.</p></div>
+</section>
+<section class="panel" id="p-studio" role="tabpanel" aria-labelledby="t-studio" hidden>
+<h2>Studio flow — proposed, not implemented</h2>
+<div class="node planned"><div class="state">Needed</div><h3>Implementation catalog + readable settings definitions</h3><p>Names, versions, supported block types, labels, defaults, constraints and migration rules.</p></div>
+<div class="arrow" aria-label="flows into">↓</div>
+<div class="node planned"><div class="state">Future studio</div><h3>Read defaults + stored overrides → show controls</h3><p>Appearance fields · lesson ordering · implementation picker · simulation inspector.</p></div>
+<div class="arrow" aria-label="flows into">↓ user edits a control</div>
+<div class="grid"><div class="node"><div class="state">Existing file</div><h3>mrmd.config.json</h3><p>Chapter appearance, engine selection, settings or lesson order.</p></div><div class="node"><div class="state">Existing file</div><h3>Simulation companion config</h3><p>Simulation-specific control, range, dimension or measurement.</p></div></div>
+<div class="arrow" aria-label="flows into">↓</div>
+<div class="node"><div class="state">Existing build path</div><h3>Validate → compile → render → preview</h3><p>Studio reuses the same build behavior as the CLI. Validation errors return to the appropriate field.</p></div>
+<div class="arrow" aria-label="flows into">↺ next edit</div>
+<div class="node planned"><h3>Remaining integration work</h3><p>Form metadata, consistent overrides, compatibility checks, settings migration and safe staged publishing.</p></div>
+</section>
+</div>
+<script>
+(()=>{const root=document.getElementById('bk-map');const names=['flow','files','swap','studio'];for(const name of names){root.querySelector('#t-'+name).addEventListener('click',()=>{for(const item of names){root.querySelector('#t-'+item).setAttribute('aria-selected',String(item===name));root.querySelector('#p-'+item).hidden=item!==name;}});}const details={content:['Markdown, headings, callouts, columns and media blocks.','Rendered HTML, optional navigation items, CSS and browser JS.'],testing:['Quiz and guided-step blocks. A block can point to a question source file.','Replacement questions and behavior. Backend integration must be provided by the implementation.'],simulation:['Simulation/world/animation blocks with companion-file settings.','Simulation embedding and behavior. The built-in renderer keeps controls in the expanded lab.'],code:['Code text plus the full language/info string, dispatched inside Markdown rendering.','Code HTML and optional CSS/browser JS. A replacement owns runnable behavior too.'],theme:['Already rendered body, lesson/chapter metadata, navigation and renderDefault().','Complete document HTML, plus optional styles and browser JS. Runs after block rendering.']};root.querySelectorAll('[data-section]').forEach(button=>button.addEventListener('click',()=>{root.querySelectorAll('[data-section]').forEach(other=>other.setAttribute('aria-selected',String(other===button)));const key=button.dataset.section;root.querySelector('#detail-title').textContent=key;root.querySelector('#detail-input').textContent='Input: '+details[key][0];root.querySelector('#detail-output').textContent='Output: '+details[key][1];}));})();
+</script>
+
+</body></html>

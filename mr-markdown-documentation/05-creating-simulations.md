@@ -1,5 +1,4 @@
 ---
-index: 6
 title: Creating Simulations
 slug: creating-simulations
 description: Build inline, guided, and immersive simulations for your lessons.
@@ -43,6 +42,21 @@ Embed the simulation with Markdown image syntax:
 
 The host automatically pairs `oscillator.js` with `oscillator.config.json` by matching the file basename in the same directory.
 
+## Presentation settings
+
+The companion simulation config defines the block's presentation:
+
+```json
+{
+  "type": "block",
+  "open": "workspace",
+  "height": 420,
+  "controls": "interactive"
+}
+```
+
+The built-in renderer opens controls in the dedicated lab workspace. `height` sets the preview height in pixels. `controls` selects `interactive` or `observe`. Props, tunables, presets, and measurements belong in this same companion file. Mr. Markdown pairs it with the embedded script by filename.
+
 ## Block simulations
 
 To create a block simulation, define a script next to your lesson. `bkSetup` configures the canvas and executes your drawing callback on each animation frame:
@@ -58,7 +72,7 @@ window.bkSetup((ctx, width, height) => {
 
 ### Playback, reset, and authoring lifecycle
 
-Block simulations open as modal workspaces. The host supplies **Pause / Resume**
+Block simulations use modal workspaces by default. The host supplies **Pause / Resume**
 and **Reset**. Closing pauses the model and restores the lesson position and focus;
 reopening preserves control values and an explicit pause. Background lesson
 controls stay unavailable while the workspace is open. Escape also works from

@@ -54,12 +54,11 @@ export function renderSimulation(
         </aside>`
 		: "";
 
-	return {
-		html: blockChrome(
-			block.controls === "observe" ? "Simulation" : "Interactive Lab",
-			block.label,
-			block.caption,
-			`<div class="bk-phone-sim-notice">
+	const html = blockChrome(
+		block.controls === "observe" ? "Simulation" : "Interactive Lab",
+		block.label,
+		block.caption,
+		`<div class="bk-phone-sim-notice">
     <svg class="bk-phone-device" aria-hidden="true" width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="25" height="18" rx="2"/><path d="M8 23h12m-6-4v4"/><rect x="23" y="9" width="8" height="14" rx="1.5"/></svg>
           <div class="bk-phone-sim-notice-title">Open on desktop</div>
           <div class="bk-phone-sim-notice-body">This simulation needs a larger screen. You can keep reading here.</div>
@@ -84,9 +83,20 @@ export function renderSimulation(
         <script type="application/json" class="bk-sim-config">${escapeScriptJson(simConfig)}</script>
         ${telemetrySchemaScript}
   <script type="application/json" class="bk-measurements-config">${escapeScriptJson(block.measurements ?? {})}</script>`,
-			block.accent ?? "blue",
-			true,
-			id,
+		block.accent ?? "blue",
+		true,
+		id,
+	);
+	const openMode = "workspace";
+	const height = block.height;
+	const heightStyle =
+		height && Number.isFinite(height) && height > 0
+			? ` style="--bk-sim-preview-height:${height}px"`
+			: "";
+	return {
+		html: html.replace(
+			"<figure ",
+			`<figure data-bk-sim-open="${escAttr(openMode)}"${heightStyle} `,
 		),
 		navItems: [{ id, label, kind: "simulation" }],
 	};

@@ -23,6 +23,7 @@ lessons/
 update-*.py
 
 playground/*
+!playground/blog-kit/
 !playground/orbital-telemetry/
 !playground/measurements-lab/
 playground/**/out/

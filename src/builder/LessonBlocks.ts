@@ -185,7 +185,7 @@ export abstract class LessonBlocks {
 	simulation(
 		src: string,
 		opts: SimulationOptions | Record<string, unknown> = {},
-		height = DEFAULT_SIMULATION_HEIGHT,
+		height?: number,
 	): this {
 		const fileConfig = this.loadSimulationConfig(src);
 		if (fileConfig?.type === "world") {

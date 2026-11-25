@@ -1,5 +1,6 @@
 import type { BuildOptions } from "../../types.js";
 import { escAttr, escHtml } from "../blocks.js";
+import { escapeScriptJson } from "../markdown/chrome.js";
 import { assetVersion, clientScript, pageCSS } from "./assets.js";
 
 function renderThemePanelContent(
@@ -85,17 +86,35 @@ export function renderLayout(
 	const palette = opts.palette ?? "ink";
 	const ui = opts.ui ?? "standard";
 	const safeFont = opts.font ? opts.font.replace(/[;{}<>\\]/g, "") : "";
+	const presentation = opts.presentation ?? {};
+	const pageSettings = {
+		settings: presentation,
+		theme: opts.theme ?? "auto",
+		palette,
+		ui,
+		density,
+		tone,
+	};
+	const variables = Object.entries({
+		"--accent": presentation.theme?.accent,
+		"--font-sans": presentation.theme?.font,
+		"--font-display": presentation.theme?.headingFont,
+		"--font-mono": presentation.theme?.monoFont,
+	})
+		.filter((entry) => entry[1])
+		.map(([key, value]) => `${key}:${value}`)
+		.join(";");
 
 	const appearanceButtonHtml = `<button ${!opts.phoneApp ? 'class="bk-icon-btn bk-topbar-btn bk-fallback-appearance"' : ""} type="button" id="bk-phone-appearance" aria-label="Appearance" aria-controls="bk-sidebar" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>`;
 	return `<!DOCTYPE html>
-<html lang="en" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}>
+<html lang="en" data-palette="${palette}" data-ui="${ui}" ${schemeAttr} data-bk-theme-default="${escAttr(pageSettings.theme)}" data-bk-width="${escAttr(presentation.layout ?? "")}"${variables ? ` style="${escAttr(variables)}"` : ""}>
 <head>
 ${opts.documentBase ? `<base data-bk-course-root href="${escAttr(opts.documentBase)}">` : ""}
 <script>
 (function() {
 	var courseBase = document.querySelector("base[data-bk-course-root]");
 	if (courseBase) courseBase.href = courseBase.href;
-	var t = localStorage.getItem("bk-theme") || "auto";
+	var t = localStorage.getItem("bk-theme") || ${escapeScriptJson(pageSettings.theme)};
 	var p = localStorage.getItem("bk-palette");
 	var u = localStorage.getItem("bk-ui");
 	var root = document.documentElement;
@@ -125,7 +144,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
 
 </head>
 <body class="bk-layout-${layout} bk-density-${density} bk-tone-${tone}">
-<div class="bk-shell" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}${_isChapter ? ' data-is-chapter="true"' : ""}>
+<div class="bk-shell" data-palette="${palette}" data-ui="${ui}" ${schemeAttr}${variables ? ` style="${escAttr(variables)}"` : ""}${_isChapter ? ' data-is-chapter="true"' : ""}>
 <script>
   (function() {
     var shell = document.querySelector(".bk-shell");
@@ -215,6 +234,7 @@ ${opts.standalone === false ? `<link rel="stylesheet" href="assets/theme.css?v=$
       </div>
     </aside>
     <main class="bk-main">
+      <script type="application/json" class="bk-page-settings">${escapeScriptJson(pageSettings)}</script>
       <button class="bk-icon-btn bk-sidebar-expand" id="bk-sidebar-expand" type="button" aria-label="Expand sidebar" title="Expand sidebar" style="display:none" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </button>

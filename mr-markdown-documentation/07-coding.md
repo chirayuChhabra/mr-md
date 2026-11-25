@@ -1,5 +1,4 @@
 ---
-index: 4
 title: Code in Lessons
 slug: coding
 description: Add highlighted examples, runnable code, and output-checked challenges to a lesson.

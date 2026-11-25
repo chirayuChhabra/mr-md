@@ -29,7 +29,7 @@ export function renderEndNav(lesson: Lesson): string {
     ${
 			prevSlug
 				? `
-    <a class="bk-end-link bk-end-link--prev" href="${prevSlug}.html">
+    <a class="bk-end-link bk-end-link--prev" href="${escAttr(prevSlug)}.html">
       <span>Previous Lesson</span>
       <strong>${escHtml(prevTitle || "Previous")}</strong>
     </a>
@@ -39,7 +39,7 @@ export function renderEndNav(lesson: Lesson): string {
     ${
 			nextSlug
 				? `
-    <a class="bk-end-link bk-end-link--next" href="${nextSlug}.html">
+    <a class="bk-end-link bk-end-link--next" href="${escAttr(nextSlug)}.html">
       <span>Next Lesson</span>
       <strong>${escHtml(nextTitle || "Next")}</strong>
     </a>

@@ -121,12 +121,13 @@ export function mergeOptions(
 
 export function normalizeSimulationOptions(
 	opts: SimulationOptions | Record<string, unknown>,
-	legacyHeight: number,
+	legacyHeight: number | undefined,
 	fileConfig: SimulationConfig | null = null,
 ): SimulationOptions {
 	let inline: SimulationOptions;
 	const optionKeys = [
 		"props",
+		"open",
 		"tunables",
 		"actions",
 		"presets",
@@ -150,6 +151,9 @@ export function normalizeSimulationOptions(
 	}
 
 	return {
+		...((inline.open ?? fileConfig?.open)
+			? { open: inline.open ?? fileConfig?.open }
+			: {}),
 		props: { ...(fileConfig?.props ?? {}), ...(inline.props ?? {}) },
 		tunables: inline.tunables ?? fileConfig?.tunables,
 		actions: inline.actions ?? fileConfig?.actions,

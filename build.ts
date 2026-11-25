@@ -1,3 +1,4 @@
+import { mrmdConfigJsonSchema } from "./src/config.ts";
 import { simulationConfigJsonSchema } from "./src/simulation-config.ts";
 import { rmSync, cpSync, mkdirSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -9,6 +10,7 @@ if (existsSync("dist")) {
 }
 mkdirSync("dist");
 writeFileSync("dist/simulation.schema.json", JSON.stringify(simulationConfigJsonSchema, null, 2) + "\n");
+writeFileSync("dist/config.schema.json", JSON.stringify(mrmdConfigJsonSchema, null, 2) + "\n");
 await $`bunx tsc`;
 cpSync("src/styles", "dist/styles", { recursive: true });
 cpSync("src/client", "dist/client", { recursive: true });

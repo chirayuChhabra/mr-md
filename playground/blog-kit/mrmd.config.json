@@ -1,0 +1,35 @@
+{
+  "$schema": "../../dist/config.schema.json",
+  "title": "Blog Kit Playground",
+  "description": "Three lessons showing what chapter settings, lesson overrides, and a custom quiz change in the browser.",
+  "theme": {
+    "settings": {
+      "mode": "light",
+      "accent": "#2563eb",
+      "layout": "narrow"
+    }
+  },
+  "content": {
+    "lessons": [
+      "welcome.md",
+      {
+        "file": "experiment.md",
+        "theme": {
+          "settings": { "accent": "#0f766e", "layout": "wide" }
+        }
+      },
+      {
+        "file": "custom-quiz.md",
+        "testing": {
+          "settings": { "label": "Try the same quiz again" }
+        }
+      }
+    ]
+  },
+  "testing": {
+    "engine": "./testing.js",
+    "settings": {
+      "label": "Chapter knowledge check"
+    }
+  }
+}

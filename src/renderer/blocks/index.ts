@@ -79,9 +79,10 @@ export function renderBlock(
 	block: Block,
 	idx: number,
 	options: BuildOptions,
+	renderer: typeof renderBlockInner = renderBlockInner,
 ): { html: string; navItems?: NavItem[] } {
 	try {
-		const result = renderBlockInner(block, idx, options);
+		const result = renderer(block, idx, options);
 		if (
 			result.html &&
 			"src" in block &&
@@ -89,10 +90,10 @@ export function renderBlock(
 			!block.src.includes("\n") &&
 			block.src.includes(".")
 		) {
-			result.html = result.html.replace(
-				/^<([a-zA-Z0-9-]+)([^>]*)>/,
-				(_, tag, rest) => `<${tag} data-bk-src="${escAttr(block.src)}"${rest}>`,
-			);
+			const tag = result.html.match(/^<[a-z0-9-]+/i)?.[0];
+			if (tag && result.html.indexOf(">", tag.length) !== -1) {
+				result.html = `${tag} data-bk-src="${escAttr(block.src)}"${result.html.slice(tag.length)}`;
+			}
 		}
 		return result;
 	} catch (e) {

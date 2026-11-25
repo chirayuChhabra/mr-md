@@ -7,10 +7,11 @@ import {
 } from "./components/timeline.js";
 import { renderLayout } from "./html.js";
 
-export function renderChapter(
-	chapter: Chapter,
-	opts: BuildOptions = {},
-): string {
+export function renderChapterContent(chapter: Chapter): {
+	navHtml: string;
+	contentHtml: string;
+	breadcrumbsHtml: string;
+} {
 	const lessons = chapter.lessons || [];
 	const navHtml = lessons
 		.map(
@@ -95,6 +96,15 @@ export function renderChapter(
     </article>
 	`;
 
+	return { navHtml, contentHtml, breadcrumbsHtml };
+}
+
+export function renderChapter(
+	chapter: Chapter,
+	opts: BuildOptions = {},
+): string {
+	const { navHtml, contentHtml, breadcrumbsHtml } =
+		renderChapterContent(chapter);
 	return renderLayout(
 		chapter.meta.title,
 		chapter.meta.description,
