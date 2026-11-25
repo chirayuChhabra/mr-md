@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0-alpha.3] - 2026-11-26
+
 ### Added
 - **Blog Kit** lets chapters replace the `theme`, `content`, `testing`, `simulation`, and `code` renderers with local modules or installed packages. Engines receive typed inputs and can return HTML, CSS, browser JavaScript, and navigation entries.
 - Add `mrmd.config.json` and the packaged `mr-md/config.schema.json` schema for lesson order, chapter defaults, and per-lesson settings. Built-in settings include theme colors, fonts, layout, and density, plus quiz retries and answer explanations.
@@ -290,7 +292,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated to Bun runtime
 - Replaced gray-matter with @11ty/gray-matter for js-yaml v4 support
 
-[Unreleased]: https://github.com/chirayuChhabra/mr-md/compare/v4.0.0-alpha.1...HEAD
+[Unreleased]: https://github.com/chirayuChhabra/mr-md/compare/v4.0.0-alpha.3...develop
+[4.0.0-alpha.3]: https://github.com/chirayuChhabra/mr-md/compare/v4.0.0-alpha.2...v4.0.0-alpha.3
+[4.0.0-alpha.2]: https://github.com/chirayuChhabra/mr-md/compare/v4.0.0-alpha.1...v4.0.0-alpha.2
 [4.0.0-alpha.1]: https://github.com/chirayuChhabra/mr-md/compare/v3.1.1...v4.0.0-alpha.1
 [3.1.1]: https://github.com/chirayuChhabra/mr-md/compare/v3.1.0...v3.1.1
 [3.1.0]: https://github.com/chirayuChhabra/mr-md/compare/v3.0.2...v3.1.0
