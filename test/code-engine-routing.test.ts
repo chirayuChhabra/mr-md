@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
 import { mdToHtml, renderCodeBlock } from "../src/renderer/markdown/index.js";
 
+test("uses the first rendered H1 or H2 as the Markdown title", () => {
+	const markdown = "```md\n# Code example\n```\n\n### Detail\n\n## Lesson title\n\n# Later";
+	expect(mdToHtml(markdown).title).toBe("Lesson title");
+	expect(mdToHtml("### Detail").title).toBe("");
+});
+
 test("code replacement receives full fence info and preserves surrounding content order", () => {
 	const calls: { code: string; language: string }[] = [];
 	const { html } = mdToHtml("Before\n\n```js run readonly\nconsole.log(1)\n```\n\nAfter", {

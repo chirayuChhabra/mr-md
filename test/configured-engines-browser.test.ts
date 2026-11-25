@@ -5,14 +5,14 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import puppeteer from "puppeteer";
 
-function testingModule(result: string): string {
-	const js = `document.querySelector('[data-test-engine]').addEventListener('click', () => { document.querySelector('output').textContent = ${JSON.stringify(result)}; });`;
+function testingModule(updated = false): string {
+	const result = updated ? "Updated engine result" : "Original engine result";
 	return `module.exports = {
   render({ settings }) {
     return {
-      html: '<button data-test-engine type="button" aria-label="' + settings.label + '">' + settings.label + '</button><output aria-label="Test result"></output>',
+      html: '<button data-test-engine type="button" aria-label="' + settings.label + '">' + settings.label + '</button><output aria-label="Test result" data-engine-result="${result}"></output>',
       css: '[data-test-engine] { border-top: 7px solid rgb(12, 34, 56); }',
-      js: ${JSON.stringify(js)}
+      js: "document.querySelector('[data-test-engine]').addEventListener('click', () => { const output = document.querySelector('output'); output.textContent = output.dataset.engineResult; });"
     };
   }
 };`;
@@ -27,7 +27,7 @@ test("configured testing engines keep behavior across desktop and mobile navigat
 	const configPath = join(directory, "mrmd.config.json");
 	const modulePath = join(directory, "testing.cjs");
 	writeFileSync(configPath, JSON.stringify(config));
-	writeFileSync(modulePath, testingModule("Original engine result"));
+	writeFileSync(modulePath, testingModule());
 	for (const title of ["First", "Second"]) {
 		writeFileSync(join(directory, `${title.toLowerCase()}.md`), `# ${title}\n\n![Question](./quiz.json)`);
 	}
@@ -90,7 +90,7 @@ test("configured testing engines keep behavior across desktop and mobile navigat
 		await configReload;
 		await checkButton("Submit response", "Original engine result");
 		const moduleReload = page.waitForNavigation({ waitUntil: "networkidle0" });
-		writeFileSync(modulePath, testingModule("Updated engine result"));
+		writeFileSync(modulePath, testingModule(true));
 		await moduleReload;
 		await checkButton("Submit response", "Updated engine result");
 		expect(errors).toEqual([]);

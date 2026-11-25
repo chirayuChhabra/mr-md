@@ -23,6 +23,18 @@ test("a replacement learning engine feeds the selected layout without changing c
 	expect(lesson.blocks[0].type).toBe("quiz");
 });
 
+test("block source is added only to a complete leading tag", () => {
+	const block = { type: "quiz", src: 'quiz"name.json' } as const;
+	const complete = renderBlock(block, 0, {}, () => ({
+		html: '<custom-quiz aria-label="Check > review"></custom-quiz>',
+	}));
+	expect(complete.html).toBe(
+		'<custom-quiz data-bk-src="quiz&quot;name.json" aria-label="Check > review"></custom-quiz>',
+	);
+	const incomplete = renderBlock(block, 0, {}, () => ({ html: "<custom-quiz" }));
+	expect(incomplete.html).toBe("<custom-quiz");
+});
+
 test("engine failures preserve strict and tolerant rendering behavior", () => {
 	const kit = createBlogKit({ engines: {
 		learning: { ...defaultBlogKitEngines.learning, render: () => { throw new Error("<broken>"); } },

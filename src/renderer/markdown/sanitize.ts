@@ -327,12 +327,6 @@ export function mdToHtml(
 } {
 	let title = "";
 
-	// Extract first H1 or H2 as title
-	const titleMatch = md.match(/^(?:#|##)\s+(.+)$/m);
-	if (titleMatch) {
-		title = titleMatch[1].trim();
-	}
-
 	const headings: { id: string; text: string; level: number }[] = [];
 	let headingIdCounter = 0;
 
@@ -340,6 +334,7 @@ export function mdToHtml(
 	renderer.heading = function (token) {
 		const depth = token.depth;
 		const rawText = token.text;
+		if (!title && (depth === 1 || depth === 2)) title = rawText.trim();
 		const plainText = DOMPurify.sanitize(rawText.replace(/`/g, ""), {
 			ALLOWED_TAGS: [],
 		});
