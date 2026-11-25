@@ -31,6 +31,10 @@ test("one source edit rebuilds once and generated assets never trigger another b
 	}
 	try {
 		await waitFor(() => output.includes("Watching"));
+		await waitFor(() => /http:\/\/localhost:\d+/.test(output));
+		const url = output.match(/http:\/\/localhost:\d+/)?.[0];
+		if (!url) throw new Error("Missing development server URL");
+		expect((await fetch(url)).ok).toBe(true);
 		output = "";
 		writeFileSync(source, "---\ntitle: Lesson\nindex: 1\n---\nChanged\n");
 		await waitFor(() => output.includes("Build successful"));

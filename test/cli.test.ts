@@ -8,17 +8,20 @@ import { $ } from "bun";
 delete process.env.INIT_CWD;
 delete process.env.npm_config_local_prefix;
 
-async function waitForServer(url: string, timeout = 10000) {
+async function waitForServer(
+  url: string,
+  timeout = 10000,
+  ready: (response: Response) => boolean | Promise<boolean> = () => true,
+) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     try {
       const res = await fetch(url);
-      return res;
-    } catch (e) {
-      await new Promise(r => setTimeout(r, 200));
-    }
+      if (await ready(res)) return res;
+    } catch { /* The server may still be coming up. */ }
+    await Bun.sleep(100);
   }
-  throw new Error(`Server at ${url} did not start within ${timeout}ms`);
+  throw new Error(`Server at ${url} did not return the expected response within ${timeout}ms`);
 }
 
 describe("CLI Deep Tests", () => {
@@ -161,15 +164,11 @@ describe("CLI Deep Tests", () => {
         const oldHtml = await Bun.file(join(tempDir, "out", "lesson.html")).text();
         expect(oldHtml).toContain("Old Heading");
 
-        // Update the file with a new heading
         await writeFile(filePath, "# New Heading\n\nContent");
-        
-        // Wait for watcher debounce and rebuild
-        await new Promise(r => setTimeout(r, 1000));
-
+        await waitForServer("http://localhost:4010/lesson.html", 10000, async (response) =>
+          response.ok && (await response.text()).includes("New Heading"),
+        );
         expect(existsSync(join(tempDir, "out", "lesson.html"))).toBe(true);
-        const newHtml = await Bun.file(join(tempDir, "out", "lesson.html")).text();
-        expect(newHtml).toContain("New Heading");
 
         // Verify root and index.html redirect in single file mode
         const rootRes = await fetch("http://localhost:4010/", { redirect: "manual" });
@@ -182,7 +181,7 @@ describe("CLI Deep Tests", () => {
       } finally {
         devProc.kill();
       }
-    }, 15000);
+    }, 25000);
 
     test("Should filter static asset logs in dev mode and log on 404", async () => {
       await writeFile(join(tempDir, "chapter.md"), "---\nindex: 1\n---\ntest");

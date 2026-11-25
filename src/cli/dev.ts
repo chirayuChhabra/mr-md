@@ -263,8 +263,10 @@ export async function runDev(args: string[]) {
 	await rebuild();
 
 	let timeout: NodeJS.Timeout;
+	const watchRoot = fs.realpathSync(contentBase);
+	const watchOutput = path.join(watchRoot, "out");
 	const watcher = fs.watch(
-		contentBase,
+		watchRoot,
 		{ recursive: true },
 		(_eventType, filename) => {
 			if (
@@ -276,14 +278,15 @@ export async function runDev(args: string[]) {
 				return;
 			}
 
-			const changedPath = path.resolve(contentBase, filename);
-			const relativeToOutput = path.relative(outDir, changedPath);
+			const changedPath = path.resolve(watchRoot, filename);
+			const relativeToOutput = path.relative(watchOutput, changedPath);
 			const isGenerated =
 				relativeToOutput === "" ||
 				(relativeToOutput !== ".." &&
 					!relativeToOutput.startsWith(`..${path.sep}`) &&
 					!path.isAbsolute(relativeToOutput));
-			const segments = path.relative(contentBase, changedPath).split(path.sep);
+			const relativeToRoot = path.relative(watchRoot, changedPath);
+			const segments = relativeToRoot.split(path.sep);
 			if (
 				isGenerated ||
 				segments.includes("node_modules") ||
@@ -295,7 +298,8 @@ export async function runDev(args: string[]) {
 			timeout = setTimeout(() => {
 				logger.watch(`File changed: ${filename}`);
 				rebuild(
-					filename === "mrmd.config.json" || /\.(?:[cm]?js|ts)$/.test(filename),
+					relativeToRoot === "mrmd.config.json" ||
+						/\.(?:[cm]?js|ts)$/.test(relativeToRoot),
 				);
 			}, 200);
 		},
