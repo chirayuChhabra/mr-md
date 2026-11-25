@@ -33,6 +33,8 @@ test("configuration flows through CLI, navigation, quizzes, phone views, and liv
 		}
 		const url = output.match(/http:\/\/localhost:\d+/)![0];
 		const page = await browser.newPage();
+		// Navigation assertions should wait on lesson content, independent of view transitions.
+		await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
 		await page.setRequestInterception(true);
 		page.on("request", request => { if (request.url().startsWith(url)) void request.continue(); else void request.abort(); });
 		page.setDefaultTimeout(7000);
