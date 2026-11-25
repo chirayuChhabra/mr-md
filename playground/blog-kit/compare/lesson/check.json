@@ -1,0 +1,10 @@
+{
+  "questions": [
+    {
+      "q": "Which speed is the first that lets the spacecraft escape?",
+      "options": ["0.85× escape speed", "1.00× escape speed", "1.15× escape speed"],
+      "answer": 1,
+      "explanation": "Escape becomes possible at the threshold. Above it, the spacecraft can escape with speed left over."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Mr Markdown
 
-Mr Markdown is an opinionated Markdown framework for building interactive learning pages. It is designed for lessons that mix prose, LaTeX, simulations, media, video, and quizzes without making every author build layout and interaction chrome from scratch.
+Mr Markdown is an opinionated Markdown framework for building interactive learning pages. It combines prose, LaTeX, simulations, media, and quizzes with shared layouts and interactive controls.
 
 ## Documentation
 
@@ -25,13 +25,15 @@ bunx mr-md dev lesson.md
 bunx mr-md build lesson.md
 ```
 
-Build output goes into `out/` next to the input file. For a chapter, run `bunx mr-md generate intro` in a directory, then `bunx mr-md dev .` or `bunx mr-md build .`. Top-level Markdown lessons need consecutive, unique `index` values in frontmatter, starting at 1. Place quiz files in a subdirectory.
+Build output goes into `out/` next to the input file. For a chapter, run `bunx mr-md generate intro` in a directory, then `bunx mr-md dev .` or `bunx mr-md build .`. The `content.lessons` array in `mrmd.config.json` defines lesson order. Omitting the array enables folder-based lesson discovery. Place quiz files in a subdirectory.
+
+See [Blog Kit configuration and engine contracts](docs/blog-kit.md) for chapter defaults, lesson overrides, and replaceable rendering engines.
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `mr-md build <path>` | Build all chapters or a specific file |
+| `mr-md build <path>` | Build a chapter folder or lesson file |
 | `mr-md dev <path>` | Start local dev server with hot reloading |
 | `mr-md stop [path]` | Stop a detached development server |
 | `mr-md generate <name>` | Generate a new markdown file (alias: `g`) |
@@ -62,7 +64,7 @@ See the [Agent Skills documentation](https://mrmarkdown.com/agent-skills) for de
 - **Columns** — responsive side-by-side layouts
 - **Hot Reloading** — instant feedback during development
 
-Python runners load Skulpt from a CDN. Other languages such as C++ and Rust use Wandbox and send code and input to that service; those runners require network access. JavaScript and TypeScript run in a browser worker. Quiz answers are included in the page and are intended for practice, not secure assessment.
+Python runners load Skulpt from a CDN. Other languages such as C++ and Rust use Wandbox and send code and input to that service; those runners require network access. JavaScript and TypeScript run in a browser worker. Quizzes provide client-side practice and include their answers in the page.
 
 For local development of this repository, run `bun install`, `bun run build`, then `bun run dev:docs`. `bun run build:docs` builds the documentation site and `bun test` runs the tests.
 

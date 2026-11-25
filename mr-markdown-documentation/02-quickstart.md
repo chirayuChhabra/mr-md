@@ -1,5 +1,4 @@
 ---
-index: 2
 title: Quickstart
 slug: quickstart
 description: Get up and running in seconds. From single-file markdown notes to production-ready multi-page chapters.
@@ -10,7 +9,7 @@ eyebrow: Fast Track
 
 # Quickstart
 
-Getting started with `mr-md` does not require complex boilerplate. You can create a single interactive lesson or build a multi-page course.
+Mr. Markdown builds single interactive lessons and chapters of linked lessons.
 
 ## 1. Single File Project
 
@@ -49,7 +48,7 @@ bunx mr-md generate intro
 > [!tip]
 > You can use the `g` alias instead of `generate`. For example: `bunx mr-md g intro`.
 
-This command automatically calculates the next available numeric index in the directory, generating a file such as `01-intro.md`. It pre-populates YAML frontmatter with the index and a title heading, so you do not need to manually append numeric prefixes.
+This generates a file such as `01-intro.md` and appends it to the `lessons` list in `mrmd.config.json`. The configuration array determines lesson order.
 
 Finally, start the development server for the entire folder:
 
@@ -57,16 +56,19 @@ Finally, start the development server for the entire folder:
 bunx mr-md dev .
 ```
 
-Each top-level lesson must have a positive `index` in its YAML frontmatter. Indexes must be unique and consecutive, starting at 1. The generated files already include an index; for a hand-written lesson, add:
+Set the lesson order in `mrmd.config.json`:
 
-```yaml
----
-index: 1
-title: Introduction
----
+```json
+{
+  "lessons": ["01-intro.md", "forces.md", "energy.md"],
+  "theme": { "accent": "#2563eb" }
+}
 ```
 
-`mr-md` orders the chapter by these indexes and generates navigation. Keep quiz files in a subdirectory such as `quizzes/`, since top-level Markdown files are treated as lessons.
+The folder is one chapter. The list controls lesson numbering, navigation, and previous/next links. Titles come from each lesson's frontmatter or first heading. An entry can be an object with `file` and lesson-specific settings when an override is needed.
+
+Omitting the list enables discovery of top-level `.md` files in filename order. Existing folders where every lesson has a positive integer `index` retain their legacy ordering. An explicit list always takes precedence and includes only the listed files.
+
 
 ## AI-Assisted Simulations
 

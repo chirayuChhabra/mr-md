@@ -12,6 +12,11 @@ async function buildFile(filePath: string) {
 	logger.startSpinner(`Building file: ${filePath}`);
 	const outDir = path.resolve(getOriginalCwd(), path.dirname(filePath), "out");
 	const contentBase = path.dirname(filePath);
+	const { loadMrmdConfig, lessonConfiguration } = require("../config.js");
+	const { presentation, engineSettings } = lessonConfiguration(
+		loadMrmdConfig(contentBase),
+		path.basename(filePath),
+	);
 
 	try {
 		const {
@@ -36,7 +41,7 @@ async function buildFile(filePath: string) {
 				{ outDir, contentBase },
 				contentBase,
 			);
-			buildChapter(chapter, { outDir, contentBase });
+			buildChapter(chapter, { outDir, contentBase, presentation });
 		} else {
 			const lesson = parseLesson(
 				content,
@@ -45,7 +50,10 @@ async function buildFile(filePath: string) {
 				undefined,
 				path.basename(filePath),
 			);
-			buildLesson(lesson, { outDir, contentBase });
+			buildLesson(
+				{ ...lesson, engineSettings },
+				{ outDir, contentBase, presentation },
+			);
 		}
 		logger.succeedSpinner(
 			`Build successful for ${path.relative(process.cwd(), filePath) || path.basename(filePath)}.`,
@@ -82,22 +90,18 @@ export async function runBuild(args: string[]) {
 
 	if (fs.statSync(targetPath).isDirectory()) {
 		try {
-			const { generateChapterContent } = require("./chapter.js");
-			const chapterContent = generateChapterContent(targetPath);
-			await preloadLanguagesFromMarkdown(chapterContent);
-
-			const outDir = path.resolve(getOriginalCwd(), targetPath, "out");
-			const contentBase = targetPath;
-
+			const { compileProject } = require("../compiler.js");
+			const { buildChapter } = require("../parser/mdx.js");
+			const outDir = path.join(targetPath, "out");
 			logger.startSpinner(`Building chapter from directory: ${targetPath}`);
-			const { parseChapter, buildChapter } = require("../parser/mdx.js");
-
-			const chapter = parseChapter(
-				chapterContent,
-				{ outDir, contentBase },
-				contentBase,
-			);
-			buildChapter(chapter, { outDir, contentBase });
+			const document = compileProject(targetPath);
+			for (const lesson of document.chapter.lessons) {
+				for (const block of lesson.blocks) {
+					if (block.type === "markdown")
+						await preloadLanguagesFromMarkdown(block.src);
+				}
+			}
+			buildChapter(document.chapter, { outDir, contentBase: targetPath });
 
 			logger.succeedSpinner(
 				`Build successful for directory ${path.relative(process.cwd(), targetPath) || path.basename(targetPath)}.`,

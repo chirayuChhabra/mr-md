@@ -157,6 +157,7 @@ export const simulationConfigSchema = z
 				timeline: timeline.optional(),
 			})
 			.optional(),
+		open: z.enum(["workspace"]).optional(),
 		height: z.number().positive().optional(),
 		label: z.string().optional(),
 		caption: z.string().optional(),

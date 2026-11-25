@@ -8380,3 +8380,12 @@ body.bk-world-immersive .bk-sidebar {
 @media (max-width: 767px), (max-height: 500px) and (pointer: coarse) {
  html:not([data-phone-app]) .bk-topbar .bk-fallback-appearance { display: inline-flex; }
 }
+
+html[data-bk-width="narrow"] .bk-content { max-width: 720px !important; }
+html[data-bk-width="wide"] .bk-content { max-width: 1120px !important; }
+html[data-bk-width="full"] .bk-content { max-width: none !important; }
+
+.bk-object:not(.bk-object--maximized)[style*="--bk-sim-preview-height"] .bk-sim-preview {
+	height: var(--bk-sim-preview-height);
+	aspect-ratio: auto;
+}

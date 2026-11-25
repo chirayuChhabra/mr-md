@@ -1,0 +1,13 @@
+{
+  "questions": [
+    {
+      "q": "Where is the lesson order defined?",
+      "options": [
+        "mrmd.config.json",
+        "marker.config.json"
+      ],
+      "answer": 0,
+      "explanation": "The content.lessons array defines ordering, numbering, and previous/next navigation."
+    }
+  ]
+}

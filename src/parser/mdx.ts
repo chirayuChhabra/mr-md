@@ -4,6 +4,7 @@ import { marked, type Tokens } from "marked";
 import * as path from "path";
 import pc from "picocolors";
 import { z } from "zod";
+import { configuredBuildOptions } from "../blog-kit/configured.js";
 import {
 	extractYouTubeId,
 	extractYouTubeStart,
@@ -217,7 +218,7 @@ export function parseLesson(
 
 					const normalized = normalizeSimulationOptions(
 						{ caption },
-						420,
+						undefined,
 						fileConfig,
 					);
 					blocks.push({
@@ -452,6 +453,7 @@ export function parseChapter(
 	return { meta, lessons };
 }
 
+import { presentationOptions } from "../blog-kit/settings.js";
 import { copyAssets } from "../builder/utils.js";
 import { validateLesson } from "../builder/validation.js";
 import type { PhoneAppData } from "../phone-app-data.js";
@@ -520,8 +522,11 @@ export function buildChapter(
 	chapter: Chapter,
 	options: BuildOptions = {},
 ): string {
+	options = configuredBuildOptions(options);
+	options = presentationOptions(options, chapter.presentation);
 	options = { ...options, standalone: options.standalone ?? false };
-	if (!options.standalone) options.phoneApp = "assets/phone-app.json";
+	if (!options.standalone && options.engineNavigation !== "document")
+		options.phoneApp = "assets/phone-app.json";
 	const phoneData: PhoneAppData = {
 		version: 1,
 		home: "index.html",

@@ -5,6 +5,7 @@ import { bkInitPhoneApp } from "./phone-app.js";
 import { bkCollapseLab } from "./workspace.js";
 import { bkExitWorld } from "./world.js";
 export function bkInitRouter() {
+	if (document.querySelector('meta[name="bk-engine-navigation"]')) return;
 	if (window.__bk_router_initialized) return;
 	window.__bk_router_initialized = true;
 	if (bkInitPhoneApp()) return;

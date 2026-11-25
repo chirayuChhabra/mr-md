@@ -51,8 +51,8 @@ export async function runDev(args: string[]) {
 	if (fs.statSync(targetPath).isDirectory()) {
 		isDirectory = true;
 		try {
-			const { generateChapterContent } = require("./chapter.js");
-			generateChapterContent(targetPath);
+			const { compileProject } = require("../compiler.js");
+			compileProject(targetPath);
 		} catch (err: unknown) {
 			logger.error(err instanceof Error ? err.message : String(err));
 			process.exit(1);
@@ -181,7 +181,7 @@ export async function runDev(args: string[]) {
 	let singleFileSlug = "";
 	let previousFileSlug = "";
 
-	const rebuild = async () => {
+	const rebuild = async (reloadPage = false) => {
 		logger.startSpinner("Rebuilding...");
 		try {
 			const {
@@ -195,16 +195,21 @@ export async function runDev(args: string[]) {
 			} = require("../renderer/markdown/index.js");
 
 			if (isDirectory) {
-				const { generateChapterContent } = require("./chapter.js");
-				const chapterContent = generateChapterContent(targetPath);
-				await preloadLanguagesFromMarkdown(chapterContent);
-				const chapter = parseChapter(
-					chapterContent,
-					{ outDir, contentBase },
-					contentBase,
-				);
-				buildChapter(chapter, { outDir, contentBase });
+				const { compileProject } = require("../compiler.js");
+				const document = compileProject(targetPath);
+				for (const lesson of document.chapter.lessons) {
+					for (const block of lesson.blocks) {
+						if (block.type === "markdown")
+							await preloadLanguagesFromMarkdown(block.src);
+					}
+				}
+				buildChapter(document.chapter, { outDir, contentBase });
 			} else {
+				const { loadMrmdConfig, lessonConfiguration } = require("../config.js");
+				const { presentation, engineSettings } = lessonConfiguration(
+					loadMrmdConfig(contentBase),
+					path.basename(filePath),
+				);
 				const content = fs.readFileSync(filePath, "utf-8");
 				await preloadLanguagesFromMarkdown(content);
 				const parsed = require("@11ty/gray-matter")(content);
@@ -217,7 +222,7 @@ export async function runDev(args: string[]) {
 						{ outDir, contentBase },
 						contentBase,
 					);
-					buildChapter(chapter, { outDir, contentBase });
+					buildChapter(chapter, { outDir, contentBase, presentation });
 				} else {
 					const lesson = parseLesson(
 						content,
@@ -232,7 +237,10 @@ export async function runDev(args: string[]) {
 						if (fs.existsSync(staleFile)) fs.unlinkSync(staleFile);
 					}
 					singleFileSlug = newSlug;
-					buildLesson(lesson, { outDir, contentBase });
+					buildLesson(
+						{ ...lesson, engineSettings },
+						{ outDir, contentBase, presentation },
+					);
 				}
 			}
 			logger.succeedSpinner(
@@ -241,7 +249,7 @@ export async function runDev(args: string[]) {
 			if (previousFileSlug && previousFileSlug !== singleFileSlug) {
 				server?.publish("livereload", `redirect:/${singleFileSlug}.html`);
 			} else {
-				server?.publish("livereload", "reload");
+				server?.publish("livereload", reloadPage ? "reload-config" : "reload");
 			}
 			previousFileSlug = singleFileSlug;
 		} catch (err: unknown) {
@@ -261,7 +269,7 @@ export async function runDev(args: string[]) {
 		(_eventType, filename) => {
 			if (
 				!filename ||
-				!/\.(md|mdx|js|ts|jsx|tsx|json|css|png|jpg|jpeg|gif|svg|webp|ico)$/i.test(
+				!/\.(md|mdx|[cm]?js|ts|jsx|tsx|json|css|png|jpg|jpeg|gif|svg|webp|ico)$/i.test(
 					filename,
 				)
 			) {
@@ -286,7 +294,9 @@ export async function runDev(args: string[]) {
 			clearTimeout(timeout);
 			timeout = setTimeout(() => {
 				logger.watch(`File changed: ${filename}`);
-				rebuild();
+				rebuild(
+					filename === "mrmd.config.json" || /\.(?:[cm]?js|ts)$/.test(filename),
+				);
 			}, 200);
 		},
 	);
@@ -349,7 +359,9 @@ export async function runDev(args: string[]) {
 						ws.onmessage = async (e) => { 
 							if (typeof e.data === "string" && e.data.startsWith("redirect:")) {
 								window.location.href = e.data.slice(9);
-							} else if (e.data === "reload") {
+							} else if (e.data === "reload-config") {
+                                location.reload();
+                            } else if (e.data === "reload") {
                                 if (document.documentElement.dataset.phoneApp === "true") { location.reload(); return; }
 								try {
 									const res = await fetch(location.href);

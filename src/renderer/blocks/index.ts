@@ -79,9 +79,10 @@ export function renderBlock(
 	block: Block,
 	idx: number,
 	options: BuildOptions,
+	renderer: typeof renderBlockInner = renderBlockInner,
 ): { html: string; navItems?: NavItem[] } {
 	try {
-		const result = renderBlockInner(block, idx, options);
+		const result = renderer(block, idx, options);
 		if (
 			result.html &&
 			"src" in block &&

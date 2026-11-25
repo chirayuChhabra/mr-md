@@ -16,6 +16,11 @@
       "types": "./dist/simulation.d.ts",
       "import": "./dist/simulation.js",
       "default": "./dist/simulation.js"
+    },
+    "./config.schema.json": "./dist/config.schema.json",
+    "./blog-kit": {
+      "types": "./dist/blog-kit/engine.d.ts",
+      "import": "./dist/blog-kit/engine.js"
     }
   },
   "bin": {

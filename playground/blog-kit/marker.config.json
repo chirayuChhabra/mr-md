@@ -1,0 +1,17 @@
+{
+  "type": "block",
+  "height": 280,
+  "controls": "interactive",
+  "props": {
+    "position": 50
+  },
+  "tunables": {
+    "position": {
+      "label": "Position",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    }
+  }
+}

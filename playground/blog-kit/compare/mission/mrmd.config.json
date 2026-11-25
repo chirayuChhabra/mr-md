@@ -1,0 +1,8 @@
+{
+  "title": "Mission Control",
+  "content": { "lessons": ["escape-burn.md"] },
+  "theme": { "engine": "./theme.js" },
+  "simulation": { "engine": "./simulation.js" },
+  "testing": { "engine": "./testing.js", "settings": { "submitLabel": "Transmit answer" } },
+  "code": { "engine": "./code.js" }
+}

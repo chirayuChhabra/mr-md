@@ -11,6 +11,15 @@ import {
 	validateSimulationConfig,
 } from "../src/simulation-config.js";
 
+test("simulation config validates opening mode and presentation values", () => {
+	for (const open of ["workspace"] as const) {
+		expect(validateSimulationConfig({ open, height: 320, controls: "observe" })).toMatchObject({ open, height: 320, controls: "observe" });
+	}
+	for (const value of [{ open: "inline" }, { open: "popup" }, { height: -1 }, { controls: "hidden" }]) {
+		expect(() => validateSimulationConfig(value)).toThrow(SimulationConfigError);
+	}
+});
+
 test("validates defaults, typed choices, range bounds and advanced names with field diagnostics", () => {
 	const config = {
 		props: { speed: 9, enabled: "yes", choice: "1" },

@@ -1,0 +1,8 @@
+{
+  "title": "Field Notes",
+  "content": { "engine": "./content.js", "lessons": ["escape-burn.md"] },
+  "theme": { "engine": "./theme.js" },
+  "simulation": { "engine": "./simulation.js" },
+  "testing": { "engine": "./testing.js", "settings": { "submitLabel": "Check my answer" } },
+  "code": { "engine": "./code.js" }
+}

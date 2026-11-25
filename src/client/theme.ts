@@ -48,7 +48,7 @@ export function bkWireThemeControls() {
 	);
 	const uiBtns = document.querySelectorAll(".bk-theme-panel button[data-ui]");
 	let savedTheme = localStorage.getItem("bk-theme");
-	if (!savedTheme) savedTheme = "auto";
+	if (!savedTheme) savedTheme = root.dataset.bkThemeDefault || "auto";
 	const savedPalette = localStorage.getItem("bk-palette");
 	const savedUi = localStorage.getItem("bk-ui");
 
@@ -250,9 +250,17 @@ export function bkWireThemeControls() {
 	});
 
 	window.addEventListener("bk-page-loaded", () => {
-		updateThemeBtn(localStorage.getItem("bk-theme") || "auto");
-		updatePaletteBtn(localStorage.getItem("bk-palette") || "ink");
-		updateUiBtn(localStorage.getItem("bk-ui") || "standard");
+		updateThemeBtn(
+			localStorage.getItem("bk-theme") || root.dataset.bkThemeDefault || "auto",
+		);
+		updatePaletteBtn(
+			localStorage.getItem("bk-palette") ||
+				root.dataset.bkPaletteDefault ||
+				"ink",
+		);
+		updateUiBtn(
+			localStorage.getItem("bk-ui") || root.dataset.bkUiDefault || "standard",
+		);
 	});
 
 	// Broadcast the initial theme to any iframes already present
@@ -278,7 +286,10 @@ if (typeof window !== "undefined") {
 	window
 		.matchMedia("(prefers-color-scheme: dark)")
 		.addEventListener("change", () => {
-			const currentSetting = localStorage.getItem("bk-theme") || "auto";
+			const currentSetting =
+				localStorage.getItem("bk-theme") ||
+				document.documentElement.dataset.bkThemeDefault ||
+				"auto";
 			if (currentSetting === "auto") {
 				const resolved = window.matchMedia("(prefers-color-scheme: dark)")
 					.matches

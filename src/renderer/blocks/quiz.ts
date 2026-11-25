@@ -36,6 +36,7 @@ function renderQuestion(
       <div class="bk-q-text">${mdToHtml(q.q, options).html}</div>
       <div class="bk-opts">${optStrings}</div>
       ${expHtml}
+      ${options.presentation?.learning?.retry ? '<button type="button" class="bk-quiz-retry" hidden>Try again</button>' : ""}
     </div>`;
 }
 
@@ -91,7 +92,7 @@ export function renderQuiz(
 	}
 
 	return {
-		html: `<div class="bk-quiz" id="quiz-${idx}">
+		html: `<div class="bk-quiz" id="quiz-${idx}" data-bk-explanations="${options.presentation?.learning?.explanations !== false}">
           <div class="bk-quiz-head">
             <span>${escHtml(block.label ?? "Check your understanding")}</span>
             ${block.caption ? `<small>${mdInline(block.caption)}</small>` : ""}

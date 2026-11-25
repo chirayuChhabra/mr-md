@@ -45,7 +45,9 @@ describe("CLI Deep Tests", () => {
       expect(existsSync(filePath)).toBe(true);
       
       const content = await readFile(filePath, "utf-8");
-      expect(content).toContain("index: 1");
+      expect(content).not.toContain("index:");
+      const config = JSON.parse(await readFile(join(tempDir, "mrmd.config.json"), "utf-8"));
+      expect(config.content.lessons).toEqual(["01-test-lesson.md"]);
       expect(content).toContain("# test-lesson");
 
       const buildResult = await $`bun run ${CLI_PATH} build 01-test-lesson.md`.cwd(tempDir).quiet();
@@ -53,12 +55,14 @@ describe("CLI Deep Tests", () => {
       expect(existsSync(join(tempDir, "out", "01-test-lesson.html"))).toBe(true);
     });
 
-    test("Should correctly increment index for subsequent files", async () => {
+    test("Should append subsequent lessons to configuration order", async () => {
       await $`bun run ${CLI_PATH} generate "first"`.cwd(tempDir).quiet();
       await $`bun run ${CLI_PATH} generate "second"`.cwd(tempDir).quiet();
       
       const content = await readFile(join(tempDir, "02-second.md"), "utf-8");
-      expect(content).toContain("index: 2");
+      expect(content).not.toContain("index:");
+      const config = JSON.parse(await readFile(join(tempDir, "mrmd.config.json"), "utf-8"));
+      expect(config.content.lessons).toEqual(["01-first.md", "02-second.md"]);
     });
   });
 

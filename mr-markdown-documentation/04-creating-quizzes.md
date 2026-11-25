@@ -1,5 +1,4 @@
 ---
-index: 5
 title: Creating Quizzes
 slug: creating-quizzes
 description: How to construct accessible, multi-step interactive quizzes with markdown-first question definitions.

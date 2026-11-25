@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Blog Kit** lets chapters replace the `theme`, `content`, `testing`, `simulation`, and `code` renderers with local modules or installed packages. Engines receive typed inputs and can return HTML, CSS, browser JavaScript, and navigation entries.
+- Add `mrmd.config.json` and the packaged `mr-md/config.schema.json` schema for lesson order, chapter defaults, and per-lesson settings. Built-in settings include theme colors, fonts, layout, and density, plus quiz retries and answer explanations.
+- Export `compileProject` and `buildProject` for programmatic chapter builds.
+- Add [Blog Kit documentation](docs/blog-kit.md) and a [playground comparison](playground/blog-kit/compare/) that builds the same lesson as stock Mr. Markdown, Field Notes, and Mission Control.
 - Phone course navigation with Continue learning, lesson-scoped contents, course and lesson search, and preserved lesson scroll positions, editor drafts, and output when revisiting lessons.
 - Compact phone code-runner controls with inline Run, Compile, and Check Answer actions, plus a menu for Hint, Reset, and Copy.
 - Persistent saved simulation states with screenshots, settings, exact state, and independent measurement histories stored in IndexedDB.
@@ -56,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collective `advancedControls` array placing secondary tunables inside a native disclosure, resolving visibility via `control.advanced ?? advancedControls.includes(key)`.
 
 ### Fixed
+- Reject lesson output paths that collide with each other or the chapter index, including paths that differ only in case or Unicode normalization.
 - Include Measurements and Saved panel styles in shared chapter assets, matching standalone pages.
 - Let expanded simulation canvases fill their containers without forcing the iframe to its original aspect ratio; preserve drawing proportions and model coordinates.
 - Close the inherited sidebar when entering a simulation so it cannot cover the scene or graph windows, and restore its prior state on exit.
@@ -79,6 +84,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Drive chapter builds, previews, and previous/next navigation from `content.lessons`. Chapters without an explicit list discover lessons by filename, with support for complete legacy frontmatter indexes. `mr-md generate` adds new lessons to the configured list.
+- Rebuild and reload the development preview when chapter settings or renderer modules change. Chapters using custom renderers use full-page navigation so each lesson loads its own scripts and styles.
+- Honor the simulation companion config's `height` in collapsed block previews. Previews without an explicit height use the default 16:9 ratio, and controls open in the lab workspace.
 - Replace the mobile coming-soon screen with responsive phone and tablet lesson layouts, touch-sized controls, accessible drawers, and reduced-motion support.
 - Keep phone code editors and media inline, wrap editor lines, use 16px touch input text, and enable inline video playback.
 - Show an Open on desktop notice for simulations, guided labs, and immersive worlds on phones, with simulation frames deferred to avoid running them in the background.

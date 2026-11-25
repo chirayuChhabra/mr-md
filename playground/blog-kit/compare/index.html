@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blog Kit engine comparison</title>
+  <style>
+    :root { font: 16px/1.5 system-ui, sans-serif; color: #1f252e; background: #f4f5f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 78rem; margin: auto; padding: clamp(1.5rem, 6vw, 5rem); }
+    h1 { max-width: 17ch; margin: 0 0 1rem; font: 600 clamp(3rem, 7vw, 6rem)/.98 Georgia, serif; letter-spacing: -.05em; }
+    header p { max-width: 55ch; margin: 0 0 3rem; font-size: 1.125rem; }
+    .editions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .edition { display: flex; flex-direction: column; min-width: 0; color: inherit; background: white; text-decoration: none; border: 1px solid #cbd2db; }
+    .edition:hover { border-color: #365b96; }
+    .edition:focus-visible { outline: 3px solid #365b96; outline-offset: 4px; }
+    .body { display: flex; flex-direction: column; flex: 1; padding: 1.25rem; }
+    h2 { margin: 0; font-size: 1.25rem; }
+    .body p { margin: .5rem 0 1rem; max-width: 36ch; }
+    .body span { margin-top: auto; color: #264b83; font-weight: 600; text-decoration: underline; text-underline-offset: .2em; }
+    .sample { display: grid; place-items: center; min-height: 10rem; padding: 1rem; overflow: hidden; }
+    .stock { background: #ecf1f7; }
+    .stock b { padding: .75rem 1rem; border-block-start: 1px solid #acb8c8; font: 700 1.6rem Georgia, serif; }
+    .notes { background: repeating-linear-gradient(0deg, #faf3e2 0 23px, #d8dedf 23px 24px); color: #193f8a; }
+    .notes b { font: italic 700 1.75rem Georgia, serif; transform: rotate(-6deg); border-bottom: 2px solid; }
+    .mission { background: #101a2d; color: #ff9d63; }
+    .mission b { padding: .5rem 1rem; border: 1px solid #79d7ff; font: 700 1.25rem ui-monospace, monospace; letter-spacing: .08em; }
+    @media (max-width: 52rem) { .editions { grid-template-columns: 1fr; } .sample { min-height: 7rem; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>One lesson, three engines in action</h1>
+      <p>Each edition builds the same Markdown, quiz, and simulation embed. Try the burn and answer the flight check in each one.</p>
+    </header>
+    <nav class="editions" aria-label="Lesson editions">
+      <a class="edition" href="default/escape-burn.html">
+        <div class="sample stock" aria-hidden="true"><b>The escape burn</b></div>
+        <div class="body"><h2>1. Default Mr. Markdown</h2><p>Read the lesson, expand the standard lab, and answer the built-in quiz.</p><span>Open default lesson</span></div>
+      </a>
+      <a class="edition" href="field/escape-burn.html">
+        <div class="sample notes" aria-hidden="true"><b>Field notes</b></div>
+        <div class="body"><h2>2. Field Notes</h2><p>Read a paper-style notebook and use a foldout lookup chart to compare speeds.</p><span>Open the notebook</span></div>
+      </a>
+      <a class="edition" href="mission/escape-burn.html">
+        <div class="sample mission" aria-hidden="true"><b>FLIGHT DECK</b></div>
+        <div class="body"><h2>3. Mission Control</h2><p>Set the speed, fire the burn, and track the spacecraft from the flight console.</p><span>Open mission control</span></div>
+      </a>
+    </nav>
+  </main>
+</body>
+</html>

@@ -1,25 +1,16 @@
-import type { BuildOptions, Lesson } from "../types.js";
-import { renderBlock } from "./blocks.js";
-import { renderPage } from "./html.js";
-import type { NavItem } from "./utils.js";
-
-// ─── Main render function ─────────────────────────────────────────────────────
+import { configuredBuildOptions } from "../blog-kit/configured.js";
+import { blogKit } from "../blog-kit/engine.js";
+import type { BuildOptions, Chapter, Lesson } from "../types.js";
 
 export function render(lesson: Lesson, opts: BuildOptions = {}): string {
-	const bodyItems: string[] = [];
-	const structuredNavItems: NavItem[] = [];
-
-	lesson.blocks.forEach((block, idx) => {
-		const { html, navItems } = renderBlock(block, idx, opts);
-		bodyItems.push(html);
-		if (navItems) {
-			structuredNavItems.push(...navItems);
-		}
-	});
-
-	return renderPage(lesson, structuredNavItems, bodyItems.join("\n"), opts);
+	opts = configuredBuildOptions(opts);
+	return (opts.blogKit ?? blogKit).renderLesson(lesson, opts);
 }
 
-// ─── Chapter Rendering ────────────────────────────────────────────────────────
-
-export { renderChapter } from "./chapter.js";
+export function renderChapter(
+	chapter: Chapter,
+	opts: BuildOptions = {},
+): string {
+	opts = configuredBuildOptions(opts);
+	return (opts.blogKit ?? blogKit).renderChapter(chapter, opts);
+}

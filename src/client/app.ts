@@ -7,6 +7,7 @@ import {
 	bkWireInteractiveFrames,
 } from "./interactive.js";
 import { bkInitMedia, bkWireMedia } from "./media.js";
+import { bkApplyPageSettings } from "./presentation.js";
 import { bkWireQuizzes } from "./quiz.js";
 import { bkInitRouter } from "./router.js";
 import { bkInitCodeRunners, bkWireCodeRunners } from "./runner.js";
@@ -69,6 +70,7 @@ function wireOnce() {
 }
 
 function initOnPageLoad() {
+	bkApplyPageSettings();
 	bkInitMedia();
 	bkInitCodeCopy();
 	bkInitCodeRunners();
@@ -85,6 +87,7 @@ function initOnPageLoad() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+	bkApplyPageSettings();
 	wireOnce();
 	initOnPageLoad();
 });

@@ -1,6 +1,22 @@
 // @ts-nocheck
 export function bkWireQuizzes() {
 	document.addEventListener("click", (e) => {
+		const retry = (e.target as HTMLElement).closest?.(".bk-quiz-retry");
+		if (retry) {
+			const question = retry.closest(".bk-question");
+			question
+				?.querySelectorAll<HTMLButtonElement>(".bk-opt")
+				.forEach((option) => {
+					option.disabled = false;
+					option.classList.remove("correct", "wrong", "disabled");
+				});
+			const explanation =
+				question?.querySelector<HTMLElement>(".bk-explanation");
+			if (explanation) explanation.hidden = true;
+			retry.hidden = true;
+			question?.querySelector<HTMLButtonElement>(".bk-opt")?.focus();
+			return;
+		}
 		const btn = (e.target as HTMLElement).closest?.(".bk-opt") as HTMLElement;
 		if (!btn) return;
 
@@ -52,6 +68,8 @@ export function bkWireQuizzes() {
 			}
 		});
 		const exp = document.getElementById(`${qid}-exp`);
-		if (exp) exp.hidden = false;
+		if (exp && quiz?.dataset.bkExplanations !== "false") exp.hidden = false;
+		const retryButton = question.querySelector<HTMLElement>(".bk-quiz-retry");
+		if (retryButton) retryButton.hidden = false;
 	});
 }
