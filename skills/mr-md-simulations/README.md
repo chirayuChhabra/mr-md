@@ -3,9 +3,8 @@
 An Agent Skill for building context-aware interactive simulations that use the
 target lesson's terminology, notation, formulas, and teaching sequence together
 with mr-md's generated controls, sandboxed canvas runtime, appearance system,
-and lesson authoring syntax. It includes hard visual gates for containment,
-contrast, host-control use, modern restrained styling, UI-mode restraint, and
-screenshot review.
+and lesson authoring syntax. It covers measurement graphs, scene guides, exact
+saved moments, responsive workspaces, and chapter rendering with Blog Kit.
 
 The skill is useful both to:
 
@@ -25,12 +24,8 @@ lesson workflow remains `bunx mr-md dev .` or `bunx mr-md build .`.
 Use `bunx mr-md skill status` to inspect the installation. The mr-md
 command transparently delegates to the open Agent Skills CLI.
 
-The `assets/` directory contains a starting pair that an agent can copy into a
-lesson project. It is an example, not another runtime implementation.
-
-
-The skill covers block experiments, guided steps, host-managed 2D worlds, and
-custom Three.js worlds. Copy the matching starter pair from `assets/`.
+Copy the matching starter pair from `assets/` for a block experiment, guided
+steps, a host-managed 2D world, or a custom Three.js world.
 
 Install selects the source tag matching the running mr-md package. Run install
 with the desired package version to select its compatible skill.

@@ -16,7 +16,8 @@ than marking untested behavior as complete.
   the lesson.
 - The simulation does not introduce unexplained vocabulary or future concepts.
 - Local terminology is preserved even when a more common synonym exists.
-- Ambiguity or conflicting source material was clarified rather than guessed.
+- Unresolved notation or model choices that affect the lesson were checked with
+  the author.
 
 ## Learning experience
 
@@ -45,14 +46,33 @@ also apply [steps.md](steps.md). Custom renderers own their loop lifecycle.
 
 ## Runtime behavior
 
-- `bkSetup` owns the drawing lifecycle.
+- Block and step canvas scenes use one `bkSetup` loop. Custom renderers own
+  their drawing loop and honor the same host lifecycle.
 - Event listeners are registered only once.
 - Pointer positions use `bkCanvasPoint`.
 - Pointer capture or cancellation cannot leave drag state stuck.
 - Frame deltas are clamped after pause/resume.
 - Prop changes have an immediate visible result.
 - Resize does not reset important learner state unexpectedly.
+- Paused redraws leave model time frozen. Direct edits still appear.
+- Expanded labs without settings or measurements use the full scene area.
+- Tablet rotation preserves a usable scene and inspector. The phone notice
+  replaces the interactive frame.
 - Errors are absent from both the host and iframe consoles.
+
+## Measurements and saved moments
+
+- [Measurements](measurements.md) show model values, units, and graph axes
+  that match the lesson. Unavailable values are distinct from zero.
+- Author plots and learner-created X/Y plots pair samples from the same
+  update, including repeated edits while paused.
+- Scene-guide selection and graph layout survive trial reset. Trial samples
+  and rule state reset.
+- [Saved cards](saved-moments.md), when enabled, restore exact state paused.
+  Returning to Live restores its previous history and playback. Continuing
+  from a save preserves the original saved copy.
+- Saved states and annotated histories survive reload. Test manual or named
+  automatic saves and image download where the lesson uses them.
 
 ## Visual and accessible communication
 

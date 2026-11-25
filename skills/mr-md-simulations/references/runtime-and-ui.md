@@ -46,6 +46,7 @@ Supported config fields correspond to `SimulationConfig`:
 
 ```json
 {
+  "type": "block",
   "props": {},
   "tunables": {},
   "advancedControls": [],
@@ -61,7 +62,10 @@ Supported config fields correspond to `SimulationConfig`:
 }
 ```
 
-Generated host controls support:
+Generated host controls appear in Settings. Use `group` to label related
+parameters. Each tunable needs a matching typed default in `props`. Values
+must match the configured numeric bounds or choice options. Labels are plain
+text and can use Unicode notation from the lesson. Control types include
 - `range`: numeric slider (`min`, `max`, `step`, optional `unit?: string`);
 - `number`: numeric input field (`min`, `max`, `step`, optional `unit?: string`);
 - `text`: single-line string input;
@@ -82,20 +86,9 @@ Top-level configuration options:
 
 The host supplies Pause / Resume and Reset for expanded block simulations. Steps retain their existing playback and trial-reset controls. Do not duplicate these controls inside the iframe.
 
-Declared `telemetry` quantities describe computed physical outputs published by
-the simulation. In the expanded lab workspace, live measurements are displayed
-in the reserved inspector column directly below host controls, grouped with
-quiet section labels, readable label/value rows, units, and optional decimal precision:
-
-```json
-{
-  "telemetry": {
-    "status": { "label": "Orbit Status", "group": "State" },
-    "eccentricity": { "label": "Eccentricity (e)", "precision": 3, "group": "Geometry" },
-    "speed": { "label": "Current Velocity (v)", "unit": "km/s", "precision": 2, "group": "Dynamics" }
-  }
-}
-```
+Use [measurements.md](measurements.md) for live stats, graphs, scene guides,
+and notification rules. Use [saved-moments.md](saved-moments.md) for exact state
+capture and restoration.
 
 For block/steps, these generated controls are the non-spatial input UI. Keep form fields,
 toggles, selects, ordinary action buttons, and control panels out of the iframe.
@@ -104,7 +97,9 @@ comma-separated text for a collection—then use the canvas to show the result.
 If the required interaction cannot be represented, propose a host-control
 extension instead of implementing a parallel form system in the frame.
 
-`controls: "observe"` hides generated controls. Accent values supported by the
+`controls: "observe"` hides generated controls on a block. A block without
+settings or measurements expands without an empty inspector and still has host
+playback and Reset. Accent values supported by the
 block type are `neutral`, `blue`, `teal`, `amber`, `rose`, and `violet`.
 
 External script dependencies can be listed as URLs in `dependencies`. They are
@@ -158,7 +153,7 @@ window.bkTelemetry({
 Updates are safely coalesced via `requestAnimationFrame` on the host side to
 prevent layout thrashing during 60 FPS animation loops. Quantities not yet
 published or undefined/null are displayed explicitly as `—` rather than fake
-zeros in the document-level Measurements inspector anchored below the global topbar.
+zeros in the lab's Measurements inspector.
 
 ### `window.bkSetup(draw, options?)`
 
@@ -262,22 +257,18 @@ traits. See `ui-language.md`.
 The simulation iframe uses `sandbox="allow-scripts"`. It does not receive
 same-origin access to the host page.
 
-The host:
+The host sends `bk:play` and `bk:pause` as the simulation activates and
+deactivates. A renderer with its own loop must check that lifecycle, reset its
+frame clock on resume, and clamp long deltas. Check `event.source === window.parent`
+when reading host messages. Use the iframe bridge for actions and data.
 
-- adds an activation overlay;
-- allows only one interactive frame to be active at a time;
-- sends `bk:play` when a simulation is activated;
-- sends `bk:pause` when it is deactivated or leaves the observed area; and
-- restarts animations when they return to the viewport.
-
-Because a frame can be paused for an arbitrary duration, compute and clamp
-frame deltas:
-
-```js
-const now = performance.now();
-const dt = Math.min((now - previousTime) / 1000, 0.1);
-previousTime = now;
-```
+Phones show Open on desktop for block simulations, steps, and worlds. Their
+iframes are deferred and blocked by the shared device policy. The policy matches
+widths up to 767px or heights up to 500px with a coarse pointer. Expanded tablet
+labs fit the viewport and authored scene ratio. Allow for inspector content
+below the scene in portrait and beside it in landscape. Verify touch targets,
+rotation, focus, and drag cancellation. A switch to the phone layout closes an
+open lab and unmounts its frame.
 
 ## Source-of-truth implementation
 
@@ -291,7 +282,9 @@ Inside the mr-md repository:
 | Markdown image detection | `src/parser/mdx.ts` |
 | Host block and iframe creation | `src/renderer/blocks/simulation.ts` |
 | World block creation & portal | `src/renderer/blocks/world.ts` |
-| Injected canvas/runtime API | `src/renderer/blocks/iframe.ts` |
+| Injected canvas/runtime API | `src/renderer/blocks/iframe.ts`, `canvas-framing.ts`, `simulation-runtime.ts` in the same directory |
+| Companion schema and cross-field validation | `src/simulation-config.ts` |
+| Expanded lab and device policy | `src/client/workspace.ts`, `src/client/device.ts` |
 | Generated controls | `src/renderer/markdown/controls.ts` |
 | Control-to-prop messages | `src/client/simulation.ts` |
 | World portal expansion controller | `src/client/world.ts` |
@@ -328,8 +321,14 @@ Action buttons accept an optional `color`: `accent` (default), `neutral`, `red`,
 ## Preview and model lifecycle
 
 Regular blocks are still inline previews with a native Click to expand button.
-The inspector is visible only in the expanded modal workspace. Keep the iframe
-scene free of fake controls, repeated titles, and application chrome.
+The inspector is visible only in the expanded modal workspace. A block preview
+uses 16:9 by default, or the companion config's `height` in pixels when authored.
+The built-in renderer supports `open: "workspace"` or omission. Keep the scene
+focused on the experiment. The host owns the title, caption, and controls.
+Close, Escape, and browser Back should return to the lesson with scroll and
+focus restored. Space toggles play and pause, and R resets the trial. Steps
+also use arrow keys for step navigation. Preserve editable inputs and any
+scene-specific keyboard bindings when wiring those shortcuts.
 
 Prefer `window.defineSimulation({ props: defaults })` for new scripts, or import
 `defineSimulation` from `mr-md/simulation` in TypeScript. The returned runtime has

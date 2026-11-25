@@ -33,7 +33,7 @@ state from the supplied props, not only from module-start values. Reset position
 velocity, elapsed time, drag state, and the local completion guard on each trial.
 
 Use `bkSetup` for drawing. A draw also occurs while paused: advance the model only
-when `window.__loop` is true. Report success once per trial with
+when `sim.deltaTime()` is positive if using the typed runtime. Report success once per trial with
 `bkCompleteStep("feedback")`; object form supports `{stepIndex, feedback, voice}`.
 Do not emit completion on every rendered frame. Completion records success; do
 not assume it automatically advances the learner to the next step.
@@ -57,10 +57,12 @@ Source: `src/types.ts`, `src/renderer/blocks/steps.ts`, `steps-iframe.ts`,
 
 ## Shared workspace and typed runtime
 
-Keep steps inline interactive with their instructions, hints, and progress.
-Do not convert them into block-style thumbnails as a side effect of shared
-workspace changes. Expansion isolates the lesson and contains keyboard focus;
-closing pauses the trial and narration without erasing solved progress.
+Keep the guided instructions, hints, and progress with the step runner. On
+supported screens the inline guided flow can expand into the shared workspace.
+Expansion isolates the lesson and contains keyboard focus. Closing pauses the
+trial and narration while preserving solved progress. Trial reset clears Live
+measurements while preserving graph and scene-guide preferences. See
+[measurements.md](measurements.md) when a goal depends on measured values.
 
 The optional `defineSimulation` runtime works in steps too. `sim.onReset` adapts
 the existing trial-reset lifecycle, receiving current trial props. Continue to

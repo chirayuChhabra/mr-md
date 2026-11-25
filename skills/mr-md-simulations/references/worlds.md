@@ -42,7 +42,8 @@ Pause sound and ongoing work on deactivation; release renderer resources when
 tearing down a custom scene. Do not rely exclusively on `bk:world-enter/exit`
 events: inspect the actual host message path for the checked-out version.
 
-Worlds do not render the standard generated tunable panel. A world may provide
+The built-in world portal has no standard Settings, Measurements, or Saved
+inspector. Shared config fields alone do not supply a lab UI. A world may provide
 necessary scene navigation such as search, destinations, camera controls, and
 sound toggles inside its iframe. Keep these keyboard accessible, responsive,
 and consistent with live host appearance. Avoid duplicating the host exit UI or

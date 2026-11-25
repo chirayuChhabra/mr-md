@@ -87,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve CodeMirror editor styles across dev server live reloads.
 
 ### Changed
+- Update the `mr-md-simulations` skill to v1.6.0 with authoring guides for time and X/Y graphs, scene guides, persistent saved moments, phone and tablet layouts, and Blog Kit renderer selection.
 - Drive chapter builds, previews, and previous/next navigation from `content.lessons`. Chapters without an explicit list discover lessons by filename, with support for complete legacy frontmatter indexes. `mr-md generate` adds new lessons to the configured list.
 - Rebuild and reload the development preview when chapter settings or renderer modules change. Chapters using custom renderers use full-page navigation so each lesson loads its own scripts and styles.
 - Honor the simulation companion config's `height` in collapsed block previews. Previews without an explicit height use the default 16:9 ratio, and controls open in the lab workspace.
